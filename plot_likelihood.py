@@ -221,7 +221,7 @@ def generate_likelihood_class(testdir, emudir, simulation_sub_directory=None, me
     print('Beginning to initialise LikelihoodClass at', str(datetime.now()))
     return LikelihoodClass(basedir=emudir, datadir=testdir+simulation_sub_directory, mean_flux=mean_flux_label, max_z=max_z, rescale_data_error=rescale_data_error, fix_error_ratio=fix_error_ratio, error_ratio=error_ratio)
 
-def run_and_plot_likelihood_samples(testdir, emudir, savefile, plotname, plot=True, chain_savedir=None, n_walkers=100, n_burn_in_steps=100, n_steps=400, while_loop=True, mean_flux_label='s', return_class_only=False, rescale_data_error=False, fix_error_ratio=False, error_ratio=100., include_emulator_error=True, max_z=4.2):
+def run_and_plot_likelihood_samples(testdir, emudir, savefile, plotname, plot_posterior=True, plot_refinement=False, chain_savedir=None, n_walkers=100, n_burn_in_steps=100, n_steps=400, while_loop=True, mean_flux_label='s', return_class_only=False, rescale_data_error=False, fix_error_ratio=False, error_ratio=100., include_emulator_error=True, max_z=4.2):
     """Generate some likelihood samples"""
     # TODO: Add true values #Read from filenames
     #true_parameter_values = [None, None, 0.97, 1.3, 0.67, 1.3, 0.083, 0.92, 0.69]
@@ -245,10 +245,13 @@ def run_and_plot_likelihood_samples(testdir, emudir, savefile, plotname, plot=Tr
 
     like = generate_likelihood_class(testdir, emudir, mean_flux_label=mean_flux_label, max_z=max_z, rescale_data_error=rescale_data_error, fix_error_ratio=fix_error_ratio, error_ratio=error_ratio)
 
+    '''if plot_refinement:
+        refinement_metric_grid = like.make_err_grid(2, 3)'''
+
     if return_class_only is False:
         print('Beginning to sample likelihood at', str(datetime.now()))
         output = like.do_sampling(chainfile, nwalkers=n_walkers, burnin=n_burn_in_steps, nsamples=n_steps, while_loop=while_loop, include_emulator_error=include_emulator_error)
-        if plot is True:
+        if plot_posterior is True:
             print('Beginning to make corner plot at', str(datetime.now()))
             make_plot(chainfile, savefile, true_parameter_values=true_parameter_values)
         return like

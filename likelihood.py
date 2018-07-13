@@ -252,13 +252,18 @@ class LikelihoodClass(object):
             detc *= det_bin
         return detc
 
-    def refine_metric(self, params):
+    def refine_metric(self, params, use_error_ratio=False):
         """This evaluates the 'refinement metric':
            the extent to which the emulator error dominates the covariance.
            The idea is that when it is > 1, refinement is necessary"""
-        detnoemu = self.get_covar_det(params, False)
-        detemu = self.get_covar_det(params, True)
-        return detemu/detnoemu
+        if not use_error_ratio:
+            detnoemu = self.get_covar_det(params, False)
+            detemu = self.get_covar_det(params, True)
+            return detemu/detnoemu
+        else:
+            likelihood_evaluation = self.likelihood(params)
+            assert self.emulated_flux_power_std[0].size == np.array(self.exact_flux_power_std).size
+            return np.mean(self.emulated_flux_power_std[0]) / np.mean(np.array(self.exact_flux_power_std))
 
     def check_for_refinement(self, conf = 0.95, thresh = 1.05):
         """Crude check for refinement: check whether the likelihood is dominated by
@@ -289,12 +294,12 @@ class LikelihoodClass(object):
         assert np.shape(new_samples)[0] == nsamples
         self.emulator.gen_simulations(nsamples=nsamples, samples=new_samples)
 
-    def make_err_grid(self, i, j, samples = 30000):
+    def make_err_grid(self, i, j, samples = 30000, use_error_ratio=False):
         """Make an error grid"""
         ndim = np.size(self.param_limits[:,0])
         rr = lambda x : np.random.rand(ndim)*(self.param_limits[:,1]-self.param_limits[:,0]) + self.param_limits[:,0]
         rsamples = np.array([rr(i) for i in range(samples)])
-        randscores = [self.refine_metric(rr) for rr in rsamples]
+        randscores = [self.refine_metric(rr, use_error_ratio=use_error_ratio) for rr in rsamples]
         grid_x, grid_y = np.mgrid[0:1:200j, 0:1:200j]
         grid_x = grid_x * (self.param_limits[i,1] - self.param_limits[i,0]) + self.param_limits[i,0]
         grid_y = grid_y * (self.param_limits[j,1] - self.param_limits[j,0]) + self.param_limits[j,0]
