@@ -129,6 +129,7 @@ class SkLearnGP(object):
         flux_predict, var = self.gp.predict(params_cube)
 
         #Extract gradients of posterior mean and variance wrt. parameters (hopefully not hyperparameters)
+        print('Posterior variance as output from Gaussian process (for normalised data vector) =', var)
         print('Gradients of posterior mean and variance wrt. parameters =', self.gp.predictive_gradients(params_cube))
 
         mean = (flux_predict+1)*self.scalefactors
