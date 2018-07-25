@@ -127,6 +127,10 @@ class SkLearnGP(object):
         #Map the parameters onto a unit cube so that all the variations are similar in magnitude
         params_cube = np.array([map_to_unit_cube(pp, self.param_limits) for pp in params])
         flux_predict, var = self.gp.predict(params_cube)
+
+        #Extract gradients of posterior mean and variance wrt. parameters (hopefully not hyperparameters)
+        print('Gradients of posterior mean and variance wrt. parameters =', self.gp.predictive_gradients(params_cube))
+
         mean = (flux_predict+1)*self.scalefactors
         std = np.sqrt(var) * self.scalefactors
         return mean, std
