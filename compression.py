@@ -54,39 +54,79 @@ class Compression(object):
 
         return data_gradient, covariance_gradient
 
+    def _get_gradients_from_emulator_analytical(self, parameter_vector):
+        """Get gradient of data vector and covariance using analytical form from emulator model"""
+        mean_flux_parameters = mf.mean_flux_slope_to_factor(self.redshift_vector, parameter_vector[0])
+        data_gradient, variance_gradient = self.emulator_object.get_predictive_gradients(parameter_vector[1:].reshape(1, -1), tau0_factors=mean_flux_parameters, mean_flux_slope=parameter_vector[0], redshifts=self.redshift_vector, pivot_redshift=2.2)
+        covariance_gradient = np.zeros((variance_gradient.shape[1], variance_gradient.shape[2], variance_gradient.shape[2]))
+        for i in range(covariance_gradient.shape[0]): #Looping over parameters
+            covariance_gradient[i, :, :] = np.diag(variance_gradient[0, i, :]) #Expand variance gradient into covariance
+        return data_gradient[0], covariance_gradient
+
+    def get_Fisher_matrix(self, fiducial_parameter_vector):
+        """Get the Fisher matrix (for a Gaussian likelihood)"""
+        fiducial_data_vector, fiducial_covariance_matrix = self._get_data_vector_and_covariance_from_emulator(
+            fiducial_parameter_vector)
+        fiducial_inverse_covariance = self._invert_block_diagonal_covariance(fiducial_covariance_matrix)  # dims: p x p
+        fiducial_data_gradient, fiducial_covariance_gradient = self._get_gradients_from_emulator_analytical(
+            fiducial_parameter_vector)
+
+        inv_cov_data_grad = np.dot(fiducial_inverse_covariance, fiducial_data_gradient.transpose()) #dims: p x t
+        data_gradient_term = np.dot(fiducial_data_gradient, inv_cov_data_grad) #dims: t x t #Don't actually need trace!?
+        cov_grad_inv_cov = np.dot(fiducial_covariance_gradient, fiducial_inverse_covariance) #dims: t x p x p
+        covariance_gradient_term = 0.5 * np.trace(np.dot(cov_grad_inv_cov, cov_grad_inv_cov), axis1=1, axis2=3)
+        #dims: tr[(t x p x p) * (t x p x p)] = tr[t x p x t x p] = t x t
+
+        return data_gradient_term + covariance_gradient_term
+
+    def get_inverse_Fisher_matrix(self, fiducial_parameter_vector):
+        """Get the inverse of the Fisher matrix (for a Gaussian likelihood)"""
+        return npl.inv(self.get_Fisher_matrix(fiducial_parameter_vector))
+
 
 class ScoreFunctionCompression(Compression):
     """Sub-class to handle data compression to the score function"""
-    def __init__(self, data_vector, redshift_vector, fixed_covariance_matrix, emulator_object):
-        super(Compression, self).__init__(data_vector, redshift_vector, fixed_covariance_matrix, emulator_object)
+    def __init__(self, data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=None):
+        super(Compression, self).__init__(data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=parameter_vector)
 
     def compress_data_vector(self, fiducial_parameter_vector):
         """Compress data to score function"""
         fiducial_data_vector, fiducial_covariance_matrix = self._get_data_vector_and_covariance_from_emulator(fiducial_parameter_vector)
         fiducial_inverse_covariance = self._invert_block_diagonal_covariance(fiducial_covariance_matrix) #dims: p x p
-        fiducial_data_gradient, fiducial_covariance_gradient = self._get_gradients_from_emulator(fiducial_parameter_vector, fiducial_data_vector, fiducial_covariance_matrix)
+        fiducial_data_gradient, fiducial_covariance_gradient = self._get_gradients_from_emulator_analytical(fiducial_parameter_vector)
+        #, fiducial_data_vector, fiducial_covariance_matrix)
 
         inv_cov_data_diff = np.dot(fiducial_inverse_covariance, (self.data_vector - fiducial_data_vector)) #dims: p
         data_gradient_term = np.dot(fiducial_data_gradient, inv_cov_data_diff) #dims: (t x p) * p = t
-        covariance_gradient_term = np.dot(inv_cov_data_diff, np.dot(fiducial_covariance_gradient, inv_cov_data_diff).transpose())
+        covariance_gradient_term = 0.5 * np.dot(inv_cov_data_diff, np.dot(fiducial_covariance_gradient, inv_cov_data_diff).transpose())
         #dims: p * [(t x p x p) * p]^T = p * (t x p)^T = t
-        return data_gradient_term + covariance_gradient_term
+        trace_term = -0.5 * np.trace(np.dot(fiducial_covariance_gradient, fiducial_inverse_covariance), axis1=1, axis2=2)
+        #dims: tr[(t x p x p) * (p x p)] = tr[t x p x p] = t
+
+        return data_gradient_term + covariance_gradient_term + trace_term
+
+    def compress_data_vector_linearised(self, fiducial_parameter_vector):
+        """Compress data to linearised form of score function"""
+        inv_fish_score = np.dot(self.get_inverse_Fisher_matrix(fiducial_parameter_vector), self.compress_data_vector(fiducial_parameter_vector))
+        return fiducial_parameter_vector + inv_fish_score
 
 
 class IMNNsCompression(Compression):
     """Sub-class to handle data compression by information maximising neural networks (IMNNs)"""
-    def __init__(self, data_vector, redshift_vector, fixed_covariance_matrix, emulator_object):
-        super(Compression, self).__init__(data_vector, redshift_vector, fixed_covariance_matrix, emulator_object)
+    def __init__(self, data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=None):
+        super(Compression, self).__init__(data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=parameter_vector)
 
     def compress_data_vector(self):
         """Compress data by IMNNs"""
         pass
 
 
-def parameter_vector_to_compressed_data_vector(parameter_vector, redshift_vector=np.arange(4.2, 2.1, -0.2), fixed_covar=None):
-    """Helper function for generating compressed data vector for given parameter vector"""
-    if fixed_covar is None:
+def parameter_vector_to_compressed_data_vector_score_function(parameter_vector, fiducial_parameter_vector, emulator_object, fixed_covar, redshift_vector=np.arange(4.2, 2.1, -0.2)):
+    """Helper function for generating compressed data vector (score function) for given parameter vector"""
+    compression_instance = ScoreFunctionCompression(None, redshift_vector, fixed_covar, emulator_object, parameter_vector=parameter_vector)
+    return compression_instance.compress_data_vector_linearised(fiducial_parameter_vector)
 
-        fixed_covar = np.zeros(())
-
-    compression_instance = Compression(None, redshift_vector, fixed_covar, )
+def data_vector_to_compressed_data_vector_score_function(data_vector, fiducial_parameter_vector, emulator_object, fixed_covar, redshift_vector=np.arange(4.2, 2.1, -0.2)):
+    """Helper function for compressing a given data vector (to the score function)"""
+    compression_instance = ScoreFunctionCompression(data_vector, redshift_vector, fixed_covar, emulator_object)
+    return compression_instance.compress_data_vector_linearised(fiducial_parameter_vector)

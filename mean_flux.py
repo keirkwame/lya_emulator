@@ -8,6 +8,15 @@ def obs_mean_tau(redshift, amp=0, slope=0):
     this is a weak prior"""
     return (2.3+amp)*1e-3*(1.0+redshift)**(3.65+slope)
 
+def d_tau_emulated_d_tau0_sampled(redshift, slope=0., pivot_redshift=2.2):
+    """Derivative of emulated mean optical depth parameter wrt. tau0 (sampled mean optical depth amplitude)"""
+    return ((1. + redshift) / (1. + pivot_redshift)) ** slope
+
+def d_tau_emulated_d_dtau0_sampled(redshift, tau0=1., slope=0., pivot_redshift=2.2):
+    """Derivative of emulated mean optical depth parameter wrt. dtau0 (sampled mean optical depth slope correction)"""
+    log_term = np.log(d_tau_emulated_d_tau0_sampled(redshift, slope=1., pivot_redshift=pivot_redshift))
+    return tau0 * d_tau_emulated_d_tau0_sampled(redshift, slope=slope, pivot_redshift=pivot_redshift) * log_term
+
 class ConstMeanFlux(object):
     """Object which implements different mean flux models. This model fixes the mean flux to a constant value.
     """
