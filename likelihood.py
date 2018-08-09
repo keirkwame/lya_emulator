@@ -152,7 +152,7 @@ class LikelihoodClass(object):
             '''if self.rescale_data_error:
                 rescaling_factor = self.data_fluxpower[nkf*bb:nkf*(bb+1)] / self.BOSS_flux_power[bb] #Rescale 1 sigma
                 covar_bin *= np.outer(rescaling_factor, rescaling_factor) #(km / s)**2'''
-            covar_bin = self.get_BOSS_covariance_single_z(bb)
+            covar_bin = self.get_BOSS_covariance_single_z(self.zout[bb])
 
             if self.fix_error_ratio:
                 fix_rescaling_factor = self.error_ratio * np.mean(std_bin) / np.mean(np.sqrt(np.diag(covar_bin)))
