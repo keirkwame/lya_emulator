@@ -1,30 +1,42 @@
 import copy as cp
 import numpy as np
 import numpy.linalg as npl
+import numpy.random as npr
 
 import mean_flux as mf
 
 
 class Compression(object):
     """Class to handle data compression"""
-    def __init__(self, data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=None):
+    def __init__(self, data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=None, add_noise=False, random_seed=42):
         """Redshift vector - in reverse order
         Fixed covariance matrix - full (though probably sparse) data_dimensions^2 matrix - should default to zeros"""
         self.redshift_vector = redshift_vector
         self.fixed_covariance_matrix = fixed_covariance_matrix
         self.emulator_object = emulator_object
+        self.add_noise = add_noise
+        self.random_seed = random_seed
 
         self.parameter_vector = parameter_vector
         if self.parameter_vector is None:
             self.data_vector = data_vector
+            if add_noise:
+                self.data_vector += self.get_noise_Gaussian_realisation(self.fixed_covariance_matrix, seed=self.random_seed)
         else:
-            self.data_vector, _ = self._get_data_vector_and_covariance_from_emulator(self.parameter_vector)
+            self.data_vector, _ = self._get_data_vector_and_covariance_from_emulator(self.parameter_vector, add_noise=self.add_noise)
 
-    def _get_data_vector_and_covariance_from_emulator(self, parameter_vector):
+    def get_noise_Gaussian_realisation(self, covariance_matrix, seed=42):
+        """Get a noise realisation as drawn from a multivariate Gaussian distribution with zero mean"""
+        npr.seed(seed=seed)
+        return npr.multivariate_normal(np.zeros(covariance_matrix.shape[0]), covariance_matrix)
+
+    def _get_data_vector_and_covariance_from_emulator(self, parameter_vector, add_noise=False):
         """Emulate data vector and covariance (and add any fixed covariance)"""
         mean_flux_parameters = mf.mean_flux_slope_to_factor(self.redshift_vector, parameter_vector[0])
         data_vector, std_diagonal = self.emulator_object.predict(parameter_vector[1:].reshape(1, -1), tau0_factors=mean_flux_parameters)
         total_covariance_matrix = self.fixed_covariance_matrix + np.diag(std_diagonal[0] ** 2)
+        if add_noise: #Add realisation of noise drawn from Gaussian distribution with fixed covariance matrix
+            data_vector += self.get_noise_Gaussian_realisation(self.fixed_covariance_matrix, seed=self.random_seed)
         return data_vector[0], total_covariance_matrix
 
     def _invert_block_diagonal_covariance(self, full_covariance_matrix):
@@ -47,7 +59,7 @@ class Compression(object):
         for i in range(parameter_vector.shape[0]): #Loop over parameters
             perturbed_parameter_vector = cp.deepcopy(parameter_vector)
             perturbed_parameter_vector[i] *= 1.01
-            perturbed_data_vector, perturbed_covariance = self._get_data_vector_and_covariance_from_emulator(perturbed_parameter_vector)
+            perturbed_data_vector, perturbed_covariance = self._get_data_vector_and_covariance_from_emulator(perturbed_parameter_vector, add_noise=self.add_noise)
             delta_parameter = perturbed_parameter_vector - parameter_vector
             data_gradient[i, :] = (perturbed_data_vector - data_vector) / delta_parameter[i]
             covariance_gradient[i, :, :] = (perturbed_covariance - covariance) / delta_parameter[i]
@@ -65,7 +77,7 @@ class Compression(object):
 
     def get_Fisher_matrix(self, fiducial_parameter_vector):
         """Get the Fisher matrix (for a Gaussian likelihood)"""
-        fiducial_data_vector, fiducial_covariance_matrix = self._get_data_vector_and_covariance_from_emulator(
+        _, fiducial_covariance_matrix = self._get_data_vector_and_covariance_from_emulator(
             fiducial_parameter_vector)
         fiducial_inverse_covariance = self._invert_block_diagonal_covariance(fiducial_covariance_matrix)  # dims: p x p
         fiducial_data_gradient, fiducial_covariance_gradient = self._get_gradients_from_emulator_analytical(
@@ -86,12 +98,12 @@ class Compression(object):
 
 class ScoreFunctionCompression(Compression):
     """Sub-class to handle data compression to the score function"""
-    def __init__(self, data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=None):
-        super(ScoreFunctionCompression, self).__init__(data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=parameter_vector)
+    def __init__(self, data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=None, add_noise=False, random_seed=42):
+        super(ScoreFunctionCompression, self).__init__(data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=parameter_vector, add_noise=add_noise, random_seed=random_seed)
 
     def compress_data_vector(self, fiducial_parameter_vector):
         """Compress data to score function"""
-        fiducial_data_vector, fiducial_covariance_matrix = self._get_data_vector_and_covariance_from_emulator(fiducial_parameter_vector)
+        fiducial_data_vector, fiducial_covariance_matrix = self._get_data_vector_and_covariance_from_emulator(fiducial_parameter_vector, add_noise=self.add_noise)
         fiducial_inverse_covariance = self._invert_block_diagonal_covariance(fiducial_covariance_matrix) #dims: p x p
         fiducial_data_gradient, fiducial_covariance_gradient = self._get_gradients_from_emulator_analytical(fiducial_parameter_vector)
         #, fiducial_data_vector, fiducial_covariance_matrix)
@@ -113,20 +125,20 @@ class ScoreFunctionCompression(Compression):
 
 class IMNNsCompression(Compression):
     """Sub-class to handle data compression by information maximising neural networks (IMNNs)"""
-    def __init__(self, data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=None):
-        super(IMNNsCompression, self).__init__(data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=parameter_vector)
+    def __init__(self, data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=None, add_noise=False, random_seed=42):
+        super(IMNNsCompression, self).__init__(data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=parameter_vector, add_noise=add_noise, random_seed=random_seed)
 
     def compress_data_vector(self):
         """Compress data by IMNNs"""
         pass
 
 
-def parameter_vector_to_compressed_data_vector_score_function(parameter_vector, fiducial_parameter_vector, emulator_object, fixed_covar, redshift_vector=np.arange(4.2, 2.1, -0.2)):
+def parameter_vector_to_compressed_data_vector_score_function(parameter_vector, fiducial_parameter_vector, emulator_object, fixed_covar, redshift_vector=np.arange(4.2, 2.1, -0.2), add_noise=False):
     """Helper function for generating compressed data vector (score function) for given parameter vector"""
-    compression_instance = ScoreFunctionCompression(None, redshift_vector, fixed_covar, emulator_object, parameter_vector=parameter_vector)
+    compression_instance = ScoreFunctionCompression(None, redshift_vector, fixed_covar, emulator_object, parameter_vector=parameter_vector, add_noise=add_noise)
     return compression_instance.compress_data_vector_linearised(fiducial_parameter_vector)
 
-def data_vector_to_compressed_data_vector_score_function(data_vector, fiducial_parameter_vector, emulator_object, fixed_covar, redshift_vector=np.arange(4.2, 2.1, -0.2)):
+def data_vector_to_compressed_data_vector_score_function(data_vector, fiducial_parameter_vector, emulator_object, fixed_covar, redshift_vector=np.arange(4.2, 2.1, -0.2), add_noise=False):
     """Helper function for compressing a given data vector (to the score function)"""
-    compression_instance = ScoreFunctionCompression(data_vector, redshift_vector, fixed_covar, emulator_object)
+    compression_instance = ScoreFunctionCompression(data_vector, redshift_vector, fixed_covar, emulator_object, add_noise=add_noise)
     return compression_instance.compress_data_vector_linearised(fiducial_parameter_vector)
