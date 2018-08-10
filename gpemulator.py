@@ -180,8 +180,10 @@ class SkLearnGP(object):
                                                                                                    np.newaxis, :,
                                                                                                    np.newaxis]
         if mean_flux_sampling_parameters is not None:
-            gradient_of_mean_renorm = np.insert(gradient_of_mean_renorm, 0., 0., axis=1)
-            gradient_of_variance_renorm = np.insert(gradient_of_variance_renorm, 0., 0., axis=1)
+            #gradient_of_mean_renorm = np.insert(gradient_of_mean_renorm, 0., 0., axis=1)
+            gradient_of_mean_renorm = np.pad(gradient_of_mean_renorm, ((0, 0), (1, 0), (0, 0)), 'constant')
+            #gradient_of_variance_renorm = np.insert(gradient_of_variance_renorm, 0., 0., axis=1)
+            gradient_of_variance_renorm = np.pad(gradient_of_variance_renorm, ((0, 0), (1, 0), (0, 0)), 'constant')
             mean_flux_slope_correction = d_tau_emulated_d_dtau0_sampled(redshift, tau0=mean_flux_sampling_parameters[1], slope=mean_flux_sampling_parameters[0], pivot_redshift=pivot_redshift)
             mean_flux_amplitude_correction = d_tau_emulated_d_tau0_sampled(redshift, slope=mean_flux_sampling_parameters[0], pivot_redshift=pivot_redshift)
             gradient_of_mean_renorm[:, 0, :] = gradient_of_mean_renorm[:, 1, :] * mean_flux_slope_correction

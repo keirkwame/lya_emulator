@@ -31,12 +31,12 @@ class Compression(object):
         """Efficiently invert block diagonal covariance matrix"""
         inverse_covariance_matrix = np.zeros_like(full_covariance_matrix)
         nz = self.redshift_vector.shape[0]
-        nk = full_covariance_matrix.shape[0] / nz
+        nk = int(full_covariance_matrix.shape[0] / nz)
         for z in range(nz): #Loop over blocks by redshift
             start_index = nk * z
             end_index = nk * (z + 1)
-            inverse_covariance_block = npl.inv(full_covariance_matrix[start_index: end_index, start_index, end_index])
-            inverse_covariance_matrix[start_index: end_index, start_index, end_index] = inverse_covariance_block
+            inverse_covariance_block = npl.inv(full_covariance_matrix[start_index: end_index, start_index: end_index])
+            inverse_covariance_matrix[start_index: end_index, start_index: end_index] = inverse_covariance_block
         return inverse_covariance_matrix
 
     def _get_gradients_from_emulator(self, parameter_vector, data_vector, covariance):
@@ -87,7 +87,7 @@ class Compression(object):
 class ScoreFunctionCompression(Compression):
     """Sub-class to handle data compression to the score function"""
     def __init__(self, data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=None):
-        super(Compression, self).__init__(data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=parameter_vector)
+        super(ScoreFunctionCompression, self).__init__(data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=parameter_vector)
 
     def compress_data_vector(self, fiducial_parameter_vector):
         """Compress data to score function"""
@@ -114,7 +114,7 @@ class ScoreFunctionCompression(Compression):
 class IMNNsCompression(Compression):
     """Sub-class to handle data compression by information maximising neural networks (IMNNs)"""
     def __init__(self, data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=None):
-        super(Compression, self).__init__(data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=parameter_vector)
+        super(IMNNsCompression, self).__init__(data_vector, redshift_vector, fixed_covariance_matrix, emulator_object, parameter_vector=parameter_vector)
 
     def compress_data_vector(self):
         """Compress data by IMNNs"""

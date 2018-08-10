@@ -190,7 +190,7 @@ class LikelihoodClass(object):
         nz = len(self.zout)
         n_data_points = nkf * nz
         covariance_full = np.zeros((n_data_points, n_data_points))
-        for i in range(self.zout): #Loop over redshifts (in descending order)
+        for i in range(self.zout.shape[0]): #Loop over redshifts (in descending order)
             start_index = i * nkf
             end_index = (i+1) * nkf
             covariance_full[start_index:end_index, start_index:end_index] = self.get_BOSS_covariance_single_z(self.zout[i])
