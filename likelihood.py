@@ -146,12 +146,14 @@ class LikelihoodClass(object):
         for bb in range(nz):
             diff_bin = diff[nkf*bb:nkf*(bb+1)]
             std_bin = std[0,nkf*bb:nkf*(bb+1)]
-            covar_bin = self.sdss.get_covar(sdssz[bb])
+            #covar_bin = self.sdss.get_covar(sdssz[bb])
 
             #Rescale mock measurement covariance matrix to match BOSS percentage accuracy
-            if self.rescale_data_error:
+            '''if self.rescale_data_error:
                 rescaling_factor = self.data_fluxpower[nkf*bb:nkf*(bb+1)] / self.BOSS_flux_power[bb] #Rescale 1 sigma
-                covar_bin *= np.outer(rescaling_factor, rescaling_factor) #(km / s)**2
+                covar_bin *= np.outer(rescaling_factor, rescaling_factor) #(km / s)**2'''
+            covar_bin = self.get_BOSS_covariance_single_z(self.zout[bb])
+
             if self.fix_error_ratio:
                 fix_rescaling_factor = self.error_ratio * np.mean(std_bin) / np.mean(np.sqrt(np.diag(covar_bin)))
                 covar_bin *= np.outer(fix_rescaling_factor, fix_rescaling_factor)
@@ -170,6 +172,29 @@ class LikelihoodClass(object):
             assert 0 > chi2 > -2**31
             assert not np.isnan(chi2)
         return chi2
+
+    def get_BOSS_covariance_single_z(self, redshift):
+        """Get the BOSS covariance matrix at a given redshift"""
+        redshift_index = np.nonzero(self.zout == redshift)[0][0]
+        covariance_unscaled = self.sdss.get_covar(redshift)
+        if not self.rescale_data_error:
+            return covariance_unscaled
+        else:
+            nkf = len(self.kf)
+            rescaling_factor = self.data_fluxpower[nkf*redshift_index:nkf*(redshift_index+1)] / self.BOSS_flux_power[redshift_index]
+            return covariance_unscaled * np.outer(rescaling_factor, rescaling_factor)
+
+    def get_BOSS_covariance_full(self):
+        """Get the full BOSS covariance matrix (for all redshifts)"""
+        nkf = len(self.kf)
+        nz = len(self.zout)
+        n_data_points = nkf * nz
+        covariance_full = np.zeros((n_data_points, n_data_points))
+        for i in range(self.zout.shape[0]): #Loop over redshifts (in descending order)
+            start_index = i * nkf
+            end_index = (i+1) * nkf
+            covariance_full[start_index:end_index, start_index:end_index] = self.get_BOSS_covariance_single_z(self.zout[i])
+        return covariance_full
 
     def do_sampling(self, savefile, nwalkers=100, burnin=5000, nsamples=5000, while_loop=True, include_emulator_error=True):
         """Initialise and run emcee."""
@@ -271,7 +296,7 @@ class LikelihoodClass(object):
         exploitation_term = self.likelihood(params) #Log-posterior
 
         relative_weight = 1.
-        posterior_estimated_error = np.dot(self.emulated_flux_power_std[0], np.dot(a, self.emulated_flux_power_std[0]))
+        posterior_estimated_error = np.dot(self.emulated_flux_power_std[0], np.dot(self.get_BOSS_covariance_full(), self.emulated_flux_power_std[0]))
         exploration_term = relative_weight * posterior_estimated_error
 
         return exploitation_term + exploration_term
