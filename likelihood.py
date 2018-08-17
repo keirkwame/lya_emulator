@@ -67,6 +67,8 @@ class LikelihoodClass(object):
         self.fix_error_ratio = fix_error_ratio
         self.error_ratio = error_ratio
 
+        self._inverse_BOSS_covariance_full = None
+
         #Use the BOSS covariance matrix
         self.sdss = lyman_data.BOSSData()
         #'Data' now is a simulation
@@ -210,6 +212,12 @@ class LikelihoodClass(object):
             covariance_full[start_index:end_index, start_index:end_index] = self.get_BOSS_covariance_single_z(self.zout[i])
         return covariance_full
 
+    def get_inverse_BOSS_covariance_full(self):
+        """Get the inverse of the full BOSS covariance matrix (for all redshifts)"""
+        if self._inverse_BOSS_covariance_full is None:
+            self._inverse_BOSS_covariance_full = invert_block_diagonal_covariance(self.get_BOSS_covariance_full(), self.zout.shape[0])
+        return self._inverse_BOSS_covariance_full
+
     def do_sampling(self, savefile, nwalkers=100, burnin=5000, nsamples=5000, while_loop=True, include_emulator_error=True):
         """Initialise and run emcee."""
         pnames = self.emulator.print_pnames()
@@ -304,16 +312,22 @@ class LikelihoodClass(object):
             assert self.emulated_flux_power_std[0].size == np.array(self.exact_flux_power_std).size
             return np.mean(self.emulated_flux_power_std[0]) / np.mean(np.array(self.exact_flux_power_std))
 
-    def acquisition_function_GP_UCB(self, params):
+    def acquisition_function_GP_UCB(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.):
         """Evaluate the GP-UCB at given parameter vector. This is an acquisition function for determining where to run
         new training simulations"""
-        exploitation_term = self.likelihood(params) #Log-posterior
+        assert iteration_number >= 1.
+        assert 0. < delta < 1.
+        if self.mf_slope:
+            n_emulated_params = params.shape[0] - 1
+        else:
+            n_emulated_params = params.shape[0]
 
-        relative_weight = 1.
+        exploitation_term = self.likelihood(params) * exploitation_weight #Log-posterior [weighted]
 
-        inverse_measurement_covariance = invert_block_diagonal_covariance(self.get_BOSS_covariance_full(), self.zout.shape[0])
+        exploration_weight = math.sqrt(nu * 2. * math.log((iteration_number**((n_emulated_params / 2.) + 2.)) * (math.pi**2) / 3. / delta))
+        inverse_measurement_covariance = self.get_inverse_BOSS_covariance_full()
         posterior_estimated_error = np.dot(self.emulated_flux_power_std[0], np.dot(inverse_measurement_covariance, self.emulated_flux_power_std[0]))
-        exploration_term = relative_weight * posterior_estimated_error
+        exploration_term = exploration_weight * posterior_estimated_error
 
         return exploitation_term + exploration_term
 
@@ -360,13 +374,29 @@ class LikelihoodClass(object):
         rsamples = np.array([rr(i) for i in range(samples)])
         return self._interpolate_err_grid(i, j, rsamples, use_error_ratio=use_error_ratio)
 
+    def _get_parameter_grid_single_slice(self, i, j, random_samples=True, samples=30000):
+        """Get grid of parameter values on just a single slice through the hyper-volume"""
+        rsamples = np.ones((samples, np.size(self.param_limits[:,0]))) * 0.5
+        if random_samples:
+            rsamples[:, i] = np.random.rand(samples)
+            rsamples[:, j] = np.random.rand(samples)
+        else:
+            slice_samples = np.mgrid[0:1:200j, 0:1:200j]
+            rsamples[:, i] = slice_samples[0].flatten()
+            rsamples[:, j] = slice_samples[1].flatten()
+        return rsamples * (self.param_limits[np.newaxis, :, 1] - self.param_limits[np.newaxis, :, 0]) + self.param_limits[np.newaxis, :, 0]
+
     def make_err_grid_single_slice(self, i, j, samples=30000, use_error_ratio=False):
         """Make an error grid on just a single slice through the hyper-volume"""
-        rsamples = np.ones((samples, np.size(self.param_limits[:,0]))) * 0.5
-        rsamples[:, i] = np.random.rand(samples)
-        rsamples[:, j] = np.random.rand(samples)
-        rsamples = rsamples * (self.param_limits[np.newaxis, :, 1] - self.param_limits[np.newaxis, :, 0]) + self.param_limits[np.newaxis, :, 0]
+        rsamples = self._get_parameter_grid_single_slice(i, j, samples=samples)
         return self._interpolate_err_grid(i, j, rsamples, use_error_ratio=use_error_ratio)
+
+    def make_grid_acquisition_function(self, i, j, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.):
+        """Make a grid of acquisition function evaluations on a 2D slice through the hyper-volume"""
+        parameter_samples = self._get_parameter_grid_single_slice(i, j, random_samples=False)
+        acquisition_function = lambda x: self.acquisition_function_GP_UCB(x, iteration_number=iteration_number, delta=delta, nu=nu, exploitation_weight=exploitation_weight)
+        acquisition_samples = [acquisition_function(parameter_vector) for parameter_vector in parameter_samples]
+        return acquisition_samples.reshape((math.sqrt(acquisition_samples.shape[0]), -1))
 
 if __name__ == "__main__":
     like = LikelihoodClass(basedir=os.path.expanduser("~/data/Lya_Boss/hires_knots_refine"), datadir=os.path.expanduser("~/data/Lya_Boss/hires_knots_test/AA0.97BB1.3CC0.67DD1.3heat_slope0.083heat_amp0.92hub0.69/output"))
