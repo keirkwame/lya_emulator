@@ -3,6 +3,7 @@ import numpy as np
 import numpy.linalg as npl
 import numpy.random as npr
 
+import likelihood as li
 import mean_flux as mf
 
 
@@ -41,15 +42,15 @@ class Compression(object):
 
     def _invert_block_diagonal_covariance(self, full_covariance_matrix):
         """Efficiently invert block diagonal covariance matrix"""
-        inverse_covariance_matrix = np.zeros_like(full_covariance_matrix)
+        '''inverse_covariance_matrix = np.zeros_like(full_covariance_matrix)
         nz = self.redshift_vector.shape[0]
         nk = int(full_covariance_matrix.shape[0] / nz)
         for z in range(nz): #Loop over blocks by redshift
             start_index = nk * z
             end_index = nk * (z + 1)
             inverse_covariance_block = npl.inv(full_covariance_matrix[start_index: end_index, start_index: end_index])
-            inverse_covariance_matrix[start_index: end_index, start_index: end_index] = inverse_covariance_block
-        return inverse_covariance_matrix
+            inverse_covariance_matrix[start_index: end_index, start_index: end_index] = inverse_covariance_block'''
+        return li.invert_block_diagonal_covariance(full_covariance_matrix, self.redshift_vector.shape[0])
 
     def _get_gradients_from_emulator(self, parameter_vector, data_vector, covariance):
         """Estimate gradient of data vector and covariance using emulator for perturbed parameter values"""

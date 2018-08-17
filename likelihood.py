@@ -3,6 +3,7 @@ import os
 import os.path
 import math
 import numpy as np
+import numpy.linalg as npl
 import numpy.testing as npt
 import emcee
 import coarse_grid
@@ -44,6 +45,19 @@ def gelman_rubin(chain):
     var_t = (n - 1) / n * W + 1 / n * B
     R = np.sqrt(var_t / W)
     return R
+
+def invert_block_diagonal_covariance(full_covariance_matrix, n_blocks):
+    """Efficiently invert block diagonal covariance matrix"""
+    inverse_covariance_matrix = np.zeros_like(full_covariance_matrix)
+    nz = n_blocks
+    nk = int(full_covariance_matrix.shape[0] / nz)
+    for z in range(nz): #Loop over blocks by redshift
+        start_index = nk * z
+        end_index = nk * (z + 1)
+        inverse_covariance_block = npl.inv(full_covariance_matrix[start_index: end_index, start_index: end_index])
+        inverse_covariance_matrix[start_index: end_index, start_index: end_index] = inverse_covariance_block
+    return inverse_covariance_matrix
+
 
 class LikelihoodClass(object):
     """Class to contain likelihood computations."""
