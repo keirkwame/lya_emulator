@@ -265,6 +265,17 @@ class LikelihoodClass(object):
             assert self.emulated_flux_power_std[0].size == np.array(self.exact_flux_power_std).size
             return np.mean(self.emulated_flux_power_std[0]) / np.mean(np.array(self.exact_flux_power_std))
 
+    def acquisition_function_GP_UCB(self, params):
+        """Evaluate the GP-UCB at given parameter vector. This is an acquisition function for determining where to run
+        new training simulations"""
+        exploitation_term = self.likelihood(params) #Log-posterior
+
+        relative_weight = 1.
+        posterior_estimated_error = np.dot(self.emulated_flux_power_std[0], np.dot(a, self.emulated_flux_power_std[0]))
+        exploration_term = relative_weight * posterior_estimated_error
+
+        return exploitation_term + exploration_term
+
     def check_for_refinement(self, conf = 0.95, thresh = 1.05):
         """Crude check for refinement: check whether the likelihood is dominated by
            emulator error at the 1 sigma contours."""
@@ -294,17 +305,27 @@ class LikelihoodClass(object):
         assert np.shape(new_samples)[0] == nsamples
         self.emulator.gen_simulations(nsamples=nsamples, samples=new_samples)
 
+    def _interpolate_err_grid(self, i, j, rsamples, use_error_ratio=False):
+        randscores = [self.refine_metric(rr, use_error_ratio=use_error_ratio) for rr in rsamples]
+        grid_x, grid_y = np.mgrid[0:1:200j, 0:1:200j]
+        grid_x = grid_x * (self.param_limits[i,1] - self.param_limits[i,0]) + self.param_limits[i,0]
+        grid_y = grid_y * (self.param_limits[j,1] - self.param_limits[j,0]) + self.param_limits[j,0]
+        return spi.griddata(rsamples[:,(i,j)], randscores,(grid_x,grid_y),fill_value = 0)
+
     def make_err_grid(self, i, j, samples = 30000, use_error_ratio=False):
         """Make an error grid"""
         ndim = np.size(self.param_limits[:,0])
         rr = lambda x : np.random.rand(ndim)*(self.param_limits[:,1]-self.param_limits[:,0]) + self.param_limits[:,0]
         rsamples = np.array([rr(i) for i in range(samples)])
-        randscores = [self.refine_metric(rr, use_error_ratio=use_error_ratio) for rr in rsamples]
-        grid_x, grid_y = np.mgrid[0:1:200j, 0:1:200j]
-        grid_x = grid_x * (self.param_limits[i,1] - self.param_limits[i,0]) + self.param_limits[i,0]
-        grid_y = grid_y * (self.param_limits[j,1] - self.param_limits[j,0]) + self.param_limits[j,0]
-        grid = spi.griddata(rsamples[:,(i,j)], randscores,(grid_x,grid_y),fill_value = 0)
-        return grid
+        return self._interpolate_err_grid(i, j, rsamples, use_error_ratio=use_error_ratio)
+
+    def make_err_grid_single_slice(self, i, j, samples=30000, use_error_ratio=False):
+        """Make an error grid on just a single slice through the hyper-volume"""
+        rsamples = np.ones((samples, np.size(self.param_limits[:,0]))) * 0.5
+        rsamples[:, i] = np.random.rand(samples)
+        rsamples[:, j] = np.random.rand(samples)
+        rsamples = rsamples * (self.param_limits[np.newaxis, :, 1] - self.param_limits[np.newaxis, :, 0]) + self.param_limits[np.newaxis, :, 0]
+        return self._interpolate_err_grid(i, j, rsamples, use_error_ratio=use_error_ratio)
 
 if __name__ == "__main__":
     like = LikelihoodClass(basedir=os.path.expanduser("~/data/Lya_Boss/hires_knots_refine"), datadir=os.path.expanduser("~/data/Lya_Boss/hires_knots_test/AA0.97BB1.3CC0.67DD1.3heat_slope0.083heat_amp0.92hub0.69/output"))
