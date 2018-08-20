@@ -375,7 +375,9 @@ class LikelihoodClass(object):
         return self._interpolate_err_grid(i, j, rsamples, use_error_ratio=use_error_ratio)
 
     def _get_parameter_grid_single_slice(self, i, j, random_samples=True, samples=30000):
-        """Get grid of parameter values on just a single slice through the hyper-volume"""
+        """Get a grid of parameter values on a 2D slice through the hyper-volume"""
+        if not random_samples:
+            samples = 40000
         rsamples = np.ones((samples, np.size(self.param_limits[:,0]))) * 0.5
         if random_samples:
             rsamples[:, i] = np.random.rand(samples)
@@ -396,7 +398,7 @@ class LikelihoodClass(object):
         parameter_samples = self._get_parameter_grid_single_slice(i, j, random_samples=False)
         acquisition_function = lambda x: self.acquisition_function_GP_UCB(x, iteration_number=iteration_number, delta=delta, nu=nu, exploitation_weight=exploitation_weight)
         acquisition_samples = [acquisition_function(parameter_vector) for parameter_vector in parameter_samples]
-        return acquisition_samples.reshape((math.sqrt(acquisition_samples.shape[0]), -1))
+        return acquisition_samples.reshape((int(math.sqrt(acquisition_samples.shape[0])), -1))
 
 if __name__ == "__main__":
     like = LikelihoodClass(basedir=os.path.expanduser("~/data/Lya_Boss/hires_knots_refine"), datadir=os.path.expanduser("~/data/Lya_Boss/hires_knots_test/AA0.97BB1.3CC0.67DD1.3heat_slope0.083heat_amp0.92hub0.69/output"))
