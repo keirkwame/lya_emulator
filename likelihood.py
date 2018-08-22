@@ -10,6 +10,7 @@ import coarse_grid
 import flux_power
 import lyman_data
 import mean_flux as mflux
+import scipy.integrate as spg
 import scipy.interpolate as spi
 #from datetime import datetime
 
@@ -189,6 +190,15 @@ class LikelihoodClass(object):
             assert not np.isnan(chi2)
         return chi2
 
+    def likelihood_marginalised_mean_flux(self, params, include_emu=True, integration_options=None, verbose=True): #marginalised_axes=(0, 1)
+        """Evaluate (Gaussian) likelihood marginalised over mean flux parameter axes: (dtau0, tau0)"""
+        #assert len(marginalised_axes) == 2
+        assert self.mf_slope
+        likelihood_function = lambda dtau0, tau0: self.likelihood(np.concatenate(([dtau0,], [tau0,], params)), include_emu=include_emu)
+        integration_output = spg.nquad(likelihood_function, self.param_limits[:2], opts=integration_options, full_output=verbose)
+        print(integration_output)
+        return integration_output[0]
+
     def get_BOSS_covariance_single_z(self, redshift):
         """Get the BOSS covariance matrix at a given redshift"""
         redshift_index = np.nonzero(self.zout == redshift)[0][0]
@@ -312,6 +322,27 @@ class LikelihoodClass(object):
             assert self.emulated_flux_power_std[0].size == np.array(self.exact_flux_power_std).size
             return np.mean(self.emulated_flux_power_std[0]) / np.mean(np.array(self.exact_flux_power_std))
 
+    def _get_emulator_error_averaged_mean_flux(self, params):
+        """Get the emulator error having averaged over the mean flux parameter axes: (dtau0, tau0)"""
+        n_samples = 10
+        emulator_error_total = 0.
+        for dtau0 in np.linspace(self.param_limits[0, 0], self.param_limits[0, 1], num=n_samples):
+            for tau0 in np.linspace(self.param_limits[1, 0], self.param_limits[1, 1], num=n_samples):
+                _ = self.likelihood(np.concatenate(([dtau0,], [tau0,], params)))
+                emulator_error_total += self.emulated_flux_power_std[0]
+        return emulator_error_total / (n_samples ** 2)
+
+    def _get_GP_UCB_exploitation_term(self, objective_function, exploitation_weight=1.):
+        """Evaluate the exploitation term of the GP-UCB acquisition function"""
+        return objective_function * exploitation_weight
+
+    def _get_GP_UCB_exploration_term(self, data_vector_emulator_error, n_emulated_params, iteration_number=1, delta=0.5, nu=1.):
+        """Evaluate the exploration term of the GP-UCB acquisition function"""
+        exploration_weight = math.sqrt(nu * 2. * math.log((iteration_number**((n_emulated_params / 2.) + 2.)) * (math.pi**2) / 3. / delta))
+        inverse_measurement_covariance = self.get_inverse_BOSS_covariance_full()
+        posterior_estimated_error = np.dot(data_vector_emulator_error, np.dot(inverse_measurement_covariance, data_vector_emulator_error))
+        return exploration_weight * posterior_estimated_error
+
     def acquisition_function_GP_UCB(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.):
         """Evaluate the GP-UCB at given parameter vector. This is an acquisition function for determining where to run
         new training simulations"""
@@ -321,15 +352,17 @@ class LikelihoodClass(object):
             n_emulated_params = params.shape[0] - 1
         else:
             n_emulated_params = params.shape[0]
+        #exploitation_term = self.likelihood(params) * exploitation_weight #Log-posterior [weighted]
 
-        exploitation_term = self.likelihood(params) * exploitation_weight #Log-posterior [weighted]
+        exploitation = self._get_GP_UCB_exploitation_term(self.likelihood(params), exploitation_weight)
+        exploration = self._get_GP_UCB_exploration_term(self.emulated_flux_power_std[0], n_emulated_params, iteration_number=iteration_number, delta=delta, nu=nu)
+        return exploitation + exploration
 
-        exploration_weight = math.sqrt(nu * 2. * math.log((iteration_number**((n_emulated_params / 2.) + 2.)) * (math.pi**2) / 3. / delta))
-        inverse_measurement_covariance = self.get_inverse_BOSS_covariance_full()
-        posterior_estimated_error = np.dot(self.emulated_flux_power_std[0], np.dot(inverse_measurement_covariance, self.emulated_flux_power_std[0]))
-        exploration_term = exploration_weight * posterior_estimated_error
-
-        return exploitation_term + exploration_term
+    def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_options=None):
+        """Evaluate the GP-UCB acquisition function, having marginalised over mean flux parameter axes: (dtau0, tau0)"""
+        exploitation = self._get_GP_UCB_exploitation_term(self.likelihood_marginalised_mean_flux(params, integration_options=integration_options), exploitation_weight)
+        exploration = self._get_GP_UCB_exploration_term(self._get_emulator_error_averaged_mean_flux(params), params.size, iteration_number=iteration_number, delta=delta, nu=nu)
+        return exploitation + exploration
 
     def check_for_refinement(self, conf = 0.95, thresh = 1.05):
         """Crude check for refinement: check whether the likelihood is dominated by
@@ -395,10 +428,13 @@ class LikelihoodClass(object):
         randscores = [self.refine_metric(rr, use_error_ratio=use_error_ratio) for rr in rsamples]
         return self._interpolate_err_grid(i, j, rsamples, randscores)
 
-    def make_grid_acquisition_function(self, i, j, random_samples=True, samples=30000, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.):
+    def make_grid_acquisition_function(self, i, j, random_samples=True, samples=30000, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., mean_flux_marginalisation=True, likelihood_integration_options=None):
         """Make a grid of acquisition function evaluations on a 2D slice through the hyper-volume"""
         parameter_samples = self._get_parameter_grid_single_slice(i, j, random_samples=random_samples, samples=samples)
-        acquisition_function = lambda x: self.acquisition_function_GP_UCB(x, iteration_number=iteration_number, delta=delta, nu=nu, exploitation_weight=exploitation_weight)
+        if mean_flux_marginalisation:
+            acquisition_function = lambda x: self.acquisition_function_GP_UCB_marginalised_mean_flux(x[2:], iteration_number=iteration_number, delta=delta, nu=nu, exploitation_weight=exploitation_weight, integration_options=likelihood_integration_options)
+        else:
+            acquisition_function = lambda x: self.acquisition_function_GP_UCB(x, iteration_number=iteration_number, delta=delta, nu=nu, exploitation_weight=exploitation_weight)
         print('Evaluating acquisition function at parameter samples')
         acquisition_samples = np.array([acquisition_function(parameter_vector) for parameter_vector in parameter_samples])
         print('Forming grid of acquisition function evaluations')
