@@ -2,6 +2,7 @@
 import os
 import os.path
 import math
+import mpmath as mmh
 import numpy as np
 import numpy.linalg as npl
 import numpy.testing as npt
@@ -190,14 +191,14 @@ class LikelihoodClass(object):
             assert not np.isnan(chi2)
         return chi2
 
-    def likelihood_marginalised_mean_flux(self, params, include_emu=True, integration_options=None, verbose=True): #marginalised_axes=(0, 1)
+    def log_likelihood_marginalised_mean_flux(self, params, include_emu=True, integration_options=None, verbose=True): #marginalised_axes=(0, 1)
         """Evaluate (Gaussian) likelihood marginalised over mean flux parameter axes: (dtau0, tau0)"""
         #assert len(marginalised_axes) == 2
         assert self.mf_slope
-        likelihood_function = lambda dtau0, tau0: self.likelihood(np.concatenate(([dtau0,], [tau0,], params)), include_emu=include_emu)
-        integration_output = spg.nquad(likelihood_function, self.param_limits[:2], opts=integration_options, full_output=verbose)
+        likelihood_function = lambda dtau0, tau0: mmh.exp(self.likelihood(np.concatenate(([dtau0, tau0], params)), include_emu=include_emu))
+        integration_output = float(mmh.log(mmh.quad(likelihood_function, list(self.param_limits[0]), list(self.param_limits[1]), verbose=verbose))) #, opts=integration_options, full_output=verbose)
         print(integration_output)
-        return integration_output[0]
+        return integration_output #[0]
 
     def get_BOSS_covariance_single_z(self, redshift):
         """Get the BOSS covariance matrix at a given redshift"""
@@ -360,11 +361,11 @@ class LikelihoodClass(object):
 
     def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_options=None):
         """Evaluate the GP-UCB acquisition function, having marginalised over mean flux parameter axes: (dtau0, tau0)"""
-        #if exploitation_weight is None:
-        print('No exploitation term')
-        exploitation = 0.
-        #else:
-        #    exploitation = self._get_GP_UCB_exploitation_term(self.likelihood_marginalised_mean_flux(params, integration_options=integration_options), exploitation_weight=exploitation_weight)
+        if exploitation_weight is None:
+            print('No exploitation term')
+            exploitation = 0.
+        else:
+            exploitation = self._get_GP_UCB_exploitation_term(self.log_likelihood_marginalised_mean_flux(params, integration_options=integration_options), exploitation_weight=exploitation_weight)
         exploration = self._get_GP_UCB_exploration_term(self._get_emulator_error_averaged_mean_flux(params), params.size, iteration_number=iteration_number, delta=delta, nu=nu)
         return exploitation + exploration
 
