@@ -198,17 +198,18 @@ class LikelihoodClass(object):
         assert self.mf_slope
         likelihood_function = lambda dtau0, tau0: mmh.exp(self.likelihood(np.concatenate(([dtau0, tau0], params)), include_emu=include_emu) + 1000.)
         if integration_method == 'Monte-Carlo':
-            integration_output = self._do_Monte_Carlo_marginalisation(likelihood_function, n_samples=integration_options)
+            integration_output = (self._do_Monte_Carlo_marginalisation(likelihood_function, n_samples=integration_options),)
         else:
             integration_output = mmh.quad(likelihood_function, list(self.param_limits[0]), list(self.param_limits[1]), method=integration_options, error=True, verbose=verbose) #, opts=integration_options, full_output=verbose)
-            print(integration_output)
-            return float(mmh.log(integration_output[0])) - 1000.
+        print(integration_output)
+        return float(mmh.log(integration_output[0])) - 1000.
 
     def _do_Monte_Carlo_marginalisation(self, function, n_samples=6000):
         """Marginalise likelihood by Monte-Carlo integration"""
         random_samples = self.param_limits[:2, 0, np.newaxis] + (self.param_limits[:2, 1, np.newaxis] - self.param_limits[:2, 0, np.newaxis]) * npr.rand(2, n_samples)
         function_sum = 0.
         for i in range(n_samples):
+            print('Likelihood function evaluation number =', i + 1)
             function_sum += function(random_samples[0, i], random_samples[1, i])
         volume_factor = (self.param_limits[0, 1] - self.param_limits[0, 0]) * (self.param_limits[1, 1] - self.param_limits[1, 0])
         return volume_factor * function_sum / n_samples
