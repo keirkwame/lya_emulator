@@ -360,7 +360,11 @@ class LikelihoodClass(object):
 
     def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_options=None):
         """Evaluate the GP-UCB acquisition function, having marginalised over mean flux parameter axes: (dtau0, tau0)"""
-        exploitation = self._get_GP_UCB_exploitation_term(self.likelihood_marginalised_mean_flux(params, integration_options=integration_options), exploitation_weight)
+        #if exploitation_weight is None:
+        print('No exploitation term')
+        exploitation = 0.
+        #else:
+        #    exploitation = self._get_GP_UCB_exploitation_term(self.likelihood_marginalised_mean_flux(params, integration_options=integration_options), exploitation_weight=exploitation_weight)
         exploration = self._get_GP_UCB_exploration_term(self._get_emulator_error_averaged_mean_flux(params), params.size, iteration_number=iteration_number, delta=delta, nu=nu)
         return exploitation + exploration
 
