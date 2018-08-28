@@ -191,14 +191,14 @@ class LikelihoodClass(object):
             assert not np.isnan(chi2)
         return chi2
 
-    def log_likelihood_marginalised_mean_flux(self, params, include_emu=True, integration_options=None, verbose=True): #marginalised_axes=(0, 1)
+    def log_likelihood_marginalised_mean_flux(self, params, include_emu=True, integration_options='tanh-sinh', verbose=True): #marginalised_axes=(0, 1)
         """Evaluate (Gaussian) likelihood marginalised over mean flux parameter axes: (dtau0, tau0)"""
         #assert len(marginalised_axes) == 2
         assert self.mf_slope
-        likelihood_function = lambda dtau0, tau0: mmh.exp(self.likelihood(np.concatenate(([dtau0, tau0], params)), include_emu=include_emu))
-        integration_output = float(mmh.log(mmh.quad(likelihood_function, list(self.param_limits[0]), list(self.param_limits[1]), verbose=verbose))) #, opts=integration_options, full_output=verbose)
+        likelihood_function = lambda dtau0, tau0: mmh.exp(self.likelihood(np.concatenate(([dtau0, tau0], params)), include_emu=include_emu) + 1000.)
+        integration_output = mmh.quad(likelihood_function, list(self.param_limits[0]), list(self.param_limits[1]), method=integration_options, error=True, verbose=verbose) #, opts=integration_options, full_output=verbose)
         print(integration_output)
-        return integration_output #[0]
+        return float(mmh.log(integration_output[0])) - 1000.
 
     def get_BOSS_covariance_single_z(self, redshift):
         """Get the BOSS covariance matrix at a given redshift"""
