@@ -14,6 +14,7 @@ import lyman_data
 import mean_flux as mflux
 import scipy.integrate as spg
 import scipy.interpolate as spi
+import scipy.optimize as spo
 #from datetime import datetime
 
 def _siIIIcorr(kf):
@@ -192,17 +193,17 @@ class LikelihoodClass(object):
             assert not np.isnan(chi2)
         return chi2
 
-    def log_likelihood_marginalised_mean_flux(self, params, include_emu=True, integration_options='tanh-sinh', verbose=True, integration_method='Monte-Carlo'): #marginalised_axes=(0, 1)
+    def log_likelihood_marginalised_mean_flux(self, params, include_emu=True, integration_options='gauss-legendre', verbose=True, integration_method='Quadrature'): #marginalised_axes=(0, 1)
         """Evaluate (Gaussian) likelihood marginalised over mean flux parameter axes: (dtau0, tau0)"""
         #assert len(marginalised_axes) == 2
         assert self.mf_slope
-        likelihood_function = lambda dtau0, tau0: mmh.exp(self.likelihood(np.concatenate(([dtau0, tau0], params)), include_emu=include_emu) + 1000.)
-        if integration_method == 'Monte-Carlo':
+        likelihood_function = lambda dtau0, tau0: mmh.exp(self.likelihood(np.concatenate(([dtau0, tau0], params)), include_emu=include_emu))
+        if integration_method == 'Quadrature':
+            integration_output = mmh.quad(likelihood_function, list(self.param_limits[0]), list(self.param_limits[1]), method=integration_options, error=True, verbose=verbose)
+        elif integration_method == 'Monte-Carlo':
             integration_output = (self._do_Monte_Carlo_marginalisation(likelihood_function, n_samples=integration_options),)
-        else:
-            integration_output = mmh.quad(likelihood_function, list(self.param_limits[0]), list(self.param_limits[1]), method=integration_options, error=True, verbose=verbose) #, opts=integration_options, full_output=verbose)
         print(integration_output)
-        return float(mmh.log(integration_output[0])) - 1000.
+        return float(mmh.log(integration_output[0]))
 
     def _do_Monte_Carlo_marginalisation(self, function, n_samples=6000):
         """Marginalise likelihood by Monte-Carlo integration"""
@@ -373,7 +374,7 @@ class LikelihoodClass(object):
         exploration = self._get_GP_UCB_exploration_term(self.emulated_flux_power_std[0], n_emulated_params, iteration_number=iteration_number, delta=delta, nu=nu)
         return exploitation + exploration
 
-    def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_options=None):
+    def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_options='gauss-legendre'):
         """Evaluate the GP-UCB acquisition function, having marginalised over mean flux parameter axes: (dtau0, tau0)"""
         if exploitation_weight is None:
             print('No exploitation term')
@@ -382,6 +383,13 @@ class LikelihoodClass(object):
             exploitation = self._get_GP_UCB_exploitation_term(self.log_likelihood_marginalised_mean_flux(params, integration_options=integration_options), exploitation_weight=exploitation_weight)
         exploration = self._get_GP_UCB_exploration_term(self._get_emulator_error_averaged_mean_flux(params), params.size, iteration_number=iteration_number, delta=delta, nu=nu)
         return exploitation + exploration
+
+    def optimise_acquisition_function(self, starting_params, optimisation_bounds='default', optimisation_method=None, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.):
+        """Find parameter vector (marginalised over mean flux parameters) at maximum of (GP-UCB) acquisition function"""
+        if optimisation_bounds == 'default': #Default to prior bounds
+            optimisation_bounds = [tuple(self.param_limits[2 + i]) for i in starting_params.shape[0]]
+        acquisition_function = lambda parameter_vector: self.acquisition_function_GP_UCB_marginalised_mean_flux(parameter_vector, iteration_number=iteration_number, delta=delta, nu=nu, exploitation_weight=exploitation_weight)
+        return spo.minimize(acquisition_function, starting_params, method=optimisation_method, bounds=optimisation_bounds)
 
     def check_for_refinement(self, conf = 0.95, thresh = 1.05):
         """Crude check for refinement: check whether the likelihood is dominated by
