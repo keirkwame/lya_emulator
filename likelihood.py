@@ -193,13 +193,16 @@ class LikelihoodClass(object):
             assert not np.isnan(chi2)
         return chi2
 
-    def log_likelihood_marginalised_mean_flux(self, params, include_emu=True, integration_options='gauss-legendre', verbose=True, integration_method='Quadrature'): #marginalised_axes=(0, 1)
+    def log_likelihood_marginalised_mean_flux(self, params, include_emu=True, integration_bounds='default', integration_options='gauss-legendre', verbose=True, integration_method='Quadrature'): #marginalised_axes=(0, 1)
         """Evaluate (Gaussian) likelihood marginalised over mean flux parameter axes: (dtau0, tau0)"""
         #assert len(marginalised_axes) == 2
         assert self.mf_slope
+        if integration_bounds == 'default':
+            integration_bounds = [list(self.param_limits[0]), list(self.param_limits[1])]
+
         likelihood_function = lambda dtau0, tau0: mmh.exp(self.likelihood(np.concatenate(([dtau0, tau0], params)), include_emu=include_emu))
         if integration_method == 'Quadrature':
-            integration_output = mmh.quad(likelihood_function, list(self.param_limits[0]), list(self.param_limits[1]), method=integration_options, error=True, verbose=verbose)
+            integration_output = mmh.quad(likelihood_function, integration_bounds[0], integration_bounds[1], method=integration_options, error=True, verbose=verbose)
         elif integration_method == 'Monte-Carlo':
             integration_output = (self._do_Monte_Carlo_marginalisation(likelihood_function, n_samples=integration_options),)
         print(integration_output)
@@ -374,21 +377,21 @@ class LikelihoodClass(object):
         exploration = self._get_GP_UCB_exploration_term(self.emulated_flux_power_std[0], n_emulated_params, iteration_number=iteration_number, delta=delta, nu=nu)
         return exploitation + exploration
 
-    def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_options='gauss-legendre'):
+    def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_bounds='default', integration_options='gauss-legendre'):
         """Evaluate the GP-UCB acquisition function, having marginalised over mean flux parameter axes: (dtau0, tau0)"""
         if exploitation_weight is None:
             print('No exploitation term')
             exploitation = 0.
         else:
-            exploitation = self._get_GP_UCB_exploitation_term(self.log_likelihood_marginalised_mean_flux(params, integration_options=integration_options), exploitation_weight=exploitation_weight)
+            exploitation = self._get_GP_UCB_exploitation_term(self.log_likelihood_marginalised_mean_flux(params, integration_bounds=integration_bounds, integration_options=integration_options), exploitation_weight=exploitation_weight)
         exploration = self._get_GP_UCB_exploration_term(self._get_emulator_error_averaged_mean_flux(params), params.size, iteration_number=iteration_number, delta=delta, nu=nu)
         return exploitation + exploration
 
-    def optimise_acquisition_function(self, starting_params, optimisation_bounds='default', optimisation_method=None, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.):
+    def optimise_acquisition_function(self, starting_params, optimisation_bounds='default', optimisation_method=None, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_bounds='default'):
         """Find parameter vector (marginalised over mean flux parameters) at maximum of (GP-UCB) acquisition function"""
         if optimisation_bounds == 'default': #Default to prior bounds
             optimisation_bounds = [tuple(self.param_limits[2 + i]) for i in range(starting_params.shape[0])]
-        optimisation_function = lambda parameter_vector: -1. * self.acquisition_function_GP_UCB_marginalised_mean_flux(parameter_vector, iteration_number=iteration_number, delta=delta, nu=nu, exploitation_weight=exploitation_weight)
+        optimisation_function = lambda parameter_vector: -1. * self.acquisition_function_GP_UCB_marginalised_mean_flux(parameter_vector, iteration_number=iteration_number, delta=delta, nu=nu, exploitation_weight=exploitation_weight, integration_bounds=integration_bounds)
         return spo.minimize(optimisation_function, starting_params, method=optimisation_method, bounds=optimisation_bounds)
 
     def check_for_refinement(self, conf = 0.95, thresh = 1.05):
