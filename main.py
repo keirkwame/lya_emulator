@@ -35,5 +35,5 @@ if __name__ == "__main__":
     output = run_and_plot_likelihood_samples(testdir, emudir, likelihood_samples_plot_savefile, plotname, plot_posterior=True,
                                              chain_savedir=chain_savedir, n_burn_in_steps=500, n_steps=1500,
                                              while_loop=False, mean_flux_label='s', return_class_only=True,
-                                             rescale_data_error=True, fix_error_ratio=False, error_ratio=100.,
+                                             rescale_data_error=False, fix_error_ratio=False, error_ratio=100.,
                                              include_emulator_error=True)  # , max_z=2.6)
