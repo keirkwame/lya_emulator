@@ -7,7 +7,7 @@ import numpy as np
 import numpy.linalg as npl
 import numpy.random as npr
 import numpy.testing as npt
-import emcee
+#import emcee
 import coarse_grid
 import flux_power
 import lyman_data
@@ -251,6 +251,7 @@ class LikelihoodClass(object):
 
     def do_sampling(self, savefile, nwalkers=100, burnin=5000, nsamples=5000, while_loop=True, include_emulator_error=True):
         """Initialise and run emcee."""
+        import emcee #Import inside function because could mess up multiprocessing
         pnames = self.emulator.print_pnames()
         if self.mf_slope:
             pnames = [('dtau0',r'd\tau_0'),]+pnames
