@@ -67,7 +67,7 @@ def invert_block_diagonal_covariance(full_covariance_matrix, n_blocks):
 
 class LikelihoodClass(object):
     """Class to contain likelihood computations."""
-    def __init__(self, basedir, datadir, mean_flux='s', max_z = 4.2, t0_training_value = 0.95, rescale_data_error=False, fix_error_ratio=False, error_ratio=100.):
+    def __init__(self, basedir, datadir, mean_flux='s', max_z = 4.2, t0_training_value = 0.95, rescale_data_error=False, fix_error_ratio=False, error_ratio=100., optimise_GP=True):
         """Initialise the emulator by loading the flux power spectra from the simulations."""
         self.rescale_data_error = rescale_data_error
         self.fix_error_ratio = fix_error_ratio
@@ -120,7 +120,8 @@ class LikelihoodClass(object):
         self.ndim = np.shape(self.param_limits)[0]
         assert np.shape(self.param_limits)[1] == 2
         #print('Beginning to generate emulator at', str(datetime.now()))
-        self.gpemu = self.emulator.get_emulator(max_z=max_z)
+        if optimise_GP:
+            self.gpemu = self.emulator.get_emulator(max_z=max_z)
         #print('Finished generating emulator at', str(datetime.now()))
 
     def likelihood(self, params, include_emu=True):
@@ -420,10 +421,11 @@ class LikelihoodClass(object):
                 break
         return limits
 
-    def refinement(self,nsamples,confidence=0.99):
+    def refinement(self,nsamples,confidence=0.99, new_samples=None):
         """Do the refinement step."""
-        new_limits = self.new_parameter_limits(confidence=confidence)
-        new_samples = self.emulator.build_params(nsamples=nsamples,limits=new_limits, use_existing=True)
+        if new_samples is None:
+            new_limits = self.new_parameter_limits(confidence=confidence)
+            new_samples = self.emulator.build_params(nsamples=nsamples,limits=new_limits, use_existing=True)
         assert np.shape(new_samples)[0] == nsamples
         self.emulator.gen_simulations(nsamples=nsamples, samples=new_samples)
 
