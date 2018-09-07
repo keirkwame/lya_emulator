@@ -211,7 +211,7 @@ def make_plot(chainfile, savefile, true_parameter_values=None):
     corner.corner(samples, labels=pnames, truths=true_parameter_values)
     plt.savefig(savefile)
 
-def generate_likelihood_class(testdir, emudir, simulation_sub_directory=None, mean_flux_label='c', max_z = 4.2, rescale_data_error=False, fix_error_ratio=False, error_ratio=100.):
+def generate_likelihood_class(testdir, emudir, simulation_sub_directory=None, mean_flux_label='c', max_z = 4.2, rescale_data_error=False, fix_error_ratio=False, error_ratio=100., optimise_GP=True):
     if simulation_sub_directory is None:
         #simulation_sub_directory = "/AA0.97BB1.3CC0.67DD1.3heat_slope0.083heat_amp0.92hub0.69/output"
         #simulation_sub_directory = '/AA1.1BB1.1CC1.4DD1.4heat_slope0.43heat_amp1hub0.71/output'
@@ -219,7 +219,13 @@ def generate_likelihood_class(testdir, emudir, simulation_sub_directory=None, me
         #simulation_sub_directory = '/ns0.96As2.6e-09heat_slope-0.19heat_amp1hub0.74/output'
         #simulation_sub_directory = '/HeliumHeatAmp0.92/output'
     print('Beginning to initialise LikelihoodClass at', str(datetime.now()))
-    return LikelihoodClass(basedir=emudir, datadir=testdir+simulation_sub_directory, mean_flux=mean_flux_label, max_z=max_z, rescale_data_error=rescale_data_error, fix_error_ratio=fix_error_ratio, error_ratio=error_ratio)
+    return LikelihoodClass(basedir=emudir, datadir=testdir+simulation_sub_directory, mean_flux=mean_flux_label, max_z=max_z, rescale_data_error=rescale_data_error, fix_error_ratio=fix_error_ratio, error_ratio=error_ratio, optimise_GP=optimise_GP)
+
+def run_simulations(testdir, emudir, simulation_parameters, simulation_sub_directory=None, rescale_data_error=True, optimise_GP=True):
+    """Run some simulations"""
+    likelihood_class_instance = generate_likelihood_class(testdir, emudir, simulation_sub_directory=simulation_sub_directory, mean_flux_label='s', rescale_data_error=rescale_data_error, optimise_GP=optimise_GP)
+    likelihood_class_instance.refinement(simulation_parameters.shape[0], new_samples=simulation_parameters)
+    return 1
 
 def run_and_plot_likelihood_samples(testdir, emudir, savefile, plotname, plot_posterior=True, plot_refinement=False, chain_savedir=None, n_walkers=100, n_burn_in_steps=100, n_steps=400, while_loop=True, mean_flux_label='s', return_class_only=False, rescale_data_error=False, fix_error_ratio=False, error_ratio=100., include_emulator_error=True, max_z=4.2):
     """Generate some likelihood samples"""

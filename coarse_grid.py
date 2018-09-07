@@ -251,7 +251,7 @@ class KnotEmulator(Emulator):
         #Used for early iterations.
         #self.knot_pos = [0.15,0.475,0.75,1.19]
 
-    def _do_ic_generation(self,ev,npart,box):
+    def _do_ic_generation_knots(self,ev,npart,box): #Potentially risky to rename this
         """Do the actual IC generation."""
         outdir = os.path.join(self.basedir, self.build_dirname(ev))
         pn = self.param_names
