@@ -9,6 +9,7 @@ import json
 import numpy as np
 from SimulationRunner import simulationics
 from SimulationRunner import lyasimulation
+from SimulationRunner import clusters
 import latin_hypercube
 import flux_power
 import matter_power
@@ -171,7 +172,7 @@ class Emulator(object):
         #at 8 Mpc (k = 0.78) to camb pivot scale
         ns = ev[pn['ns']]
         wmap = (2e-3/(2*math.pi/8.))**(ns-1.) * ev[pn['As']]
-        ss = simulationics.SimulationICs(outdir=outdir, box=box,npart=npart, ns=ns, scalar_amp=wmap, code_args = ca, code_class=lyasimulation.LymanAlphaMPSim, hubble=hub, omega0=self.omegamh2/hub**2, omegab=0.0483)
+        ss = simulationics.SimulationICs(outdir=outdir, box=box,npart=npart, ns=ns, scalar_amp=wmap, hubble=hub, omega0=self.omegamh2/hub**2, omegab=0.0483, cluster_class=clusters.HypatiaClass) #MP #code_args = ca #code_class=lyasimulation.LymanAlphaSim
         try:
             ss.make_simulation()
         except RuntimeError as e:
