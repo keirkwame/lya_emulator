@@ -68,9 +68,9 @@ def make_plot_emulator_error(emulator_training_directory, savefile, mean_flux_la
     plt.savefig(savefile)
 
 def make_plot_compare_two_simulations(simdir1, simdir2, simname1, simname2, savefile, mean_flux_label1='c', mean_flux_label2='c'):
-    likelihood_instance1 = generate_likelihood_class(simdir1, simdir1, simulation_sub_directory=simname1, mean_flux_label=mean_flux_label1)
+    likelihood_instance1 = generate_likelihood_class(simdir1, simdir1, simulation_sub_directory=simname1, mean_flux_label=mean_flux_label1, optimise_GP=False)
     likelihood_instance2 = generate_likelihood_class(simdir2, simdir2, simulation_sub_directory=simname2,
-                                                     mean_flux_label=mean_flux_label2)
+                                                     mean_flux_label=mean_flux_label2, optimise_GP=False)
     k_los, z, n_k_los, n_z = get_k_z(likelihood_instance1)
     flux_power1 = likelihood_instance1.data_fluxpower.reshape(n_z, n_k_los)
     flux_power2 = likelihood_instance2.data_fluxpower.reshape(n_z, n_k_los)
@@ -106,7 +106,7 @@ def make_plot_compare_two_simulations(simdir1, simdir2, simname1, simname2, save
     plt.savefig(savefile)
 
 def get_k_z(likelihood_instance):
-    k_los = likelihood_instance.gpemu.kf
+    k_los = likelihood_instance.kf
     n_k_los = k_los.size
     z = likelihood_instance.zout #Highest redshift first
     n_z = z.size
