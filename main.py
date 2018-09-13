@@ -15,8 +15,9 @@ if __name__ == "__main__":
     testdir = sim_rootdir + '/hires_s8_test' #'/hot_cold_test' #/share/hypatia/sbird
     emudir = sim_rootdir + '/hires_s8' #'/hot_cold'
 
-    simulation_sub_directory1 = '/ns0.97As2.2e-09heat_slope0.083heat_amp0.92hub0.69/output' #'/HeliumHeatAmp0.9/output'
-    simulation_sub_directory2 = '/HeliumHeatAmp1.1/output'
+    simulation_sub_directory1 = '/ns0.96As2.6e-09heat_slope-0.19heat_amp1hub0.74/output'
+    #'/ns0.97As2.2e-09heat_slope0.083heat_amp0.92hub0.69/output' #'/HeliumHeatAmp0.9/output'
+    simulation_sub_directory2 = '/test/output' #'/HeliumHeatAmp1.1/output'
 
     likelihood_samples_plot_savefile = savedir + '/likelihood_samples_' + plotname + '.pdf'
     flux_power_plot_savefile = savedir + '/flux_power_' + plotname + '.pdf'
@@ -32,7 +33,7 @@ if __name__ == "__main__":
 
     #make_plot(chain_savedir + '/AA0.97BB1.3_chain_20000_MeanFluxFactor.txt', likelihood_samples_plot_savefile)
     #output = make_plot_flux_power_spectra(testdir, emudir, flux_power_plot_savefile, mean_flux_label='s', rescale_data_error=True, fix_error_ratio=False, error_ratio=100.)
-    #make_plot_compare_two_simulations(emudir, emudir, simulation_sub_directory1, simulation_sub_directory2, compare_plot_savefile)
+    make_plot_compare_two_simulations(emudir, emudir, simulation_sub_directory1, simulation_sub_directory2, compare_plot_savefile)
     #make_plot_emulator_error(emudir, emulator_error_plot_savefile, mean_flux_label='s') #, max_z=2.6)
     #output = make_plot_initial_parameter_samples(initial_parameter_samples_plot_savefile)
     '''output = run_and_plot_likelihood_samples(testdir, emudir, likelihood_samples_plot_savefile, plotname, plot_posterior=True,
@@ -40,4 +41,4 @@ if __name__ == "__main__":
                                              while_loop=False, mean_flux_label='s', return_class_only=True,
                                              rescale_data_error=True, fix_error_ratio=False, error_ratio=100.,
                                              include_emulator_error=True)  # , max_z=2.6)'''
-    output = run_simulations(testdir, emudir, new_simulation_parameters, simulation_sub_directory=simulation_sub_directory1, optimise_GP=False)
+    #output = run_simulations(testdir, emudir, new_simulation_parameters, simulation_sub_directory=simulation_sub_directory1, optimise_GP=False)
