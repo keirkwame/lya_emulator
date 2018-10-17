@@ -278,3 +278,27 @@ class MatterPowerEmulator(Emulator):
         (_,_) = myspec
         fv = matter_power.get_matter_power(di,kk=self.kf, redshift = 3.)
         return fv
+
+def generate_emulator_submissions(emulator_directory, simulation_parameters):
+    """Small function to generate directory structure and submission files for an emulator"""
+    gadget_parameters = latin_hypercube.convert_to_simulation_parameters(simulation_parameters, omegamh2=0.1327)
+
+    default_files_directory = '/share/data2/keir/Simulations'
+    pbs_file_name = '/run.pbs'
+    genic_file_name = '/paramfile.genic'
+
+    for i in range(simulation_parameters.shape[0]): #Loop over simulations
+        simulation_directory = emulator_directory + '/ns%.2gAs%.2gheat_slope%.2gheat_amp%.2ghub%.2g' % tuple(simulation_parameters[i])
+        os.makedirs(simulation_directory)
+        os.makedirs(simulation_directory + '/output')
+
+        shutil.copyfile(default_files_directory + pbs_file_name, simulation_directory + pbs_file_name)
+
+        new_genic_file = simulation_directory + genic_file_name
+        shutil.copyfile(default_files_directory + genic_file_name, new_genic_file)
+        with open(new_genic_file, 'a') as new_genic_file_object:
+            new_genic_file_object.write('Omega0 = %f\n' % gadget_parameters['Omega0'])
+            new_genic_file_object.write('OmegaLambda = %f\n' % gadget_parameters['OmegaLambda'])
+            new_genic_file_object.write('OmegaBaryon = %f\n' % gadget_parameters['OmegaBaryon'])
+            new_genic_file_object.write('HubbleParam = %f\n' % gadget_parameters['HubbleParam'])
+            new_genic_file_object.write('HubbleParam = %f\n' % gadget_parameters['HubbleParam'])
