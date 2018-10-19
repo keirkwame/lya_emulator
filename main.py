@@ -35,7 +35,7 @@ if __name__ == "__main__":
 
     #make_plot(chain_savedir + '/AA0.97BB1.3_chain_20000_MeanFluxFactor.txt', likelihood_samples_plot_savefile)
     #output = make_plot_flux_power_spectra(testdir, emudir, flux_power_plot_savefile, mean_flux_label='s', rescale_data_error=True, fix_error_ratio=False, error_ratio=100.)
-    make_plot_compare_two_simulations(emudir, emudir, simulation_sub_directory1, simulation_sub_directory2, compare_plot_savefile)
+    #make_plot_compare_two_simulations(emudir, emudir, simulation_sub_directory1, simulation_sub_directory2, compare_plot_savefile)
     #make_plot_emulator_error(emudir, emulator_error_plot_savefile, mean_flux_label='s') #, max_z=2.6)
     #output = make_plot_initial_parameter_samples(initial_parameter_samples_plot_savefile)
     '''output = run_and_plot_likelihood_samples(testdir, emudir, likelihood_samples_plot_savefile, plotname, plot_posterior=True,
@@ -44,4 +44,4 @@ if __name__ == "__main__":
                                              rescale_data_error=True, fix_error_ratio=False, error_ratio=100.,
                                              include_emulator_error=True)  # , max_z=2.6)'''
     #output = run_simulations(testdir, emudir, new_simulation_parameters, simulation_sub_directory=simulation_sub_directory1, optimise_GP=False)
-    make_emulator_latin_hypercube(emudir, 21, emulator_parameter_limits, hypatia_queue='cores12')
+    make_emulator_latin_hypercube(emudir, 21, emulator_parameter_limits, hypatia_queue='cores24')
