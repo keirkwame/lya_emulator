@@ -343,7 +343,8 @@ def generate_emulator_submissions(emulator_directory, simulation_parameters, par
         #os.system('qsub %s' % pbs_file_name[1:])
 
     new_json_file = emulator_directory + json_file_name
-    shutil.copyfile(default_files_directory + json_file_name, new_json_file)
+    if not refinement:
+        shutil.copyfile(default_files_directory + json_file_name, new_json_file)
     with open(new_json_file, 'r') as new_json_file_object:
         json_dictionary = json.load(new_json_file_object)
     json_dictionary['param_limits'] = parameter_limits.tolist()

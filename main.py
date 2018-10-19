@@ -26,7 +26,8 @@ if __name__ == "__main__":
     emulator_error_plot_savefile = savedir + '/emulator_error_' + plotname + '.pdf'
     initial_parameter_samples_plot_savefile = savedir + '/initial_parameter_samples_' + plotname + '.pdf'
 
-    new_simulation_parameters = np.array([[9.83826422e-01, 1.53457828e-09, -1.12879347e-01, 1.30000000e+00, 6.61319870e-01],])
+    #new_simulation_parameters = np.array([[9.83826422e-01, 1.53457828e-09, -1.12879347e-01, 1.30000000e+00, 6.61319870e-01],])
+    new_simulation_parameters = np.array([[9.86695393e-01, 1.42783510e-09, -1.03117089e-01, 1.34173988e+00, 6.5374e-01],]) #6.53651311e-01
     print(new_simulation_parameters.shape)
     #emulator_parameter_limits = np.array([[0.9, 0.99], [1.5e-09, 2.8e-09], [-0.4, 0.4], [0.6, 1.4], [0.65, 0.75]]) #Big emulator
     emulator_parameter_limits = np.array([[0.8, 1.05], [1.2e-09, 3e-09], [-0.5, 0.5], [0.5, 1.5], [0.6, 0.8]]) #Small emulator
