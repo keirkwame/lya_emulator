@@ -2,6 +2,7 @@
 import sys
 
 from make_paper_plots import *
+from coarse_grid import *
 from coarse_grid_plot import *
 from plot_likelihood import *
 from plot_latin_hypercube import *
@@ -13,7 +14,7 @@ if __name__ == "__main__":
     chain_savedir = sys.argv[4]
 
     testdir = sim_rootdir + '/hires_s8_test' #'/hot_cold_test' #/share/hypatia/sbird
-    emudir = sim_rootdir + '/hires_s8' #'/hot_cold'
+    emudir = sim_rootdir + '/refinement_big' #'/hires_s8' #'/hot_cold'
 
     simulation_sub_directory1 = '/ns0.96As2.6e-09heat_slope-0.19heat_amp1hub0.74/output'
     #'/ns0.97As2.2e-09heat_slope0.083heat_amp0.92hub0.69/output' #'/HeliumHeatAmp0.9/output'
@@ -27,6 +28,7 @@ if __name__ == "__main__":
 
     new_simulation_parameters = np.array([[9.84993900e-01, 2.29651366e-09, 1.48893735e-01, 9.94234417e-01, 6.91563154e-01],])
     print(new_simulation_parameters.shape)
+    emulator_parameter_limits = np.array([[0.9, 0.99], [1.5e-09, 2.8e-09], [-0.4, 0.4], [0.6, 1.4], [0.65, 0.75]])
 
     #test_knot_plots(testdir=testdir, emudir=emudir, plotdir=savedir, plotname=plotname, mf=2, kf_bin_nums=None, data_err=False, max_z=4.2)
     #plot_test_interpolate_kf_bin_loop(emudir, testdir, savedir=savedir, plotname="_Two_loop", kf_bin_nums=np.arange(2))
@@ -42,3 +44,4 @@ if __name__ == "__main__":
                                              rescale_data_error=True, fix_error_ratio=False, error_ratio=100.,
                                              include_emulator_error=True)  # , max_z=2.6)'''
     #output = run_simulations(testdir, emudir, new_simulation_parameters, simulation_sub_directory=simulation_sub_directory1, optimise_GP=False)
+    make_emulator_latin_hypercube(emudir, 21, emulator_parameter_limits, hypatia_queue='cores12')

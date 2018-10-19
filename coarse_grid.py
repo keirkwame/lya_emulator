@@ -279,13 +279,25 @@ class MatterPowerEmulator(Emulator):
         fv = matter_power.get_matter_power(di,kk=self.kf, redshift = 3.)
         return fv
 
-def generate_emulator_submissions(emulator_directory, simulation_parameters):
+def make_emulator_latin_hypercube(emulator_directory, n_simulations, parameter_limits, omegamh2=0.1327, hypatia_queue='cores24'):
+    """Small wrapper to make Latin hypercube emulator"""
+    simulation_parameters = latin_hypercube.get_hypercube_samples(parameter_limits, n_simulations)
+    generate_emulator_submissions(emulator_directory, simulation_parameters, parameter_limits, omegamh2=omegamh2, hypatia_queue=hypatia_queue)
+
+def generate_emulator_submissions(emulator_directory, simulation_parameters, parameter_limits, omegamh2=0.1327, hypatia_queue='cores24'):
     """Small function to generate directory structure and submission files for an emulator"""
-    gadget_parameters = latin_hypercube.convert_to_simulation_parameters(simulation_parameters, omegamh2=0.1327)
+    gadget_parameters = latin_hypercube.convert_to_simulation_parameters(simulation_parameters, omegamh2=omegamh2)
+
+    if hypatia_queue == 'cores24':
+        pbs_file_name = '/run.pbs'
+    elif hypatia_queue == 'cores12':
+        pbs_file_name = '/run_cores12.pbs'
 
     default_files_directory = '/share/data2/keir/Simulations'
-    pbs_file_name = '/run.pbs'
     genic_file_name = '/paramfile.genic'
+    gadget_file_name = '/paramfile.gadget'
+    json_file_name = '/emulator_params.json'
+    class_file = default_files_directory + '/make_class_power.py'
 
     for i in range(simulation_parameters.shape[0]): #Loop over simulations
         simulation_directory = emulator_directory + '/ns%.2gAs%.2gheat_slope%.2gheat_amp%.2ghub%.2g' % tuple(simulation_parameters[i])
@@ -294,11 +306,47 @@ def generate_emulator_submissions(emulator_directory, simulation_parameters):
 
         shutil.copyfile(default_files_directory + pbs_file_name, simulation_directory + pbs_file_name)
 
-        new_genic_file = simulation_directory + genic_file_name
-        shutil.copyfile(default_files_directory + genic_file_name, new_genic_file)
-        with open(new_genic_file, 'a') as new_genic_file_object:
-            new_genic_file_object.write('Omega0 = %f\n' % gadget_parameters['Omega0'])
-            new_genic_file_object.write('OmegaLambda = %f\n' % gadget_parameters['OmegaLambda'])
-            new_genic_file_object.write('OmegaBaryon = %f\n' % gadget_parameters['OmegaBaryon'])
-            new_genic_file_object.write('HubbleParam = %f\n' % gadget_parameters['HubbleParam'])
-            new_genic_file_object.write('HubbleParam = %f\n' % gadget_parameters['HubbleParam'])
+        new_genic_file1 = simulation_directory + '/paramfile_genic.genic'
+        shutil.copyfile(default_files_directory + genic_file_name, new_genic_file1)
+        with open(new_genic_file1, 'a') as new_genic_file_object1:
+            new_genic_file_object1.write('Omega0 = %f\n' % gadget_parameters['Omega0'])
+            new_genic_file_object1.write('OmegaLambda = %f\n' % gadget_parameters['OmegaLambda'])
+            new_genic_file_object1.write('OmegaBaryon = %f\n' % gadget_parameters['OmegaBaryon'])
+            new_genic_file_object1.write('HubbleParam = %f\n' % gadget_parameters['HubbleParam'])
+            new_genic_file_object1.write('PrimordialIndex = %f\n' % gadget_parameters['PrimordialIndex'])
+            new_genic_file_object1.write('PrimordialAmp = %f\n' % gadget_parameters['PrimordialAmp'])
+
+        new_genic_file2 = simulation_directory + genic_file_name #For make_class_power.py
+        shutil.copyfile(new_genic_file1, new_genic_file2)
+        with open(new_genic_file2, 'a') as new_genic_file_object2:
+            new_genic_file_object2.write('InputFutureRedshift = 98.99\n')
+            new_genic_file_object2.write('FileWithFutureTransferFunction = transfer_future.dat\n')
+
+        new_gadget_file = simulation_directory + gadget_file_name
+        shutil.copyfile(default_files_directory + gadget_file_name, new_gadget_file)
+        with open(new_gadget_file, 'a') as new_gadget_file_object:
+            new_gadget_file_object.write('Omega0 = %f\n' % gadget_parameters['Omega0'])
+            new_gadget_file_object.write('OmegaLambda = %f\n' % gadget_parameters['OmegaLambda'])
+            new_gadget_file_object.write('OmegaBaryon = %f\n' % gadget_parameters['OmegaBaryon'])
+            new_gadget_file_object.write('HubbleParam = %f\n' % gadget_parameters['HubbleParam'])
+            new_gadget_file_object.write('HeliumHeatAmp = %f\n' % simulation_parameters[3])
+            new_gadget_file_object.write('HeliumHeatExp = %f\n' % simulation_parameters[2])
+
+        os.chdir(simulation_directory)
+        os.system('python %s %s' % (class_file, genic_file_name[1:]))
+        '''with open(class_file, 'r') as class_file_object:
+            code = compile(class_file_object.read(), class_file, 'exec')
+            exec(code, )'''
+
+        os.system('qsub %s' % pbs_file_name[1:])
+
+    new_json_file = emulator_directory + json_file_name
+    shutil.copyfile(default_files_directory + json_file_name, new_json_file)
+    with open(new_json_file, 'r') as new_json_file_object:
+        json_dictionary = json.load(new_json_file_object)
+    json_dictionary['param_limits'] = parameter_limits.tolist()
+    json_dictionary['omegamh2'] = omegamh2
+    json_dictionary['sample_params'] = simulation_parameters.tolist()
+    json_dictionary['basedir'] = emulator_directory
+    with open(new_json_file, 'w') as new_json_file_object:
+        json.dump(json_dictionary, new_json_file_object)
