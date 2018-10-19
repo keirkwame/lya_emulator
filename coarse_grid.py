@@ -284,13 +284,15 @@ def make_emulator_latin_hypercube(emulator_directory, n_simulations, parameter_l
     simulation_parameters = latin_hypercube.get_hypercube_samples(parameter_limits, n_simulations)
     generate_emulator_submissions(emulator_directory, simulation_parameters, parameter_limits, omegamh2=omegamh2, hypatia_queue=hypatia_queue)
 
-def generate_emulator_submissions(emulator_directory, simulation_parameters, parameter_limits, omegamh2=0.1327, hypatia_queue='cores24'):
+def generate_emulator_submissions(emulator_directory, simulation_parameters, parameter_limits, omegamh2=0.1327, hypatia_queue='cores24', refinement=False):
     """Small function to generate directory structure and submission files for an emulator"""
     #gadget_parameters = latin_hypercube.convert_to_simulation_parameters(simulation_parameters, omegamh2=omegamh2)
     if hypatia_queue == 'cores24':
         pbs_file_name = '/run.pbs'
     elif hypatia_queue == 'cores12':
         pbs_file_name = '/run_cores12.pbs'
+    elif hypatia_queue == 'cores40':
+        pbs_file_name = '/run_cores40.pbs'
 
     default_files_directory = '/share/data2/keir/Simulations'
     genic_file_name = '/paramfile.genic'
@@ -346,10 +348,12 @@ def generate_emulator_submissions(emulator_directory, simulation_parameters, par
         json_dictionary = json.load(new_json_file_object)
     json_dictionary['param_limits'] = parameter_limits.tolist()
     json_dictionary['omegamh2'] = omegamh2
-    json_dictionary['sample_params'] = simulation_parameters.tolist()
+    if not refinement:
+        json_dictionary['sample_params'] = simulation_parameters.tolist()
+    else:
+        json_dictionary['sample_params'] += simulation_parameters.tolist()
     json_dictionary['basedir'] = emulator_directory
     with open(new_json_file, 'w') as new_json_file_object:
         json.dump(json_dictionary, new_json_file_object)
 
 #def submit_emulator_submissions()
-
