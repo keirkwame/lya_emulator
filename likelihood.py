@@ -67,7 +67,7 @@ def invert_block_diagonal_covariance(full_covariance_matrix, n_blocks):
 
 class LikelihoodClass(object):
     """Class to contain likelihood computations."""
-    def __init__(self, basedir, datadir, mean_flux='s', max_z = 4.2, t0_training_value = 0.95, rescale_data_error=False, fix_error_ratio=False, error_ratio=100., optimise_GP=True):
+    def __init__(self, basedir, datadir, mean_flux='s', max_z = 4.2, t0_training_value = 0.95, rescale_data_error=False, fix_error_ratio=False, error_ratio=100., optimise_GP=True, emulator_json_file='emulator_params.json'):
         """Initialise the emulator by loading the flux power spectra from the simulations."""
         self.rescale_data_error = rescale_data_error
         self.fix_error_ratio = fix_error_ratio
@@ -109,7 +109,7 @@ class LikelihoodClass(object):
             dense_limits = np.array([np.array(t0_factor) * np.array([slopelow, slopehigh])])
             mf = mflux.MeanFluxFactor(dense_limits = dense_limits)
         self.emulator = coarse_grid.KnotEmulator(basedir, kf=self.kf, mf=mf)
-        self.emulator.load()
+        self.emulator.load(dumpfile=emulator_json_file)
         self.param_limits = self.emulator.get_param_limits(include_dense=True)
         if mean_flux == 's':
             #Add a slope to the parameter limits
