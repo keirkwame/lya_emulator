@@ -17,6 +17,9 @@ import scipy.interpolate as spi
 import scipy.optimize as spo
 #from datetime import datetime
 
+import multiprocessing as mg
+mg.set_start_method('forkserver', force=True)
+
 from latin_hypercube import *
 
 def _siIIIcorr(kf):
@@ -464,7 +467,7 @@ class LikelihoodClass(object):
         randscores = [self.refine_metric(rr, use_error_ratio=use_error_ratio) for rr in rsamples]
         return self._interpolate_err_grid(i, j, rsamples, randscores)
 
-    def make_grid_acquisition_function(self, i, j, random_samples=True, samples=30000, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., mean_flux_marginalisation=True, likelihood_integration_options=None):
+    def make_grid_acquisition_function(self, i, j, random_samples=True, samples=30000, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., mean_flux_marginalisation=True, likelihood_integration_options=None, n_process=60):
         """Make a grid of acquisition function evaluations on a 2D slice through the hyper-volume"""
         parameter_samples = self._get_parameter_grid_single_slice(i, j, random_samples=random_samples, samples=samples)
         if mean_flux_marginalisation:
@@ -472,7 +475,10 @@ class LikelihoodClass(object):
         else:
             acquisition_function = lambda x: self.acquisition_function_GP_UCB(x, iteration_number=iteration_number, delta=delta, nu=nu, exploitation_weight=exploitation_weight)
         print('Evaluating acquisition function at parameter samples')
-        acquisition_samples = np.array([acquisition_function(parameter_vector) for parameter_vector in parameter_samples])
+        pool_instance = mg.Pool(n_process)
+        #acquisition_samples = np.array([acquisition_function(parameter_vector) for parameter_vector in parameter_samples])
+        parameter_samples_list = [parameter_samples[i] for i in range(parameter_samples.shape[0])]
+        acquisition_samples = pool_instance.map(acquisition_function, parameter_samples_list)
         print('Forming grid of acquisition function evaluations')
         if random_samples:
             return self._interpolate_err_grid(i, j, parameter_samples, acquisition_samples)
