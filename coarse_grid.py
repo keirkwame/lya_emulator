@@ -293,6 +293,8 @@ def generate_emulator_submissions(emulator_directory, simulation_parameters, par
         pbs_file_name = '/run_cores12.pbs'
     elif hypatia_queue == 'cores40':
         pbs_file_name = '/run_cores40.pbs'
+    elif hypatia_queue == 'smp':
+        pbs_file_name = '/run_smp.pbs'
 
     default_files_directory = '/share/data2/keir/Simulations'
     genic_file_name = '/paramfile.genic'
