@@ -162,3 +162,7 @@ def map_to_unit_cube(param_vec, param_limits):
 def map_to_unit_cube_list(param_vec_list, param_limits):
     """Map multiple parameter vectors to the unit cube"""
     return np.array([map_to_unit_cube(param_vec, param_limits) for param_vec in param_vec_list])
+
+def map_from_unit_cube_list(param_vec_list, param_limits):
+    """Map multiple parameter vectors back from the unit cube"""
+    return np.array([map_from_unit_cube(param_vec, param_limits) for param_vec in param_vec_list])
