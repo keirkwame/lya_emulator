@@ -158,3 +158,7 @@ def map_to_unit_cube(param_vec, param_limits):
     new_params = (param_vec-param_limits[:,0])/(param_limits[:,1] - param_limits[:,0])
     assert np.all((new_params >= 0)*(new_params <= 1))
     return new_params
+
+def map_to_unit_cube_list(param_vec_list, param_limits):
+    """Map multiple parameter vectors to the unit cube"""
+    return np.array([map_to_unit_cube(param_vec, param_limits) for param_vec in param_vec_list])
