@@ -11,7 +11,11 @@ def optimise_acquisition_function_parallel(arguments):
 
     return spo.minimize(acquisition_function, starting_parameters, bounds=optimisation_bounds, options={'disp': True})
 
-def acquisition_function_wrapper(arguments):
+def acquisition_function_parallel(arguments):
     """Wrapper to acquisition function for multiprocessing. Sits in separate file so we can use interactive Python environments"""
-    parameter_vector, acquisition_function = arguments
-    return acquisition_function(parameter_function)
+    parameter_vector, likelihood_class_instance, nu, exploitation_weight, integration_bounds = arguments
+    acquisition_function = lambda parameters: likelihood_class_instance.acquisition_function_GP_UCB_marginalised_mean_flux(parameters[2:], nu=nu, exploitation_weight=exploitation_weight, integration_bounds=integration_bounds)
+    return acquisition_function(parameter_vector)
+
+def test_multiprocessing_map(arguments):
+    return arguments
