@@ -4,6 +4,7 @@ import numpy as np
 import copy as cp
 from latin_hypercube import map_to_unit_cube
 from latin_hypercube import map_to_unit_cube_list
+from latin_hypercube import map_from_unit_cube_list
 #Make sure that we don't accidentally
 #get another backend when we import GPy.
 import matplotlib
@@ -138,9 +139,14 @@ class SkLearnGP(object):
         """Add to training set and update emulator (without re-training)"""
         if self.gp_updated is None: #First time training set is updated
             self.gp_updated = cp.deepcopy(self.gp)
-        new_params_unit_cube = map_to_unit_cube_list(new_params, self.param_limits)
-        gp_updated_X_new = np.vstack((self.gp_updated.X, new_params_unit_cube))
-        gp_updated_Y_new = np.vstack((self.gp_updated.Y, self.predict(new_params)[0]))
+        mean_flux_training_samples = np.unique(self.gp.X[:, 0]).reshape(-1, 1)
+        mean_flux_samples_expand = np.repeat(mean_flux_training_samples, new_params.shape[0], axis=0)
+        new_params_unit_cube = map_to_unit_cube_list(new_params, self.param_limits[-1 * new_params.shape[0]:])
+        new_params_unit_cube_expand = np.tile(new_params_unit_cube, (mean_flux_training_samples.shape[0], 1))
+        new_params_unit_cube_mean_flux = np.hstack((mean_flux_samples_expand, new_params_unit_cube_expand))
+        new_params_mean_flux = map_from_unit_cube_list(new_params_unit_cube_mean_flux, self.param_limits)
+        gp_updated_X_new = np.vstack((self.gp_updated.X, new_params_unit_cube_mean_flux))
+        gp_updated_Y_new = np.vstack((self.gp_updated.Y, self.predict(new_params_mean_flux)[0]))
         self.gp_updated.set_XY(X=gp_updated_X_new, Y=gp_updated_Y_new)
 
     def _predict(self, params, GP_instance):
