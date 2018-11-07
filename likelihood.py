@@ -127,7 +127,7 @@ class LikelihoodClass(object):
             self.gpemu = self.emulator.get_emulator(max_z=max_z)
         #print('Finished generating emulator at', str(datetime.now()))
 
-    def likelihood(self, params, include_emu=True):
+    def likelihood(self, params, include_emu=True, use_updated_training_set=False):
         """A simple likelihood function for the Lyman-alpha forest.
         Assumes data is quadratic with a covariance matrix."""
         nparams = params
@@ -146,7 +146,7 @@ class LikelihoodClass(object):
 
         # .predict should take [{list of parameters: t0; cosmo.; thermal},]
         # Here: emulating @ cosmo.; thermal; sampled t0 * [tau0_fac from above]
-        predicted, std = self.gpemu.predict(np.array(nparams).reshape(1,-1), tau0_factors = tau0_fac)
+        predicted, std = self.gpemu.predict(np.array(nparams).reshape(1,-1), tau0_factors = tau0_fac, use_updated_training_set=use_updated_training_set)
 
         #Save emulated flux power specra for analysis
         self.emulated_flux_power = predicted
@@ -198,6 +198,10 @@ class LikelihoodClass(object):
             assert 0 > chi2 > -2**31
             assert not np.isnan(chi2)
         return chi2
+
+    def add_to_emulator_training_set(self, new_params):
+        """Add to training set and update emulator (without re-training)"""
+        self.gpemu.add_to_training_set(new_params)
 
     def log_likelihood_marginalised_mean_flux(self, params, include_emu=True, integration_bounds='default', integration_options='gauss-legendre', verbose=True, integration_method='Quadrature'): #marginalised_axes=(0, 1)
         """Evaluate (Gaussian) likelihood marginalised over mean flux parameter axes: (dtau0, tau0)"""
@@ -348,13 +352,13 @@ class LikelihoodClass(object):
             assert self.emulated_flux_power_std[0].size == np.array(self.exact_flux_power_std).size
             return np.mean(self.emulated_flux_power_std[0]) / np.mean(np.array(self.exact_flux_power_std))
 
-    def _get_emulator_error_averaged_mean_flux(self, params):
+    def _get_emulator_error_averaged_mean_flux(self, params, use_updated_training_set=False):
         """Get the emulator error having averaged over the mean flux parameter axes: (dtau0, tau0)"""
         n_samples = 10
         emulator_error_total = 0.
         for dtau0 in np.linspace(self.param_limits[0, 0], self.param_limits[0, 1], num=n_samples):
             for tau0 in np.linspace(self.param_limits[1, 0], self.param_limits[1, 1], num=n_samples):
-                _ = self.likelihood(np.concatenate(([dtau0,], [tau0,], params)))
+                _ = self.likelihood(np.concatenate(([dtau0,], [tau0,], params)), use_updated_training_set=use_updated_training_set)
                 emulator_error_total += self.emulated_flux_power_std[0]
         return emulator_error_total / (n_samples ** 2)
 
@@ -384,14 +388,14 @@ class LikelihoodClass(object):
         exploration = self._get_GP_UCB_exploration_term(self.emulated_flux_power_std[0], n_emulated_params, iteration_number=iteration_number, delta=delta, nu=nu)
         return exploitation + exploration
 
-    def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_bounds='default', integration_options='gauss-legendre'):
+    def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_bounds='default', integration_options='gauss-legendre', use_updated_training_set=False):
         """Evaluate the GP-UCB acquisition function, having marginalised over mean flux parameter axes: (dtau0, tau0)"""
         if exploitation_weight is None:
             print('No exploitation term')
             exploitation = 0.
         else:
             exploitation = self._get_GP_UCB_exploitation_term(self.log_likelihood_marginalised_mean_flux(params, integration_bounds=integration_bounds, integration_options=integration_options), exploitation_weight=exploitation_weight)
-        exploration = self._get_GP_UCB_exploration_term(self._get_emulator_error_averaged_mean_flux(params), params.size, iteration_number=iteration_number, delta=delta, nu=nu)
+        exploration = self._get_GP_UCB_exploration_term(self._get_emulator_error_averaged_mean_flux(params, use_updated_training_set=use_updated_training_set), params.size, iteration_number=iteration_number, delta=delta, nu=nu)
         return exploitation + exploration
 
     def optimise_acquisition_function(self, starting_params, optimisation_bounds='default', optimisation_method=None, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_bounds='default'):
