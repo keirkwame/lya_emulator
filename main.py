@@ -13,8 +13,8 @@ if __name__ == "__main__":
     plotname = sys.argv[3]
     chain_savedir = sys.argv[4]
 
-    testdir = sim_rootdir + '/refinement_tight_validation' #'/hires_s8_test' #'/hot_cold_test' #/share/hypatia/sbird
-    emudir = sim_rootdir + '/refinement_big' #'/hires_s8' #'/hot_cold'
+    testdir = sim_rootdir + '/hot_cold_test' #'/refinement_tight_validation' #'/hires_s8_test' #'/hot_cold_test' #/share/hypatia/sbird
+    emudir = sim_rootdir + '/hot_cold' #'/hot_cold' #/refinement_big' #'/hires_s8'
 
     simulation_sub_directory1 = '/ns0.96As2.6e-09heat_slope-0.19heat_amp1hub0.74/output'
     #'/ns0.97As2.2e-09heat_slope0.083heat_amp0.92hub0.69/output' #'/HeliumHeatAmp0.9/output'
@@ -59,12 +59,12 @@ if __name__ == "__main__":
     #make_plot_compare_two_simulations(emudir, emudir, simulation_sub_directory1, simulation_sub_directory2, compare_plot_savefile)
     #make_plot_emulator_error(emudir, emulator_error_plot_savefile, mean_flux_label='s') #, max_z=2.6)
     #output = make_plot_initial_parameter_samples(initial_parameter_samples_plot_savefile)
-    generate_emulator_submissions(emudir, new_simulation_parameters, emulator_parameter_limits, hypatia_queue='smp', refinement=True)
-    '''output = run_and_plot_likelihood_samples(testdir, emudir, likelihood_samples_plot_savefile, plotname, plot_posterior=True,
+    #generate_emulator_submissions(emudir, new_simulation_parameters, emulator_parameter_limits, hypatia_queue='smp', refinement=True)
+    output = run_and_plot_likelihood_samples(testdir, emudir, likelihood_samples_plot_savefile, plotname, plot_posterior=True,
                                              chain_savedir=chain_savedir, n_burn_in_steps=500, n_steps=1500,
                                              while_loop=False, mean_flux_label='s', return_class_only=True,
                                              rescale_data_error=True, fix_error_ratio=False, error_ratio=100.,
-                                             include_emulator_error=True) #, emulator_json_file='emulator_params_refine5.json')  # , max_z=2.6'''
+                                             include_emulator_error=True, emulator_json_file='emulator_params_latin.json')  # , max_z=2.6
     #output = run_simulations(testdir, emudir, new_simulation_parameters, simulation_sub_directory=simulation_sub_directory1, optimise_GP=False)
     #make_emulator_latin_hypercube(emudir, 21, emulator_parameter_limits, hypatia_queue='cores24')
     #generate_emulator_submissions(emudir, new_simulation_parameters, emulator_parameter_limits, hypatia_queue='cores24', refinement=True)
