@@ -144,9 +144,9 @@ class SkLearnGP(object):
         new_params_unit_cube = map_to_unit_cube_list(new_params, self.param_limits[-1 * new_params.shape[0]:])
         new_params_unit_cube_expand = np.tile(new_params_unit_cube, (mean_flux_training_samples.shape[0], 1))
         new_params_unit_cube_mean_flux = np.hstack((mean_flux_samples_expand, new_params_unit_cube_expand))
-        new_params_mean_flux = map_from_unit_cube_list(new_params_unit_cube_mean_flux, self.param_limits)
+        #new_params_mean_flux = map_from_unit_cube_list(new_params_unit_cube_mean_flux, self.param_limits)
         gp_updated_X_new = np.vstack((self.gp_updated.X, new_params_unit_cube_mean_flux))
-        gp_updated_Y_new = np.vstack((self.gp_updated.Y, self.predict(new_params_mean_flux)[0]))
+        gp_updated_Y_new = np.vstack((self.gp_updated.Y, self.gp.predict(new_params_unit_cube_mean_flux)[0]))
         self.gp_updated.set_XY(X=gp_updated_X_new, Y=gp_updated_Y_new)
 
     def _predict(self, params, GP_instance):
