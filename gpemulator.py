@@ -141,7 +141,7 @@ class SkLearnGP(object):
             self.gp_updated = cp.deepcopy(self.gp)
         mean_flux_training_samples = np.unique(self.gp.X[:, 0]).reshape(-1, 1)
         mean_flux_samples_expand = np.repeat(mean_flux_training_samples, new_params.shape[0], axis=0)
-        new_params_unit_cube = map_to_unit_cube_list(new_params, self.param_limits[-1 * new_params.shape[0]:])
+        new_params_unit_cube = map_to_unit_cube_list(new_params, self.param_limits[-1 * new_params.shape[1]:])
         new_params_unit_cube_expand = np.tile(new_params_unit_cube, (mean_flux_training_samples.shape[0], 1))
         new_params_unit_cube_mean_flux = np.hstack((mean_flux_samples_expand, new_params_unit_cube_expand))
         #new_params_mean_flux = map_from_unit_cube_list(new_params_unit_cube_mean_flux, self.param_limits)

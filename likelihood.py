@@ -85,7 +85,7 @@ class LikelihoodClass(object):
         myspec = flux_power.MySpectra(max_z=self.max_z)
         self.zout = myspec.zout
         #print(datadir)
-        pps = myspec.get_snapshot_list(datadir)
+        pps = myspec.get_snapshot_list(datadir) #, snappref="SPECTRA_PIX10_")
         self.kf = self.sdss.get_kf()
 
         #Load BOSS data vector
@@ -197,8 +197,8 @@ class LikelihoodClass(object):
             chi2 += dcd -0.5* cdet
             if not use_updated_training_set:
                 assert 0 > chi2 > -2**31
-            else:
-                print(chi2)
+            #else:
+            #    print(chi2)
             assert not np.isnan(chi2)
         return chi2
 

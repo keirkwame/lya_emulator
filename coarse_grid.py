@@ -279,12 +279,16 @@ class MatterPowerEmulator(Emulator):
         fv = matter_power.get_matter_power(di,kk=self.kf, redshift = 3.)
         return fv
 
-def make_emulator_latin_hypercube(emulator_directory, n_simulations, parameter_limits, omegamh2=0.1327, hypatia_queue='cores24'):
+def make_emulator_latin_hypercube(emulator_directory, n_simulations, parameter_limits, omegamh2=0.1327, hypatia_queue='cores24', prior_points=None, refinement=False, json_file_name='/emulator_params.json'):
     """Small wrapper to make Latin hypercube emulator"""
-    simulation_parameters = latin_hypercube.get_hypercube_samples(parameter_limits, n_simulations)
-    generate_emulator_submissions(emulator_directory, simulation_parameters, parameter_limits, omegamh2=omegamh2, hypatia_queue=hypatia_queue)
+    simulation_parameters = latin_hypercube.get_hypercube_samples(parameter_limits, n_simulations, prior_points=prior_points)
+    print('New simulation parameters =', simulation_parameters)
+    #np.save('new_params.npy', simulation_parameters)
+    if refinement:
+        simulation_parameters = simulation_parameters[prior_points.shape[0]:]
+    generate_emulator_submissions(emulator_directory, simulation_parameters, parameter_limits, omegamh2=omegamh2, hypatia_queue=hypatia_queue, refinement=refinement, json_file_name=json_file_name)
 
-def generate_emulator_submissions(emulator_directory, simulation_parameters, parameter_limits, omegamh2=0.1327, hypatia_queue='cores24', refinement=False):
+def generate_emulator_submissions(emulator_directory, simulation_parameters, parameter_limits, omegamh2=0.1327, hypatia_queue='cores24', refinement=False, json_file_name='/emulator_params.json'):
     """Small function to generate directory structure and submission files for an emulator"""
     #gadget_parameters = latin_hypercube.convert_to_simulation_parameters(simulation_parameters, omegamh2=omegamh2)
     if hypatia_queue == 'cores24':
@@ -299,7 +303,7 @@ def generate_emulator_submissions(emulator_directory, simulation_parameters, par
     default_files_directory = '/share/data2/keir/Simulations'
     genic_file_name = '/paramfile.genic'
     gadget_file_name = '/paramfile.gadget'
-    json_file_name = '/emulator_params.json'
+    #json_file_name = '/emulator_params.json'
     class_file = default_files_directory + '/make_class_power.py'
 
     for i in range(simulation_parameters.shape[0]): #Loop over simulations

@@ -60,6 +60,7 @@ def remove_single_parameter(center, prior_points):
     #Find the indices of points not in already_taken
     not_taken = np.setdiff1d(range(np.size(center)), already_taken)
     new_center = center[not_taken]
+    print(np.size(new_center), np.size(center), np.size(prior_points))
     assert np.size(new_center) == np.size(center) - np.size(prior_points)
     return new_center,not_taken
 
@@ -92,7 +93,8 @@ def lhscentered(n, samples, prior_points = None):
         if npriors > 0:
             H[:,j] = _center
             new_center, not_taken = remove_single_parameter(_center, prior_points[:,j])
-            H[not_taken, j] = np.random.permutation(new_center)
+            #H[not_taken, j] = np.random.permutation(new_center)
+            H[:, j] = np.concatenate((prior_points[:,j], np.random.permutation(new_center))) #Should include prior points in new hypercube!
         else:
             H[:, j] = np.random.permutation(_center)
     assert np.shape(H) == (samples, n)
