@@ -385,7 +385,7 @@ class nCDMEmulator(Emulator):
                 z = data_instance.get_redshifts()
         super().__init__(basedir=basedir, param_names=param_names, param_limits=param_limits, kf=kf, mf=mf, z=z, omegamh2=omegamh2)
 
-    def _do_ic_generation(self, ev, npart, box):
+    def _do_ic_generation(self, ev, npart, box): #To be modified!!!
         """Generate initial conditions"""
         outdir = os.path.join(self.basedir, self.build_dirname(ev))
         pn = self.param_names
