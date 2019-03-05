@@ -118,7 +118,10 @@ class Emulator:
         pn = self.param_names
         ev[pn['heat_slope']] = sics["rescale_slope"]
         ev[pn['heat_amp']] = sics["rescale_amp"]
-        ev[pn['hub']] = sics["hubble"]
+        if self.param_names.get('hub', None) is not None:
+            ev[pn['hub']] = sics["hubble"]
+        if self.param_names.get('omega_m', None) is not None:
+            ev[pn['omega_m']] = sics["omega_m"]
         ev[pn['ns']] = sics["ns"]
         wmap = sics["scalar_amp"]
         #Convert pivot of the scalar amplitude from amplitude
@@ -384,7 +387,26 @@ class nCDMEmulator(Emulator):
 
     def _do_ic_generation(self, ev, npart, box):
         """Generate initial conditions"""
-        pass
+        outdir = os.path.join(self.basedir, self.build_dirname(ev))
+        pn = self.param_names
+        rescale_slope = ev[pn['heat_slope']]
+        rescale_amp = ev[pn['heat_amp']]
+        hub = ev[pn['hub']]
+        # Convert pivot of the scalar amplitude from amplitude
+        # at 8 Mpc (k = 0.78) to pivot scale of 0.05
+        ns = ev[pn['ns']]
+        wmap = (0.05 / (2 * math.pi / 8.)) ** (ns - 1.) * ev[pn['As']]
+        ss = lyasimulation.LymanAlphaSim(outdir=outdir, box=box, npart=npart, ns=ns, scalar_amp=wmap,
+                                         rescale_gamma=True, rescale_slope=rescale_slope, redend=2.2,
+                                         rescale_amp=rescale_amp, hubble=hub, omega0=self.omegamh2 / hub ** 2,
+                                         omegab=0.0483, unitary=True)
+        try:
+            ss.make_simulation()
+            fpfile = os.path.join(os.path.dirname(__file__), "flux_power.py")
+            shutil.copy(fpfile, os.path.join(outdir, "flux_power.py"))
+            ss._cluster.generate_spectra_submit(outdir)
+        except RuntimeError as e:
+            print(str(e), " while building: ", outdir)
 
 
 def get_simulation_parameters_knots(base):
