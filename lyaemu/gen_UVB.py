@@ -1,6 +1,7 @@
 import numpy
-import scipy
 import asciitable
+#import scipy
+import scipy.interpolate as spi
 
 #################
 ### Constants ###
@@ -61,9 +62,10 @@ def write_TREECOOL(fout,lz,photo_new,QDeltaT=False):
     return
 
 def fzcut(z,zcut):
-    fcut=z>zcut
-    ncut=numpy.where(d==numpy.min(d))[0][0]
-    return ncut
+    #fcut=z>zcut
+    #ncut=numpy.where(d==numpy.min(d))[0][0]
+    #return ncut
+    return numpy.where(z == numpy.max(z[z <= zcut]))[0][0]
 
 def fint(z,y):
     yint=numpy.trapz(y,z)
@@ -77,7 +79,7 @@ def fintarray(z,y):
 
 def fdQdz(z,Q):
     dQdz=numpy.zeros(len(z))
-    fDQ=scipy.interpolate.interp1d(z,Q,kind='linear')
+    fDQ=spi.interp1d(z,Q,kind='linear')
     # Create new bins to better define the derivate at our desired
     # values which are z values
     bz=(z[:-1]+z[1:])/2. #new z values; binning done so center are the z values
@@ -93,14 +95,17 @@ def interpUVB(model):
         data=asciitable.read("FIXME")
     elif model=="OHL16": # this is our corrected model to match observations
         data=asciitable.read("FIXME")
+    elif model=="P18":
+        data=asciitable.read("data/TREECOOL_P18.txt")
     else:
         print('ERROR, model not defined: %s'%(model))
-    fpiHI=scipy.interpolate.interp1d(lz,data['col2'],kind='linear')
-    fpiHeI=scipy.interpolate.interp1d(lz,data['col3'],kind='linear')
-    fpiHeII=scipy.interpolate.interp1d(lz,data['col4'],kind='linear')
-    fphHI=scipy.interpolate.interp1d(lz,data['col5'],kind='linear')
-    fphHeI=scipy.interpolate.interp1d(lz,data['col6'],kind='linear')
-    fphHeII=scipy.interpolate.interp1d(lz,data['col7'],kind='linear')
+    lz = data['col1']
+    fpiHI=spi.interp1d(lz,data['col2'],kind='linear')
+    fpiHeI=spi.interp1d(lz,data['col3'],kind='linear')
+    fpiHeII=spi.interp1d(lz,data['col4'],kind='linear')
+    fphHI=spi.interp1d(lz,data['col5'],kind='linear')
+    fphHeI=spi.interp1d(lz,data['col6'],kind='linear')
+    fphHeII=spi.interp1d(lz,data['col7'],kind='linear')
     return [lz,fpiHI,fpiHeI,fpiHeII,fphHI,fphHeI,fphHeII]
 
 ####### COSMOLOGY
@@ -139,7 +144,7 @@ def calc_alphaB(T0=2E4,alpha='Nyx'):
 # calc case B HeII recombination coeff
 def calc_alphaBHeII(T0=2E4):
     ###### Nyx
-    if isinstance(T0, (float,int,long)): T0=numpy.array([T0])
+    if isinstance(T0, (float,int)): T0=numpy.array([T0]) #,long
     alphaB_F=numpy.zeros(len(T0))
     for i in range(len(T0)):
         T=T0[i]
