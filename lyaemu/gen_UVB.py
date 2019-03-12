@@ -2,6 +2,7 @@ import numpy
 import asciitable
 #import scipy
 import scipy.interpolate as spi
+import scipy.special as sps
 
 #################
 ### Constants ###
@@ -40,6 +41,7 @@ GammaHmin=1E-18
 qHmin=1E-33
 qHemin=1E-34
 
+lowval=1E-5
 ###########################
 ### Auxiliary Functions ###
 ###########################
@@ -120,6 +122,11 @@ def calc_nH(cosmo=[0.702,0.046,0.275,0.725,0.76]):
     h,omega_b,omega_m,omega_lambda,Xp=cosmo
     nH=Xp*omega_b*rho_crit_100_pMpc*(h**2) #Number density of protons per Mpc^3.
     return nH
+
+def falpha(T,a,b,Tf0,Tf1):
+    x0=numpy.sqrt(T/Tf0);x1=numpy.sqrt(T/Tf1)
+    return a/ ( x0 * ((1.+x0)**(1.-b)) * ((1.+x1)**(1+b)) )
+
 
 
 #######  Recombination times
@@ -207,7 +214,10 @@ def calc_GammaeHeI(T0):
     A=1.75E-8;E=24.6;P=0.;X=0.180;m=0.35
     Ge=fGe(T0,A,E,P,X,m)
     return Ge*(cm2Mpc**3.)
-
+def calc_GammaeHeII(T0):
+    A=2.05E-9;E=54.4;P=1.;X=0.265;m=0.25
+    Ge=fGe(T0,A,E,P,X,m)
+    return Ge*(cm2Mpc**3.)
 
 
 #########################
@@ -390,6 +400,24 @@ def genQ2G_DeltaT(z,QHII,zcutH,QHeIII,zcutHe,
         write_TREECOOL(fout,lz,photo_new,QDeltaT=False)
     return z,photo_new
 
+def myfQHII_2(listz,zzero,n1=50.,n2=1.,norm=0.5):
+    QHII=numpy.zeros(len(listz))
+    for i in range(len(listz)):
+        z=listz[i]
+        x=numpy.abs(z-zzero)
+        sgn=numpy.sign(z-zzero)
+        if (z-zzero)<=0:
+            f=0.5+norm*sps.gammainc(1./n1,x**n1)
+        else:
+            f=0.5-norm*sps.gammainc(1./n2,x**n2)
+        if f>1.0:
+            f=1.0
+        elif f<0.0:
+            f=0.0
+        QHII[i]=f
+        QHII[0]=1.
+        QHII[-1]=0.
+    return QHII
 
 ################
 # Example run  #
