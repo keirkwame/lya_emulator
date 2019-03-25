@@ -42,7 +42,7 @@ class Emulator:
         else:
             self.mf = mf
 
-        if kf or z is None:
+        if (kf is None) or (z is None):
             data_instance = lyman_data.BOSSData()
             if kf is None:
                 kf = data_instance.get_kf()
