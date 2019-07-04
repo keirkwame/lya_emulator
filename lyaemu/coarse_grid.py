@@ -10,6 +10,7 @@ import json
 import numpy as np
 import h5py
 from .SimulationRunner.SimulationRunner import lyasimulation
+from .SimulationRunner.SimulationRunner import clusters
 from . import latin_hypercube
 from . import flux_power
 from . import lyman_data
@@ -365,7 +366,10 @@ class KnotEmulator(Emulator):
         rescale_slope = ev[pn['heat_slope']]
         rescale_amp = ev[pn['heat_amp']]
         hub = ev[pn['hub']]
-        ss = lyasimulation.LymanAlphaKnotICs(outdir=outdir, box=box,npart=npart, knot_pos = self.knot_pos, knot_val=ev[0:self.nknots],hubble=hub, rescale_gamma=True, redend=2.2, rescale_slope = rescale_slope, rescale_amp = rescale_amp, omega0=self.omegamh2/hub**2, omegab=0.0483,unitary=True)
+        ss = lyasimulation.LymanAlphaKnotICs(outdir=outdir, box=box,npart=npart, knot_pos = self.knot_pos,
+                                             knot_val=ev[0:self.nknots],hubble=hub, rescale_gamma=True, redend=2.2,
+                                             rescale_slope = rescale_slope, rescale_amp = rescale_amp,
+                                             omega0=self.omegamh2/hub**2, omegab=0.0483,unitary=True)
         try:
             ss.make_simulation()
         except RuntimeError as e:
@@ -373,16 +377,19 @@ class KnotEmulator(Emulator):
 
 
 class nCDMEmulator(Emulator):
-    """Specialise parameter class for an emulator for nCDM models. Defaults to Planck 2018 Omega_m h**2."""
-    def __init__(self, basedir, kf=None, mf=None, z=None, omegamh2=0.14345):
-        param_names = {'ns': 0, 'As': 1, 'heat_slope': 2, 'heat_amp': 3, 'omega_m': 4, 'alpha': 5, 'beta': 6, 'gamma': 7}
-        param_limits = np.array([[0.8, 0.995], [1.2e-09, 2.6e-09], [-0.7, 0.1], [0.4, 1.4], [0.23, 0.32], [0., 0.1], [1., 10.], [-10., 0.]])
+    """Specialise parameter class for an emulator for nCDM models. Defaults to Planck 2018 Omega_m h**2 & Omega_b."""
+    def __init__(self, basedir, kf=None, mf=None, z=None, omegamh2=0.14345, omegab=0.04950):
+        param_names = {'ns': 0, 'As': 1, 'heat_slope': 2, 'heat_amp': 3, 'omega_m': 4, 'alpha': 5, 'beta': 6, 'gamma': 7, 'z_rei': 8}
+        param_limits = np.array([[0.9, 0.995], [1.2e-09, 2.5e-09], [-1.1, 0.5], [0.4, 1.4], [0.26, 0.33],
+                                 [0., 0.1], [0., 10.], [-10., 0.], [6., 15.]])
         if kf or z is None:
             data_instance = lyman_data.BoeraData()
             if kf is None:
                 kf = data_instance.get_kf()
             if z is None:
                 z = data_instance.get_redshifts()
+        self.omegab = omegab
+        self._scalar_pivot_scale_ratio = 0.05 / 2. #Ratio between CMB and Lyman-a forest scalar power spectrum pivots
         super().__init__(basedir=basedir, param_names=param_names, param_limits=param_limits, kf=kf, mf=mf, z=z, omegamh2=omegamh2)
 
     def _do_ic_generation(self, ev, npart, box): #To be modified!!!
@@ -391,15 +398,21 @@ class nCDMEmulator(Emulator):
         pn = self.param_names
         rescale_slope = ev[pn['heat_slope']]
         rescale_amp = ev[pn['heat_amp']]
-        hub = ev[pn['hub']]
-        # Convert pivot of the scalar amplitude from amplitude
-        # at 8 Mpc (k = 0.78) to pivot scale of 0.05
+        z_rei = ev[pn['z_rei']]
+        alpha = ev[pn['alpha']]
+        beta = ev[pn['beta']]
+        gamma = ev[pn['gamma']]
+        omega_m = ev[pn['omega_m']]
+        # Convert pivot of the scalar amplitude from amplitude at k = 2 [appropriate pivot scale for high-resolution
+        # data] to pivot scale of 0.05
         ns = ev[pn['ns']]
-        wmap = (0.05 / (2 * math.pi / 8.)) ** (ns - 1.) * ev[pn['As']]
-        ss = lyasimulation.LymanAlphaSim(outdir=outdir, box=box, npart=npart, ns=ns, scalar_amp=wmap,
-                                         rescale_gamma=True, rescale_slope=rescale_slope, redend=2.2,
-                                         rescale_amp=rescale_amp, hubble=hub, omega0=self.omegamh2 / hub ** 2,
-                                         omegab=0.0483, unitary=True)
+        wmap = self._scalar_pivot_scale_ratio ** (ns - 1.) * ev[pn['As']]
+        ss = lyasimulation.LymanAlphaNCDMSim(outdir=outdir, box=box, npart=npart, alpha=alpha, beta=beta, gamma=gamma,
+                                             ns=ns, scalar_amp=wmap, rescale_gamma=True, rescale_slope=rescale_slope,
+                                             rescale_amp=rescale_amp, z_rei=z_rei,
+                                             hubble=np.sqrt(self.omegamh2/omega_m), omega0=omega_m, omegab=self.omegab,
+                                             unitary=True, cluster_class=clusters.HypatiaClass,
+                                             MPGadget_directory=os.path.expanduser("~/Software/MP-Gadget/"))
         try:
             ss.make_simulation()
             fpfile = os.path.join(os.path.dirname(__file__), "flux_power.py")
@@ -407,6 +420,30 @@ class nCDMEmulator(Emulator):
             ss._cluster.generate_spectra_submit(outdir)
         except RuntimeError as e:
             print(str(e), " while building: ", outdir)
+
+    def _recon_one(self, pdir):
+        """Get the parameters of a simulation from the SimulationICs.json file"""
+        with open(os.path.join(pdir, "SimulationICs.json"), 'r') as jsin:
+            sics = json.load(jsin)
+        ev = np.zeros_like(self.param_limits[:,0])
+        pn = self.param_names
+        ev[pn['alpha']] = sics['alpha']
+        ev[pn['beta']] = sics['beta']
+        ev[pn['gamma']] = sics['gamma']
+        ev[pn['heat_slope']] = sics["rescale_slope"]
+        ev[pn['heat_amp']] = sics["rescale_amp"]
+        ev[pn['z_rei']] = sics['z_rei']
+        if self.param_names.get('hub', None) is not None:
+            ev[pn['hub']] = sics["hubble"]
+        if self.param_names.get('omega_m', None) is not None:
+            ev[pn['omega_m']] = sics["omega_m"]
+        ev[pn['ns']] = sics["ns"]
+        wmap = sics["scalar_amp"]
+        #Convert pivot of the scalar amplitude from amplitude
+        #at 8 Mpc (k = 0.78) to pivot scale of 0.05
+        conv = self._scalar_pivot_scale_ratio**(sics["ns"]-1.)
+        ev[pn['As']] = wmap / conv
+        return ev
 
 
 def get_simulation_parameters_knots(base):

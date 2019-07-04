@@ -107,7 +107,7 @@ class BOSSData(SDSSData):
 
 
 class BoeraData(SDSSData):
-    """A class to store the flux power spectrum and covariance matrix from Boera+ 2018 (HIRES/UVES;
+    """A class to store the flux power spectra and covariance matrices from Boera+ 2018 (HIRES/UVES;
     arxiv:1809.06980)."""
     def __init__(self, datadir=None, covardir=None):
         file_directory = os.path.dirname(__file__)
@@ -121,7 +121,7 @@ class BoeraData(SDSSData):
         self.nk = 16
         self.redshifts = np.repeat(self.redshifts_unique, self.nk)
         self.kf = np.zeros_like(self.redshifts)
-        self.pk = np.zeros_like(self.redshifts)
+        self.pf = np.zeros_like(self.redshifts)
         self.covar_diag = np.zeros_like(self.redshifts)
         self.covar = np.zeros((self.nk * self.nz, self.nk * self.nz))
         self.covar_full = np.zeros((self.nz, self.nk * self.nz))
@@ -134,7 +134,7 @@ class BoeraData(SDSSData):
             start_index = i * self.nk
             end_index = (i + 1) * self.nk
             self.kf[start_index: end_index] = 10 ** flux_power_data[:, 0]
-            self.pk[start_index: end_index] = flux_power_data[:, 2]
+            self.pf[start_index: end_index] = flux_power_data[:, 2]
             self.covar_diag[start_index: end_index] = flux_power_data[:, 3] ** 2
 
             covar_file = os.path.join(covardir, 'Cov_Matrixz=%.1f.dat'%self.redshifts_unique[i])
@@ -155,7 +155,7 @@ class BoeraData(SDSSData):
 
 
 class HighResolutionData(BoeraData):
-    """A class to store the flux power spectra and covariance matrixes for a compendium of high- (and medium-)
+    """A class to store the flux power spectra and covariance matrices for a compendium of high- (and medium-)
     resolution datasets."""
     def __init__(self):
         pass
