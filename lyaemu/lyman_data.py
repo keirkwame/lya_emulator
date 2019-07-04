@@ -135,10 +135,11 @@ class BoeraData(SDSSData):
             end_index = (i + 1) * self.nk
             self.kf[start_index: end_index] = 10 ** flux_power_data[:, 0]
             self.pf[start_index: end_index] = flux_power_data[:, 2]
-            self.covar_diag[start_index: end_index] = flux_power_data[:, 3] ** 2
+            #self.covar_diag[start_index: end_index] = flux_power_data[:, 3] ** 2
 
             covar_file = os.path.join(covardir, 'Cov_Matrixz=%.1f.dat'%self.redshifts_unique[i])
             self.covar_full[i] = np.load(covar_file)
+            self.covar_diag[start_index: end_index] = np.diag(self.covar_full[i])
             std_diag = np.sqrt(np.diag(self.covar_full[i]))
             npt.assert_almost_equal(std_diag, np.sqrt(self.covar_diag[start_index: end_index]))
             correlation_matrix = self.covar_full[i] / np.outer(std_diag, std_diag)
