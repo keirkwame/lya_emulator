@@ -417,7 +417,7 @@ class nCDMEmulator(Emulator):
                                              unitary=True, cluster_class=clusters.HypatiaClass,
                                              MPGadget_directory=os.path.expanduser("~/Software/MP-Gadget-master/"))
         try:
-            ss.make_simulation(do_build=True)
+            ss.make_simulation(do_build=False)
             fpfile = os.path.join(os.path.dirname(__file__), "flux_power.py")
             shutil.copy(fpfile, os.path.join(outdir, "flux_power.py"))
             ss._cluster.generate_spectra_submit(outdir)

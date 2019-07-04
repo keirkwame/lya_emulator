@@ -123,8 +123,8 @@ class BoeraData(SDSSData):
         self.kf = np.zeros_like(self.redshifts)
         self.pf = np.zeros_like(self.redshifts)
         self.covar_diag = np.zeros_like(self.redshifts)
-        self.covar = np.zeros((self.nk * self.nz, self.nk * self.nz))
-        self.covar_full = np.zeros((self.nz, self.nk * self.nz))
+        self.covar = np.zeros((self.nk * self.nz, self.nk * self.nz)) #Actually correlation matrix
+        self.covar_full = np.zeros((self.nz, self.nk, self.nk)) #Actually less full than the above!
         assert self.nz * self.nk == self.kf.size
 
         for i in range(self.nz):
