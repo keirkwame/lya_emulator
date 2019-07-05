@@ -103,7 +103,7 @@ class MySpectra(object):
     """This class stores the randomly positioned sightlines once,
        so that they are the same for each emulator point.
        max_k is in comoving h/Mpc."""
-    def __init__(self, numlos = 32000, max_z= 4.2, max_k = 5.):
+    def __init__(self, numlos = 32000, max_z= 4.2, max_k = 5., redshifts=None, pixel_resolution_km_s='default'):
         self.NumLos = numlos
         #For SDSS or BOSS the spectral resolution is
         #60 km/s at 5000 A and 80 km/s at 4300 A.
@@ -117,10 +117,16 @@ class MySpectra(object):
         #For BOSS the pixel resolution is actually 69 km/s.
         #We use a much smaller pixel resolution so that the window functions
         #are small for mean flux rescaling, and also so that HCDs are confined.
-        self.pix_res = 10.
+        if pixel_resolution_km_s is 'default':
+            self.pix_res = 10.
+        else:
+            self.pix_res = pixel_resolution_km_s
         self.NumLos = numlos
         #Want output every 0.2 from z=max to z=2.2, matching SDSS.
-        self.zout = np.arange(max_z,2.1,-0.2)
+        if redshifts is None:
+            self.zout = np.arange(max_z,2.1,-0.2)
+        else:
+            self.zout = redshifts
         self.max_k = max_k
         self.savefile = "lya_forest_spectra.hdf5"
 
