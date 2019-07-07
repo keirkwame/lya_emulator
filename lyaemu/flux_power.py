@@ -221,6 +221,15 @@ def _get_header_attr_from_snap(attr, num, base):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('base', type=str, help='Snapshot directory')
+    parser.add_argument('-pixel_resolution_km_s', type=float, default=10.0, required=False,
+                        help='Pixel resolution of spectra [in km/s]')
+    parser.add_argument('-redshifts', nargs='+', type=float, default=-1.0, required=False,
+                        help='List of redshifts at which to generate spectra [descending order]')
     args = parser.parse_args()
-    myspec = MySpectra()
+    if args.redshifts == -1.0:
+        redshifts = None
+    else:
+        redshifts = np.array(args.redshifts)
+    #print(args.base, redshifts, args.pixel_resolution_km_s)
+    myspec = MySpectra(redshifts=redshifts, pixel_resolution_km_s=args.pixel_resolution_km_s)
     myspec.get_snapshot_list(args.base)

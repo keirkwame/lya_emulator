@@ -50,6 +50,7 @@ class Emulator:
             if z is None:
                 z = data_instance.get_redshifts()
         self.kf = kf
+        self.redshifts = z
 
         #We fix omega_m h^2 = 0.1199 (Planck best-fit) and vary omega_m and h^2 to match it.
         #h^2 itself has little effect on the forest.
@@ -265,13 +266,13 @@ class Emulator:
         gp = self._get_custom_emulator(emuobj=None, max_z=max_z)
         return gp
 
-    def get_flux_vectors(self, max_z=4.2, kfunits="kms"):
+    def get_flux_vectors(self, max_z=4.2, kfunits="kms", redshifts=None, pixel_resolution_km_s='default'):
         """Get the desired flux vectors and their parameters"""
         pvals = self.get_parameters()
         nparams = np.shape(pvals)[1]
         nsims = np.shape(pvals)[0]
         assert nparams == len(self.param_names)
-        myspec = flux_power.MySpectra(max_z=max_z, max_k=self.maxk)
+        myspec = flux_power.MySpectra(max_z=max_z, max_k=self.maxk, redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s)
         aparams = pvals
         #Note this gets tau_0 as a linear scale factor from the observed power law
         dpvals = self.mf.get_params()
@@ -337,9 +338,9 @@ class Emulator:
         assert np.all(inparams - aparams < 1e-3)
         return kfmpc, kfkms, flux_vectors
 
-    def _get_custom_emulator(self, *, emuobj, max_z=4.2):
+    def _get_custom_emulator(self, *, emuobj, max_z=4.2, redshifts=None, pixel_resolution_km_s='default'):
         """Helper to allow supporting different emulators."""
-        aparams, kf, flux_vectors = self.get_flux_vectors(max_z=max_z, kfunits="mpc")
+        aparams, kf, flux_vectors = self.get_flux_vectors(max_z=max_z, kfunits="mpc", redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s)
         plimits = self.get_param_limits(include_dense=True)
         gp = gpemulator.MultiBinGP(params=aparams, kf=kf, powers = flux_vectors, param_limits = plimits, singleGP=emuobj)
         return gp
@@ -420,7 +421,7 @@ class nCDMEmulator(Emulator):
             ss.make_simulation(do_build=False)
             fpfile = os.path.join(os.path.dirname(__file__), "flux_power.py")
             shutil.copy(fpfile, os.path.join(outdir, "flux_power.py"))
-            ss._cluster.generate_spectra_submit(outdir)
+            ss._cluster.generate_spectra_submit(outdir, extra_options=)
         except RuntimeError as e:
             print(str(e), " while building: ", outdir)
 
@@ -447,6 +448,19 @@ class nCDMEmulator(Emulator):
         conv = self._scalar_pivot_scale_ratio**(sics["ns"]-1.)
         ev[pn['As']] = wmap / conv
         return ev
+
+    def get_emulator(self, max_z=None, redshifts='default', pixel_resolution_km_s=1.):
+        """ Build an emulator for the desired k_F and our simulations.
+            kf gives the desired k bins in s/km.
+            Mean flux rescaling is handled (if mean_flux=True) as follows:
+            1. A set of flux power spectra are generated for every one of a list of possible mean flux values.
+            2. Each flux power spectrum in the set is rescaled to the same mean flux.
+            3.
+        """
+        if redshifts is 'default':
+            redshifts = self.redshifts
+        gp = self._get_custom_emulator(emuobj=None, max_z=max_z, redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s)
+        return gp
 
 
 def get_simulation_parameters_knots(base):
