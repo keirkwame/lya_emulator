@@ -1,5 +1,6 @@
 """Module for holding different mean flux models"""
 
+import math as mh
 import numpy as np
 
 def obs_mean_tau(redshift, amp=0, slope=0):
@@ -7,6 +8,12 @@ def obs_mean_tau(redshift, amp=0, slope=0):
     Note we constrain this much better from the SDSS data itself:
     this is a weak prior"""
     return (2.3+amp)*1e-3*(1.0+redshift)**(3.65+slope)
+
+def obs_mean_tau_high_z(redshift, amp=0, slope=0):
+    """The mean flux as used in 1809.06980 is 0.0014(1+z)^4.0
+    Note we constrain this much better from data itself:
+    this is a weak prior"""
+    return (1.4+amp)*1e-3*(1.0+redshift)**(4.+slope)
 
 class ConstMeanFlux(object):
     """Object which implements different mean flux models. This model fixes the mean flux to a constant value.
@@ -37,6 +44,22 @@ class ConstMeanFlux(object):
     def get_limits(self):
         """Get limits on the dense parameters"""
         return None
+
+
+class ConstMeanFluxHighRedshift(ConstMeanFlux):
+    """Class which implements a mean flux model appropriate for high redshifts (z > 4) -- fixed to a fiducial redshift
+    dependence"""
+    def __init__(self, value=1.):
+        super().__init__(value=value)
+
+    def get_t0(self, zzs, params=None):
+        """Get mean optical depth."""
+        if params is None:
+            params = self.value
+        if params is None:
+            return np.array([None,])
+        return np.array([params * obs_mean_tau_high_z(zzs)])
+
 
 class MeanFluxFactor(ConstMeanFlux):
     """Object which implements different mean flux models. This model parametrises
@@ -79,10 +102,28 @@ class MeanFluxFactor(ConstMeanFlux):
         """Get limits on the dense parameters"""
         return self.dense_param_limits
 
-def mean_flux_slope_to_factor(zzs, slope):
+
+class MeanFluxFactorHighRedshift(MeanFluxFactor):
+    """Class which implements a mean flux model appropriate for high redshifts (z > 4)"""
+    def __init__(self, dense_samples=10, dense_limits=None, redshifts=np.array([4.24, 4.58, 4.95])):
+        if dense_limits is None:
+            redshift_pivot = redshifts[mh.floor(redshifts.size / 2)]
+            tau_factor_maximum = np.max(mean_flux_slope_to_factor(redshifts, 0.25, redshift_pivot=redshift_pivot))
+            tau_factor_minimum = np.min(mean_flux_slope_to_factor(redshifts, -0.25, redshift_pivot=redshift_pivot))
+            dense_limits = np.array([[0.75, 1.25]]) * np.array([tau_factor_minimum, tau_factor_maximum])
+        super().__init__(dense_samples=dense_samples, dense_limits=dense_limits)
+
+    def get_t0(self, zzs, params=None):
+        """Get the mean optical depth as a function of redshift for all parameters."""
+        if params is None:
+            params = self.get_params()
+        return np.array([t0 * obs_mean_tau_high_z(zzs) for t0 in params])
+
+
+def mean_flux_slope_to_factor(zzs, slope, redshift_pivot=3.):
     """Convert a mean flux slope into a list of mean flux amplitudes."""
     #tau_0_i[z] @dtau_0 / tau_0_i[z] @[dtau_0 = 0]
     taus = obs_mean_tau(zzs, amp=0, slope=slope)/obs_mean_tau(zzs, amp=0, slope=0)
-    ii = np.argmin(np.abs(zzs-3.))
-    #Divide by redshift 3 bin
+    ii = np.argmin(np.abs(zzs-redshift_pivot))
+    #Divide by redshift pivot bin
     return taus / taus[ii]

@@ -16,6 +16,7 @@ from . import flux_power
 from . import lyman_data
 from . import gpemulator
 from .mean_flux import ConstMeanFlux
+from .mean_flux import ConstMeanFluxHighRedshift
 
 def get_latex(key):
     """Get a latex name if it exists, otherwise return the key."""
@@ -392,6 +393,8 @@ class nCDMEmulator(Emulator):
                 kf = data_instance.get_kf()
             if z is None:
                 z = data_instance.get_redshifts()
+        if mf is None:
+            mf = ConstMeanFluxHighRedshift(None)
         self.omegab = omegab
         self._scalar_pivot_scale_ratio = 0.05 / 2. #Ratio between CMB and Lyman-a forest scalar power spectrum pivots
         super().__init__(basedir=basedir, param_names=param_names, param_limits=param_limits, kf=kf, mf=mf, z=z, omegamh2=omegamh2)
@@ -421,7 +424,10 @@ class nCDMEmulator(Emulator):
             ss.make_simulation(do_build=False)
             fpfile = os.path.join(os.path.dirname(__file__), "flux_power.py")
             shutil.copy(fpfile, os.path.join(outdir, "flux_power.py"))
-            ss._cluster.generate_spectra_submit(outdir, extra_options=)
+            extra_options = '-pixel_resolution_km_s 1.0 -redshifts'
+            for redshift in self.redshifts:
+                extra_options += ' %.3f'%redshift
+            ss._cluster.generate_spectra_submit(outdir, extra_options=extra_options)
         except RuntimeError as e:
             print(str(e), " while building: ", outdir)
 
