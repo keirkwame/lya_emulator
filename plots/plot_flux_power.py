@@ -10,3 +10,5 @@ if __name__ == "__main__":
     emulator_instance.load()
 
     flux_powers = emulator_instance.get_flux_vectors(redshifts=emulator_instance.redshifts, pixel_resolution_km_s=1.)
+    print(flux_powers)
+
