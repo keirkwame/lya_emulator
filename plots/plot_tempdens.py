@@ -30,6 +30,7 @@ if __name__ == "__main__":
             T0[i, j], gamma[i, j] = td.fit_td_rel_plot(snapshot_number, simulation_directory, plot=False)
         axes[0].plot(redshifts, T0[i], label=input_parameters)
         axes[1].plot(redshifts, gamma[i], label=input_parameters)
+        print(input_parameters, T0[i], gamma[i])
 
     axes[0].legend(frameon=False)
     axes[1].legend(frameon=False)
