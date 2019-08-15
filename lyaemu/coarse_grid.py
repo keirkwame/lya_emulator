@@ -433,6 +433,7 @@ class nCDMEmulator(Emulator):
             for redshift in self.redshifts:
                 extra_options += ' %.3f'%redshift
             ss._cluster.generate_spectra_submit(outdir, extra_options=extra_options)
+            ss._cluster.
         except RuntimeError as e:
             print(str(e), " while building: ", outdir)
 
