@@ -128,7 +128,7 @@ class MySpectra(object):
         else:
             self.zout = redshifts
         self.max_k = max_k
-        self.savefile = "lya_forest_spectra.hdf5"
+        self.savefile = "lya_forest_spectra_%.2f.hdf5"%self.pix_res
 
     def _get_cofm(self, num, base):
         """Get an array of sightlines."""
