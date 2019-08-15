@@ -267,7 +267,7 @@ class Emulator:
         gp = self._get_custom_emulator(emuobj=None, max_z=max_z)
         return gp
 
-    def get_flux_vectors(self, max_z=4.2, kfunits="kms", redshifts=None, pixel_resolution_km_s='default'):
+    def get_flux_vectors(self, max_z=4.2, kfunits="kms", redshifts=None, pixel_resolution_km_s='default', fix_mean_flux_samples=False):
         """Get the desired flux vectors and their parameters"""
         pvals = self.get_parameters()
         nparams = np.shape(pvals)[1]
@@ -282,13 +282,17 @@ class Emulator:
         mfc = "cc"
         if dpvals is not None:
             #Add a small offset to the mean flux in each simulation to improve support
-            nuggets = np.arange(nsims)/nsims * (dpvals[-1] - dpvals[0])/(np.size(dpvals)+1)
+            if not fix_mean_flux_samples:
+                nuggets = np.arange(nsims)/nsims * (dpvals[-1] - dpvals[0])/(np.size(dpvals)+1)
             newdp = dpvals[0] + (dpvals-dpvals[0]) / (np.size(dpvals)+1) * np.size(dpvals)
             #Make sure we don't overflow the parameter limits
             assert (newdp[-1] + nuggets[-1] < dpvals[-1]) and (newdp[0] + nuggets[0] >= dpvals[0])
             dpvals = newdp
             aparams = np.array([np.concatenate([dp+nuggets[i],pvals[i]]) for dp in dpvals for i in range(nsims)])
-            mfc = "mf"
+            mfc = "mf2"
+        print('dpvals =', dpvals)
+        print('nuggets =', nuggets)
+        print('mean_flux =', self.mf.get_mean_flux(myspec.zout, params=dpvals))
         try:
             kfmpc, kfkms, flux_vectors = self.load_flux_vectors(aparams, mfc=mfc)
         except (AssertionError, OSError):
@@ -384,9 +388,9 @@ class KnotEmulator(Emulator):
 class nCDMEmulator(Emulator):
     """Specialise parameter class for an emulator for nCDM models. Defaults to Planck 2018 Omega_m h**2 & Omega_b."""
     def __init__(self, basedir, kf=None, mf=None, z=None, omegamh2=0.14345, omegab=0.04950):
-        param_names = {'ns': 0, 'As': 1, 'heat_slope': 2, 'heat_amp': 3, 'omega_m': 4, 'alpha': 5, 'beta': 6, 'gamma': 7, 'z_rei': 8}
-        param_limits = np.array([[0.9, 0.995], [1.2e-9, 2.5e-9], [-1.1, 0.5], [0.4, 1.4], [0.26, 0.33],
-                                 [0., 0.1], [0., 10.], [-10., 0.], [6., 15.]])
+        param_names = {'ns': 0, 'As': 1, 'heat_slope': 2, 'heat_amp': 3, 'omega_m': 4, 'alpha': 5, 'beta': 6, 'gamma': 7, 'z_rei': 8, 'T_rei': 9}
+        param_limits = np.array([[0.9, 0.995], [1.2e-9, 2.5e-9], [-1.4, 1.4], [0.05, 1.9], [0.26, 0.33],
+                                 [0., 0.1], [0., 10.], [-10., 0.], [6., 15.], [1.5e+4, 4.e+4]])
         if kf or z is None:
             data_instance = lyman_data.BoeraData()
             if kf is None:
@@ -406,6 +410,7 @@ class nCDMEmulator(Emulator):
         rescale_slope = ev[pn['heat_slope']]
         rescale_amp = ev[pn['heat_amp']]
         z_rei = ev[pn['z_rei']]
+        T_rei = ev[pn['T_rei']]
         alpha = ev[pn['alpha']]
         beta = ev[pn['beta']]
         gamma = ev[pn['gamma']]
@@ -416,7 +421,7 @@ class nCDMEmulator(Emulator):
         wmap = self._scalar_pivot_scale_ratio ** (ns - 1.) * ev[pn['As']]
         ss = lyasimulation.LymanAlphaNCDMSim(outdir=outdir, box=box, npart=npart, alpha=alpha, beta=beta, gamma=gamma,
                                              ns=ns, scalar_amp=wmap, rescale_gamma=True, rescale_slope=rescale_slope,
-                                             rescale_amp=rescale_amp, z_rei=z_rei,
+                                             rescale_amp=rescale_amp, z_rei=z_rei, delta_T_HI_K=T_rei,
                                              hubble=np.sqrt(self.omegamh2/omega_m), omega0=omega_m, omegab=self.omegab,
                                              unitary=True, cluster_class=clusters.HypatiaClass,
                                              MPGadget_directory=os.path.expanduser("~/Software/MP-Gadget-master/"))
@@ -443,6 +448,7 @@ class nCDMEmulator(Emulator):
         ev[pn['heat_slope']] = sics["rescale_slope"]
         ev[pn['heat_amp']] = sics["rescale_amp"]
         ev[pn['z_rei']] = sics['z_rei']
+        ev[pn['T_rei']] = sics['T_rei']
         if self.param_names.get('hub', None) is not None:
             ev[pn['hub']] = sics["hubble"]
         if self.param_names.get('omega_m', None) is not None:

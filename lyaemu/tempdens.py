@@ -76,6 +76,9 @@ def fit_td_rel_plot(num, base, nhi=True, nbins=500, gas="raw", plot=True):
     else:
         nhi = dens
 
+    print(dens.shape, dens, np.nanmax(dens), np.nanmin(dens), np.sum(np.isnan(dens)), dens[temp == 0.])
+    print(temp.shape, temp, np.nanmax(temp), np.nanmin(temp), np.sum(np.isnan(temp)), np.min(temp[temp > 0.]), np.shape(temp[temp == 0.]), np.where(temp == 0.))
+
     logdens = np.log10(dens)
     logT = np.log10(temp)
     mean_dens = mean_density(hubble, redshift, omegab=snap.get_omega_baryon())
@@ -102,9 +105,15 @@ def fit_td_rel_plot(num, base, nhi=True, nbins=500, gas="raw", plot=True):
     return T0, gamma
 
 if __name__ == "__main__":
-    (T0, gamma) = fit_td_rel_plot(10, os.path.expanduser("~/data/Lya_Boss/hires_s8_test/ns0.97As2.2e-09heat_slope0.083heat_amp0.92hub0.69/output/"), nhi=True)
-    plt.savefig("plots/tempdens.pdf")
+    simulation_directory = '/share/data2/keir/Simulations/nCDM_test_thermal/ns0.964As1.83e-09heat_slope-1.4heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04/output'
+
+    '''(T0, gamma) = fit_td_rel_plot(3, simulation_directory, nhi=True)
+    plt.savefig("/home/keir/Plots/nCDM/tempdens3_z_rei.pdf")
     plt.clf()
-    (T0, gamma) = fit_td_rel_plot(7, os.path.expanduser("~/data/Lya_Boss/hires_s8_test/ns0.97As2.2e-09heat_slope0.083heat_amp0.92hub0.69/output/"), nhi=True)
-    plt.savefig("plots/tempdens3.pdf")
-    plt.clf()
+    (T0, gamma) = fit_td_rel_plot(4, simulation_directory, nhi=True)
+    plt.savefig("/home/keir/Plots/nCDM/tempdens4_z_rei.pdf")
+    plt.clf()'''
+    (T0, gamma) = fit_td_rel_plot(6, simulation_directory, nhi=True)
+    plt.savefig("/home/keir/Plots/nCDM/tempdens6_heat_slope_-1_4.pdf")
+    #plt.clf()
+
