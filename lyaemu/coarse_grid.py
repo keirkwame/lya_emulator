@@ -415,6 +415,7 @@ class nCDMEmulator(Emulator):
         beta = ev[pn['beta']]
         gamma = ev[pn['gamma']]
         omega_m = ev[pn['omega_m']]
+        hubble = np.sqrt(self.omegamh2/omega_m)
         # Convert pivot of the scalar amplitude from amplitude at k = 2 [appropriate pivot scale for high-resolution
         # data] to pivot scale of 0.05
         ns = ev[pn['ns']]
@@ -422,7 +423,7 @@ class nCDMEmulator(Emulator):
         ss = lyasimulation.LymanAlphaNCDMSim(outdir=outdir, box=box, npart=npart, alpha=alpha, beta=beta, gamma=gamma,
                                              ns=ns, scalar_amp=wmap, rescale_gamma=True, rescale_slope=rescale_slope,
                                              rescale_amp=rescale_amp, z_rei=z_rei, delta_T_HI_K=T_rei,
-                                             hubble=np.sqrt(self.omegamh2/omega_m), omega0=omega_m, omegab=self.omegab,
+                                             hubble=hubble, omega0=omega_m, omegab=self.omegab,
                                              unitary=True, cluster_class=clusters.HypatiaClass,
                                              MPGadget_directory=os.path.expanduser("~/Software/MP-Gadget-master/"))
         try:
@@ -430,10 +431,13 @@ class nCDMEmulator(Emulator):
             fpfile = os.path.join(os.path.dirname(__file__), "flux_power.py")
             shutil.copy(fpfile, os.path.join(outdir, "flux_power.py"))
             extra_options = '-pixel_resolution_km_s 1.0 -redshifts'
-            for redshift in self.redshifts:
+            snapshot_numbers = np.zeros_like(self.redshifts)
+            for i, redshift in enumerate(self.redshifts):
                 extra_options += ' %.3f'%redshift
+                snapshot_numbers[i] = ss.get_snapshot_number(redshift)
             ss._cluster.generate_spectra_submit(outdir, extra_options=extra_options)
-            ss._cluster.
+            ss._cluster.generate_GenPK_submit(outdir, os.path.expanduser('~/Software/GenPK'), snapshot_numbers,
+                                              box*1000., hubble)
         except RuntimeError as e:
             print(str(e), " while building: ", outdir)
 
