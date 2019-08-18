@@ -11,13 +11,13 @@ import lyaemu.mean_flux as mef
 
 if __name__ == "__main__":
     emulator_base_directory = '/share/data2/keir/Simulations'
-    emulator_name = 'nCDM_test2'
+    emulator_name = 'nCDM_test_thermal2_corners'
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name), mf=mef.MeanFluxFactorHighRedshift(dense_samples=2))
     emulator_instance.load()
     n_simulations = emulator_instance.get_parameters().shape[0]
     default_simulation_index = 0
 
-    savefile = os.path.join(emulator_base_directory, emulator_name, 'flux_power_mean_flux_2_no_nuggets.pdf')
+    savefile = os.path.join(emulator_base_directory, emulator_name, 'flux_power_nCDM_test_thermal2_corners.pdf')
     figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20.))
 
     input_parameters_all, k_parallel, flux_powers = emulator_instance.get_flux_vectors(

@@ -11,7 +11,7 @@ import lyaemu.tempdens as td
 
 if __name__ == "__main__":
     emulator_base_directory = '/share/data2/keir/Simulations'
-    emulator_name = 'nCDM_test_thermal'
+    emulator_name = 'nCDM_test2'
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name))
     emulator_instance.load()
 
