@@ -40,7 +40,7 @@ if __name__ == '__main__':
     emulator_instance.gen_simulations(None, npart=256, box=10., samples=samples_nCDM_test)'''
 
     #nCDM_test_512_HM12
-    n_simulations = 3
+    '''n_simulations = 3
     samples_fiducial_nCDM = [0.9635, 1.8296e-9, 0., 1., 0.3209, 0., 1., -1., 8., 2.e+4]
     #samples_perturbation_nCDM_z_rei = 15.
     samples_nCDM_test = np.array(samples_fiducial_nCDM * n_simulations).reshape(n_simulations, -1)
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     samples_nCDM_test[2, 9] = 1.5e+4
 
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, 'nCDM_test_512_filtering'))
-    emulator_instance.gen_simulations(None, npart=512, box=10., samples=samples_nCDM_test)
+    emulator_instance.gen_simulations(None, npart=512, box=10., samples=samples_nCDM_test)'''
 
     #nCDM_test_thermal2_corners
     '''n_simulations = 4
@@ -76,3 +76,6 @@ if __name__ == '__main__':
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, 'nCDM_test_thermal2_corners'))
     emulator_instance.gen_simulations(None, npart=256, box=10., samples=samples_nCDM_test)'''
 
+    #nCDM_test_emulator
+    emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, 'nCDM_test_emulator'))
+    emulator_instance.gen_simulations(50, npart=256, box=10.)

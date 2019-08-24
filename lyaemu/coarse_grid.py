@@ -389,8 +389,8 @@ class nCDMEmulator(Emulator):
     """Specialise parameter class for an emulator for nCDM models. Defaults to Planck 2018 Omega_m h**2 & Omega_b."""
     def __init__(self, basedir, kf=None, mf=None, z=None, omegamh2=0.14345, omegab=0.04950):
         param_names = {'ns': 0, 'As': 1, 'heat_slope': 2, 'heat_amp': 3, 'omega_m': 4, 'alpha': 5, 'beta': 6, 'gamma': 7, 'z_rei': 8, 'T_rei': 9}
-        param_limits = np.array([[0.9, 0.995], [1.2e-9, 2.5e-9], [-1.4, 1.4], [0.05, 1.9], [0.26, 0.33],
-                                 [0., 0.1], [0., 10.], [-10., 0.], [6., 15.], [1.5e+4, 4.e+4]])
+        param_limits = np.array([[0.9, 0.995], [1.2e-9, 2.5e-9], [-1.3, 0.7], [0.05, 3.5], [0.26, 0.33],
+                                 [0., 0.1], [1., 10.], [-10., 0.], [6., 15.], [1.5e+4, 4.e+4]])
         if kf or z is None:
             data_instance = lyman_data.BoeraData()
             if kf is None:
