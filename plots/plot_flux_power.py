@@ -11,15 +11,15 @@ import lyaemu.mean_flux as mef
 
 if __name__ == "__main__":
     emulator_base_directory = '/share/data2/keir/Simulations'
-    emulator_names = ['nCDM_test_thermal2_corners',]
-    simulation_indices = [np.arange(4),]
+    emulator_names = ['nCDM_test_512_filtering',] #'nCDM_test_512_HM12']
+    simulation_indices = [np.arange(3),] #np.arange(1)]
 
     default_emulator_index = 0
-    default_simulation_index = 0
+    default_simulation_index = 2
     n_simulations = np.sum(
         [np.size(simulation_indices_single_emulator) for simulation_indices_single_emulator in simulation_indices])
 
-    savefile = os.path.join(emulator_base_directory, emulator_names[0], 'flux_power_nCDM_test_thermal2_corners2.pdf')
+    savefile = os.path.join(emulator_base_directory, emulator_names[0], 'flux_power_512_filtering.pdf')
     figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20.))
 
     plot_start_index = 0
@@ -38,6 +38,7 @@ if __name__ == "__main__":
         input_parameters_all.append(input_parameters_all_single_emulator[simulation_indices[a]])
         k_parallel.append(k_parallel_single_emulator[simulation_indices[a]])
         flux_powers.append(flux_powers_single_emulator[simulation_indices[a]])
+        print(len(flux_powers), flux_powers)
 
         for b, input_parameters in enumerate(input_parameters_all[a]): #Loop over simulations
             i = plot_start_index + b
