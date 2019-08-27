@@ -65,11 +65,12 @@ class MeanFluxFactor(ConstMeanFlux):
     """Object which implements different mean flux models. This model parametrises
     uncertainty in the mean flux with a simple scaling factor.
     """
-    def __init__(self, dense_samples = 10, dense_limits = None):
+    def __init__(self, dense_samples = 10, dense_limits = None, redshift_pivot=3.):
         #Limits on factors to multiply the thermal history by.
         #Mean flux is known to about 10% from SDSS, so we don't need a big range.
+        self.redshift_pivot = redshift_pivot
         if dense_limits is None:
-            slopehigh = np.max(mean_flux_slope_to_factor(np.linspace(2.2, 4.2, 11),0.25))
+            slopehigh = np.max(mean_flux_slope_to_factor(np.linspace(2.2, 4.2, 11),0.25, redshift_pivot=self.redshift_pivot))
             slopelow = np.min(mean_flux_slope_to_factor(np.linspace(2.2, 4.2, 11),-0.25))
             self.dense_param_limits = np.array([[0.75,1.25]]) * np.array([slopelow, slopehigh])
         else:
@@ -106,12 +107,12 @@ class MeanFluxFactor(ConstMeanFlux):
 class MeanFluxFactorHighRedshift(MeanFluxFactor):
     """Class which implements a mean flux model appropriate for high redshifts (z > 4)"""
     def __init__(self, dense_samples=10, dense_limits=None, redshifts=np.array([4.24, 4.58, 4.95])):
+        redshift_pivot = redshifts[mh.floor(redshifts.size / 2)]
         if dense_limits is None:
-            redshift_pivot = redshifts[mh.floor(redshifts.size / 2)]
             tau_factor_maximum = np.max(mean_flux_slope_to_factor(redshifts, 0.25, redshift_pivot=redshift_pivot))
             tau_factor_minimum = np.min(mean_flux_slope_to_factor(redshifts, -0.25, redshift_pivot=redshift_pivot))
             dense_limits = np.array([[0.75, 1.25]]) * np.array([tau_factor_minimum, tau_factor_maximum])
-        super().__init__(dense_samples=dense_samples, dense_limits=dense_limits)
+        super().__init__(dense_samples=dense_samples, dense_limits=dense_limits, redshift_pivot=redshift_pivot)
 
     def get_t0(self, zzs, params=None):
         """Get the mean optical depth as a function of redshift for all parameters."""

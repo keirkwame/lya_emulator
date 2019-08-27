@@ -47,7 +47,7 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1.):
 
         scaling_factor = ekf[i]/ mh.pi
         data_flux_power_std_single_z = np.sqrt(like.sdss.get_covar(z[i]).diagonal())
-        exact_flux_power_std_single_z = np.sqrt(np.diag(like.get_BOSS_error(i)))
+        exact_flux_power_std_single_z = np.sqrt(np.diag(like.get_data_covariance(i)))
 #         print('Diagonal elements of BOSS covariance matrix at single redshift:', data_flux_power_std_single_z)
 
         line_width = 0.5

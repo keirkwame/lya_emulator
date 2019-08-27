@@ -61,34 +61,47 @@ def invert_block_diagonal_covariance(full_covariance_matrix, n_blocks):
         inverse_covariance_matrix[start_index: end_index, start_index: end_index] = inverse_covariance_block
     return inverse_covariance_matrix
 
-def load_data(datadir, *, kf, max_z=4.2, t0=1.):
+def load_data(datadir, *, kf, max_z=4.2, redshifts=None, pixel_resolution_km_s='default', t0=1., mean_flux='low_z'):
     """Load and initialise a "fake data" flux power spectrum"""
     #Load the data directory
-    myspec = flux_power.MySpectra(max_z=max_z)
+    myspec = flux_power.MySpectra(max_z=max_z, redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s)
     pps = myspec.get_snapshot_list(datadir)
     #self.data_fluxpower is used in likelihood.
-    data_fluxpower = pps.get_power(kf=kf, mean_fluxes=np.exp(-t0*mflux.obs_mean_tau(myspec.zout, amp=0)))
+    if mean_flux == 'low_z':
+        mean_flux_function = mflux.obs_mean_tau
+    elif mean_flux == 'high_z':
+        mean_flux_function = mflux.obs_mean_tau_high_z
+    data_fluxpower = pps.get_power(kf=kf, mean_fluxes=np.exp(-t0*mean_flux_function(myspec.zout, amp=0)))
     assert np.size(data_fluxpower) % np.size(kf) == 0
     return data_fluxpower
 
 class LikelihoodClass:
     """Class to contain likelihood computations."""
-    def __init__(self, basedir, mean_flux='s', max_z = 4.2, emulator_class="standard", t0_training_value = 1., optimise_GP=True, emulator_json_file='emulator_params.json'):
+    def __init__(self, basedir, mean_flux='s', max_z = 4.2, redshifts=None, pixel_resolution_km_s='default',
+                 emulator_class="standard", t0_training_value = 1., optimise_GP=True,
+                 emulator_json_file='emulator_params.json', data_class='BOSS'):
         """Initialise the emulator by loading the flux power spectra from the simulations."""
 
-        #Stored BOSS covariance matrix
-        self._inverse_BOSS_covariance_full = None
-        #Use the BOSS covariance matrix
-        self.sdss = lyman_data.BOSSData()
+        #Stored covariance matrix
+        self._inverse_covariance_full = None
+        #Use the covariance matrix
+        if data_class == 'BOSS':
+            self.lyman_data_instance = lyman_data.BOSSData()
+        elif data_class == 'Boera':
+            self.lyman_data_instance = lyman_data.BoeraData()
+        else:
+            raise ValueError('Data class not recognised')
         #'Data' now is a simulation
         self.max_z = max_z
-        myspec = flux_power.MySpectra(max_z=max_z)
+        self.data_redshifts = redshifts
+        self.pixel_resolution_km_s = pixel_resolution_km_s
+        myspec = flux_power.MySpectra(max_z=max_z, redshifts=self.data_redshifts, pixel_resolution_km_s=self.pixel_resolution_km_s)
         self.zout = myspec.zout
-        self.kf = self.sdss.get_kf()
+        self.kf = self.lyman_data_instance.get_kf()
 
         self.t0_training_value = t0_training_value
-        #Load BOSS data vector
-        self.BOSS_flux_power = self.sdss.pf.reshape(-1, self.kf.shape[0])[:self.zout.shape[0]][::-1] #km / s; n_z * n_k
+        #Load data vector
+        self.lyman_data_flux_power = self.lyman_data_instance.pf.reshape(-1, self.kf.shape[0])[:self.zout.shape[0]][::-1] #km / s; n_z * n_k
 
         self.mf_slope = False
         #Param limits on t0
@@ -96,6 +109,8 @@ class LikelihoodClass:
         #Get the emulator
         if mean_flux == 'c':
             mf = mflux.ConstMeanFlux(value = t0_training_value)
+        elif mean_flux == 'c_high_z':
+            mf = mflux.ConstMeanFluxHighRedshift(value=t0_training_value)
         #As each redshift bin is independent, for redshift-dependent mean flux models
         #we just need to convert the input parameters to a list of mean flux scalings
         #in each redshift bin.
@@ -108,19 +123,32 @@ class LikelihoodClass:
             slopelow = np.min(mflux.mean_flux_slope_to_factor(np.linspace(2.2, max_z, 11),-0.25))
             dense_limits = np.array([np.array(t0_factor) * np.array([slopelow, slopehigh])])
             mf = mflux.MeanFluxFactor(dense_limits = dense_limits)
+        elif mean_flux == 's_high_z':
+            self.mf_slope = True
+            t0_slope = np.array([-0.25, 0.25])
+            mf = mflux.MeanFluxFactorHighRedshift()
         else:
             mf = mflux.MeanFluxFactor()
+        self.mean_flux_instance = mf
+
+        if (mean_flux == 'c') or (mean_flux == 's'):
+            self.mean_flux_redshifts = 'low_z'
+        elif (mean_flux == 'c_high_z') or (mean_flux == 's_high_z'):
+            self.mean_flux_redshifts = 'high_z'
+
         if emulator_class == "standard":
             self.emulator = coarse_grid.Emulator(basedir, kf=self.kf, mf=mf)
         elif emulator_class == "knot":
             self.emulator = coarse_grid.KnotEmulator(basedir, kf=self.kf, mf=mf)
         elif emulator_class == "quadratic":
             self.emulator = QuadraticEmulator(basedir, kf=self.kf, mf=mf)
+        elif emulator_class == 'nCDM':
+            self.emulator = coarse_grid.nCDMEmulator(basedir, kf=self.kf, mf=mf)
         else:
             raise ValueError("Emulator class not recognised")
         self.emulator.load(dumpfile=emulator_json_file)
         self.param_limits = self.emulator.get_param_limits(include_dense=True)
-        if mean_flux == 's':
+        if (mean_flux == 's') or (mean_flux == 's_high_z'):
             #Add a slope to the parameter limits
             self.param_limits = np.vstack([t0_slope, self.param_limits])
             #Shrink param limits t0 so that even with
@@ -130,7 +158,10 @@ class LikelihoodClass:
         assert np.shape(self.param_limits)[1] == 2
         print('Beginning to generate emulator at', str(datetime.now()))
         if optimise_GP:
-            self.gpemu = self.emulator.get_emulator(max_z=max_z)
+            if emulator_class == 'nCDM':
+                self.gpemu = self.emulator.get_emulator(redshifts=self.data_redshifts, pixel_resolution_km_s=self.pixel_resolution_km_s)
+            else:
+                self.gpemu = self.emulator.get_emulator(max_z=max_z)
         print('Finished generating emulator at', str(datetime.now()))
 
     def get_predicted(self, params, use_updated_training_set=False):
@@ -139,7 +170,7 @@ class LikelihoodClass:
         if self.mf_slope:
             # tau_0_i[z] @dtau_0 / tau_0_i[z] @[dtau_0 = 0]
             # Divided by lowest redshift case
-            tau0_fac = mflux.mean_flux_slope_to_factor(self.zout, params[0])
+            tau0_fac = mflux.mean_flux_slope_to_factor(self.zout, params[0], redshift_pivot=self.mean_flux_instance.redshift_pivot)
             nparams = params[1:] #Keep only t0 sampling parameter (of mean flux parameters)
         else: #Otherwise bug if choose mean_flux = 'c'
             tau0_fac = None
@@ -147,9 +178,13 @@ class LikelihoodClass:
         # Here: emulating @ cosmo.; thermal; sampled t0 * [tau0_fac from above]
         predicted_nat, std_nat = self.gpemu.predict(np.array(nparams).reshape(1,-1), tau0_factors = tau0_fac, use_updated_training_set=use_updated_training_set)
         ndense = len(self.emulator.mf.dense_param_names)
-        hindex = ndense + self.emulator.param_names["hub"]
-        assert 0.5 < nparams[hindex] < 1
-        omega_m = self.emulator.omegamh2/nparams[hindex]**2
+        if self.emulator.param_names.get('hub', None) is not None:
+            hindex = ndense + self.emulator.param_names["hub"]
+            assert 0.5 < nparams[hindex] < 1
+            omega_m = self.emulator.omegamh2/nparams[hindex]**2
+        elif self.emulator.param_names.get('omega_m', None) is not None:
+            omega_m_index = ndense + self.emulator.param_names['omega_m']
+            omega_m = nparams[omega_m_index]
         okf, predicted = flux_power.rebin_power_to_kms(kfkms=self.kf, kfmpc=self.gpemu.kf, flux_powers = predicted_nat[0], zbins=self.zout, omega_m = omega_m)
         _, std= flux_power.rebin_power_to_kms(kfkms=self.kf, kfmpc=self.gpemu.kf, flux_powers = std_nat[0], zbins=self.zout, omega_m = omega_m)
         return okf, predicted, std
@@ -179,7 +214,7 @@ class LikelihoodClass:
             diff_bin = predicted[bb] - data_power[nkf*bb:nkf*(bb+1)][idp]
             std_bin = std[bb]
             bindx = np.min(idp)
-            covar_bin = self.get_BOSS_error(bb)[bindx:,bindx:]
+            covar_bin = self.get_data_covariance(bb)[bindx:, bindx:]
 
             assert np.shape(np.outer(std_bin,std_bin)) == np.shape(covar_bin)
             if include_emu:
@@ -225,26 +260,28 @@ class LikelihoodClass:
         volume_factor = (self.param_limits[0, 1] - self.param_limits[0, 0]) * (self.param_limits[1, 1] - self.param_limits[1, 0])
         return volume_factor * function_sum / n_samples
 
-    def get_BOSS_error(self, zbin):
+    def get_data_covariance(self, zbin):
         """Get the BOSS covariance matrix error."""
         #Redshifts
-        sdssz = self.sdss.get_redshifts()
+        lyman_data_redshifts = self.lyman_data_instance.get_redshifts()
         #Fix maximum redshift bug
-        sdssz = sdssz[sdssz <= self.max_z]
+        lyman_data_redshifts = lyman_data_redshifts[lyman_data_redshifts <= self.max_z]
         #Important assertion
-        npt.assert_allclose(sdssz, self.zout, atol=1.e-16)
-        #print('SDSS redshifts are', sdssz)
+        npt.assert_allclose(lyman_data_redshifts, self.zout, atol=1.e-16)
+        #print('SDSS redshifts are', lyman_data_redshifts)
         if zbin < 0:
-            covar_bin = self.sdss.get_covar(sdssz)
+            covar_bin = self.lyman_data_instance.get_covar(lyman_data_redshifts)
         else:
-            covar_bin = self.sdss.get_covar(sdssz[zbin])
+            covar_bin = self.lyman_data_instance.get_covar(lyman_data_redshifts[zbin])
         return covar_bin
 
     def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=True, include_emulator_error=True, maxsample=20):
         """Initialise and run emcee."""
         pnames = self.emulator.print_pnames()
         #Load the data directory
-        self.data_fluxpower = load_data(datadir, kf=self.kf, t0=self.t0_training_value)
+        self.data_fluxpower = load_data(datadir, kf=self.kf, max_z=self.max_z, redshifts=self.data_redshifts,
+                                        pixel_resolution_km_s=self.pixel_resolution_km_s, t0=self.t0_training_value,
+                                        mean_flux=self.mean_flux_redshifts)
         #Set up mean flux
         if self.mf_slope:
             pnames = [('dtau0',r'd\tau_0'),]+pnames
@@ -301,15 +338,15 @@ class LikelihoodClass:
         """Get the determinant of the covariance matrix.for certain parameters"""
         if np.any(params >= self.param_limits[:,1]) or np.any(params <= self.param_limits[:,0]):
             return -np.inf
-        sdssz = self.sdss.get_redshifts()
+        lyman_data_redshifts = self.lyman_data_instance.get_redshifts()
         #Fix maximum redshift bug
-        sdssz = sdssz[sdssz <= self.max_z]
-        nz = sdssz.size
+        lyman_data_redshifts = lyman_data_redshifts[lyman_data_redshifts <= self.max_z]
+        nz = lyman_data_redshifts.size
         if include_emu:
             okf, _, std = self.get_predicted(params)
         detc = 1
         for bb in range(nz):
-            covar_bin = self.sdss.get_covar(sdssz[bb])
+            covar_bin = self.lyman_data_instance.get_covar(lyman_data_redshifts[bb])
             if include_emu:
                 idp = np.where(self.kf >= okf[bb][0])
                 std_bin = std[bb]
@@ -346,9 +383,9 @@ class LikelihoodClass:
     def _get_GP_UCB_exploration_term(self, data_vector_emulator_error, n_emulated_params, iteration_number=1, delta=0.5, nu=1.):
         """Evaluate the exploration term of the GP-UCB acquisition function"""
         exploration_weight = math.sqrt(nu * 2. * math.log((iteration_number**((n_emulated_params / 2.) + 2.)) * (math.pi**2) / 3. / delta))
-        if self._inverse_BOSS_covariance_full is None:
-            self._inverse_BOSS_covariance_full = invert_block_diagonal_covariance(self.get_BOSS_error(-1), self.zout.shape[0])
-        posterior_estimated_error = np.dot(data_vector_emulator_error, np.dot(self._inverse_BOSS_covariance_full, data_vector_emulator_error))
+        if self._inverse_covariance_full is None:
+            self._inverse_covariance_full = invert_block_diagonal_covariance(self.get_data_covariance(-1), self.zout.shape[0])
+        posterior_estimated_error = np.dot(data_vector_emulator_error, np.dot(self._inverse_covariance_full, data_vector_emulator_error))
         return exploration_weight * posterior_estimated_error
 
     def acquisition_function_GP_UCB(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.):
