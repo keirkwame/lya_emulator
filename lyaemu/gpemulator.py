@@ -13,7 +13,7 @@ class MultiBinGP:
     """A wrapper around the emulator that constructs a separate emulator for each bin.
     Each one has a separate mean flux parameter.
     The t0 parameter fed to the emulator should be constant factors."""
-    def __init__(self, *, params, kf, powers, param_limits, singleGP=None):
+    def __init__(self, *, params, kf, powers, param_limits, singleGP=None, redshift_sensitivity=None):
         #Build an emulator for each redshift separately. This means that the
         #mean flux for each bin can be separated.
         if singleGP is None:
@@ -22,7 +22,14 @@ class MultiBinGP:
         self.nk = np.size(kf)
         assert np.shape(powers)[1] % self.nk == 0
         self.nz = int(np.shape(powers)[1]/self.nk)
-        gp = lambda i: singleGP(params=params, powers=powers[:,i*self.nk:(i+1)*self.nk], param_limits = param_limits)
+        self.redshift_sensitivity = redshift_sensitivity
+        if self.redshift_sensitivity is None:
+            params_function = lambda a: params
+            param_limits_function = lambda b: param_limits
+        else:
+            params_function = lambda a: params[:, self.redshift_sensitivity[a]]
+            param_limits_function = lambda b: param_limits[self.redshift_sensitivity[b]]
+        gp = lambda i: singleGP(params=params_function(i), powers=powers[:,i*self.nk:(i+1)*self.nk], param_limits = param_limits_function(i))
         print('Number of redshifts for emulator generation =', self.nz)
         self.gps = [gp(i) for i in range(self.nz)]
 
@@ -35,10 +42,14 @@ class MultiBinGP:
             zparams = np.array(params)
             if tau0_factors is not None:
                 zparams[0][0] *= tau0_factors[i] #Multiplying t0[z] by "tau0_factors"[z]
-            if not use_updated_training_set:
-                (m, s) = gp.predict(zparams)
+            if self.redshift_sensitivity is None:
+                zparams_single_redshift = zparams
             else:
-                (m, s) = gp.predict_from_updated_training_set(zparams)
+                zparams_single_redshift = zparams[0][self.redshift_sensitivity[i]]
+            if not use_updated_training_set:
+                (m, s) = gp.predict(zparams_single_redshift)
+            else:
+                (m, s) = gp.predict_from_updated_training_set(zparams_single_redshift)
             means[0,i*self.nk:(i+1)*self.nk] = m
             std[:,i*self.nk:(i+1)*self.nk] = s
         return means, std

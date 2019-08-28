@@ -61,16 +61,18 @@ def invert_block_diagonal_covariance(full_covariance_matrix, n_blocks):
         inverse_covariance_matrix[start_index: end_index, start_index: end_index] = inverse_covariance_block
     return inverse_covariance_matrix
 
-def load_data(datadir, *, kf, max_z=4.2, redshifts=None, pixel_resolution_km_s='default', t0=1., mean_flux='low_z'):
+def load_data(datadir, *, kf, max_z=4.2, redshifts=None, pixel_resolution_km_s='default', t0=1., mean_flux_model='low_z'):
     """Load and initialise a "fake data" flux power spectrum"""
     #Load the data directory
     myspec = flux_power.MySpectra(max_z=max_z, redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s)
     pps = myspec.get_snapshot_list(datadir)
     #self.data_fluxpower is used in likelihood.
-    if mean_flux == 'low_z':
+    if mean_flux_model == 'low_z':
         mean_flux_function = mflux.obs_mean_tau
-    elif mean_flux == 'high_z':
+    elif mean_flux_model == 'high_z':
         mean_flux_function = mflux.obs_mean_tau_high_z
+    else:
+        raise ValueError('Mean flux model not recognised')
     data_fluxpower = pps.get_power(kf=kf, mean_fluxes=np.exp(-t0*mean_flux_function(myspec.zout, amp=0)))
     assert np.size(data_fluxpower) % np.size(kf) == 0
     return data_fluxpower
@@ -79,7 +81,8 @@ class LikelihoodClass:
     """Class to contain likelihood computations."""
     def __init__(self, basedir, mean_flux='s', max_z = 4.2, redshifts=None, pixel_resolution_km_s='default',
                  emulator_class="standard", t0_training_value = 1., optimise_GP=True,
-                 emulator_json_file='emulator_params.json', data_class='BOSS'):
+                 emulator_json_file='emulator_params.json', use_measured_parameters=False,
+                 redshift_dependent_parameters=False, data_class='BOSS'):
         """Initialise the emulator by loading the flux power spectra from the simulations."""
 
         #Stored covariance matrix
@@ -106,35 +109,33 @@ class LikelihoodClass:
         self.mf_slope = False
         #Param limits on t0
         t0_factor = np.array([0.75,1.25])
-        #Get the emulator
-        if mean_flux == 'c':
-            mf = mflux.ConstMeanFlux(value = t0_training_value)
-        elif mean_flux == 'c_high_z':
-            mf = mflux.ConstMeanFluxHighRedshift(value=t0_training_value)
-        #As each redshift bin is independent, for redshift-dependent mean flux models
-        #we just need to convert the input parameters to a list of mean flux scalings
-        #in each redshift bin.
-        #This is an example which parametrises the mean flux as an amplitude and slope.
-        elif mean_flux == 's':
-            #Add a slope to the parameter limits
-            t0_slope =  np.array([-0.25, 0.25])
-            self.mf_slope = True
-            slopehigh = np.max(mflux.mean_flux_slope_to_factor(np.linspace(2.2, max_z, 11),0.25))
-            slopelow = np.min(mflux.mean_flux_slope_to_factor(np.linspace(2.2, max_z, 11),-0.25))
-            dense_limits = np.array([np.array(t0_factor) * np.array([slopelow, slopehigh])])
-            mf = mflux.MeanFluxFactor(dense_limits = dense_limits)
-        elif mean_flux == 's_high_z':
-            self.mf_slope = True
-            t0_slope = np.array([-0.25, 0.25])
-            mf = mflux.MeanFluxFactorHighRedshift()
+        t0_slope = np.array([-0.25, 0.25])
+
+        if (mean_flux == 'c') or (mean_flux == 's'):
+            self.mean_flux_model = 'low_z'
+            if mean_flux == 'c':
+                mf = mflux.ConstMeanFlux(value=t0_training_value)
+            elif mean_flux == 's':
+                #Add a slope to the parameter limits
+                self.mf_slope = True
+                slopehigh = np.max(mflux.mean_flux_slope_to_factor(np.linspace(2.2, max_z, 11),0.25))
+                slopelow = np.min(mflux.mean_flux_slope_to_factor(np.linspace(2.2, max_z, 11),-0.25))
+                dense_limits = np.array([np.array(t0_factor) * np.array([slopelow, slopehigh])])
+                mf = mflux.MeanFluxFactor(dense_limits = dense_limits)
+        elif (mean_flux == 'c_high_z') or (mean_flux == 's_high_z'):
+            self.mean_flux_model = 'high_z'
+            if mean_flux == 'c_high_z':
+                mf = mflux.ConstMeanFluxHighRedshift(value=t0_training_value)
+            #As each redshift bin is independent, for redshift-dependent mean flux models
+            #we just need to convert the input parameters to a list of mean flux scalings
+            #in each redshift bin.
+            #This is an example which parametrises the mean flux as an amplitude and slope.
+            elif mean_flux == 's_high_z':
+                self.mf_slope = True
+                mf = mflux.MeanFluxFactorHighRedshift()
         else:
             mf = mflux.MeanFluxFactor()
         self.mean_flux_instance = mf
-
-        if (mean_flux == 'c') or (mean_flux == 's'):
-            self.mean_flux_redshifts = 'low_z'
-        elif (mean_flux == 'c_high_z') or (mean_flux == 's_high_z'):
-            self.mean_flux_redshifts = 'high_z'
 
         if emulator_class == "standard":
             self.emulator = coarse_grid.Emulator(basedir, kf=self.kf, mf=mf)
@@ -147,7 +148,8 @@ class LikelihoodClass:
         else:
             raise ValueError("Emulator class not recognised")
         self.emulator.load(dumpfile=emulator_json_file)
-        self.param_limits = self.emulator.get_param_limits(include_dense=True)
+        self.use_measured_parameters = use_measured_parameters
+        self.param_limits = self.emulator.get_param_limits(include_dense=True, use_measured=self.use_measured_parameters)
         if (mean_flux == 's') or (mean_flux == 's_high_z'):
             #Add a slope to the parameter limits
             self.param_limits = np.vstack([t0_slope, self.param_limits])
@@ -159,9 +161,13 @@ class LikelihoodClass:
         print('Beginning to generate emulator at', str(datetime.now()))
         if optimise_GP:
             if emulator_class == 'nCDM':
-                self.gpemu = self.emulator.get_emulator(redshifts=self.data_redshifts, pixel_resolution_km_s=self.pixel_resolution_km_s)
+                self.gpemu = self.emulator.get_emulator(redshifts=self.data_redshifts,
+                                pixel_resolution_km_s=self.pixel_resolution_km_s,
+                                use_measured_parameters=use_measured_parameters,
+                                redshift_dependent_parameters=redshift_dependent_parameters)
             else:
-                self.gpemu = self.emulator.get_emulator(max_z=max_z)
+                self.gpemu = self.emulator.get_emulator(max_z=max_z, use_measured_parameters=use_measured_parameters,
+                                                        redshift_dependent_parameters=redshift_dependent_parameters)
         print('Finished generating emulator at', str(datetime.now()))
 
     def get_predicted(self, params, use_updated_training_set=False):
@@ -178,13 +184,23 @@ class LikelihoodClass:
         # Here: emulating @ cosmo.; thermal; sampled t0 * [tau0_fac from above]
         predicted_nat, std_nat = self.gpemu.predict(np.array(nparams).reshape(1,-1), tau0_factors = tau0_fac, use_updated_training_set=use_updated_training_set)
         ndense = len(self.emulator.mf.dense_param_names)
+        if self.use_measured_parameters:
+            index_adjustment = lambda index: np.sum(self.emulator.remove_simulation_params < index)
+        else:
+            index_adjustment = lambda index: 0.
         if self.emulator.param_names.get('hub', None) is not None:
             hindex = ndense + self.emulator.param_names["hub"]
-            assert 0.5 < nparams[hindex] < 1
-            omega_m = self.emulator.omegamh2/nparams[hindex]**2
+            hindex -= index_adjustment(self.emulator.param_names["hub"])
+            hubble = nparams[hindex]
+            omega_m = self.emulator.omegamh2/hubble**2
         elif self.emulator.param_names.get('omega_m', None) is not None:
             omega_m_index = ndense + self.emulator.param_names['omega_m']
+            omega_m_index -= index_adjustment(self.emulator.param_names['omega_m'])
             omega_m = nparams[omega_m_index]
+            hubble = np.sqrt(self.emulator.omegamh2 / omega_m)
+        else:
+            raise ValueError('Neither Hubble parameter nor matter density are specified!')
+        assert 0.5 < hubble < 1
         okf, predicted = flux_power.rebin_power_to_kms(kfkms=self.kf, kfmpc=self.gpemu.kf, flux_powers = predicted_nat[0], zbins=self.zout, omega_m = omega_m)
         _, std= flux_power.rebin_power_to_kms(kfkms=self.kf, kfmpc=self.gpemu.kf, flux_powers = std_nat[0], zbins=self.zout, omega_m = omega_m)
         return okf, predicted, std
@@ -261,7 +277,7 @@ class LikelihoodClass:
         return volume_factor * function_sum / n_samples
 
     def get_data_covariance(self, zbin):
-        """Get the BOSS covariance matrix error."""
+        """Get the covariance matrix error."""
         #Redshifts
         lyman_data_redshifts = self.lyman_data_instance.get_redshifts()
         #Fix maximum redshift bug
@@ -277,17 +293,17 @@ class LikelihoodClass:
 
     def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=True, include_emulator_error=True, maxsample=20):
         """Initialise and run emcee."""
-        pnames = self.emulator.print_pnames()
+        pnames = self.emulator.print_pnames(use_measured_parameters=self.use_measured_parameters)
         #Load the data directory
         self.data_fluxpower = load_data(datadir, kf=self.kf, max_z=self.max_z, redshifts=self.data_redshifts,
                                         pixel_resolution_km_s=self.pixel_resolution_km_s, t0=self.t0_training_value,
-                                        mean_flux=self.mean_flux_redshifts)
+                                        mean_flux_model=self.mean_flux_model)
         #Set up mean flux
         if self.mf_slope:
-            pnames = [('dtau0',r'd\tau_0'),]+pnames
+            pnames = np.concatenate(np.array([['dtau0',r'd\tau_0'],]), pnames, axis=0)
         with open(savefile+"_names.txt",'w') as ff:
             for pp in pnames:
-                ff.write("%s %s\n" % pp)
+                ff.write("%s %s\n" % tuple(pp))
         #Limits: we need to hard-prior to the volume of our emulator.
         pr = (self.param_limits[:,1]-self.param_limits[:,0])
         #Priors are assumed to be in the middle.

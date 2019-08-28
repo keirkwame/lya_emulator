@@ -66,6 +66,12 @@ class Emulator:
         if not os.path.exists(basedir):
             os.mkdir(basedir)
 
+        self.measured_param_names = {}
+        self.measured_param_limits = np.array([[None, None],])
+        self.measured_sample_params = np.array([[None,],])
+        self.remove_simulation_params = np.array([None,])
+        self.redshift_sensitivity = np.array([[None,],])
+
     def set_maxk(self):
         """Get the maximum k in Mpc/h that we will need."""
         #Corresponds to omega_m = (0.23, 0.31) which should be enough.
@@ -96,15 +102,26 @@ class Emulator:
         name = ''.join(str(elem) for elem in parts)
         return name
 
-    def print_pnames(self):
+    def print_pnames(self, use_measured_parameters=False):
         """Get parameter names for printing"""
         n_latex = []
         sort_names = sorted(list(self.mf.dense_param_names.items()), key=lambda k:(k[1],k[0]))
         for key, _ in sort_names:
             n_latex.append((key, get_latex(key)))
+
         sort_names = sorted(list(self.param_names.items()), key=lambda k:(k[1],k[0]))
         for key, _ in sort_names:
             n_latex.append((key, get_latex(key)))
+
+        if use_measured_parameters:
+            sort_names = sorted(list(self.measured_param_names.items()), key=lambda k:(k[1],k[0]))
+            for key, _ in sort_names:
+                n_latex.append((key, get_latex(key)))
+            n_latex = np.array(n_latex)
+            n_latex = np.delete(n_latex, self.remove_simulation_params + len(self.mf.dense_param_names), axis=0)
+        else:
+            n_latex = np.array(n_latex)
+
         return n_latex
 
     def _fromarray(self):
@@ -232,17 +249,22 @@ class Emulator:
         except RuntimeError as e:
             print(str(e), " while building: ",outdir)
 
-    def get_param_limits(self, include_dense=True):
+    def get_param_limits(self, include_dense=True, use_measured=False):
         """Get the reprocessed limits on the parameters for the likelihood."""
-        if not include_dense:
-            return self.param_limits
-        dlim = self.mf.get_limits()
-        if dlim is not None:
-            #Dense parameters go first as they are 'slow'
-            plimits = np.vstack([dlim, self.param_limits])
-            assert np.shape(plimits)[1] == 2
-            return plimits
-        return self.param_limits
+        plimits = self.param_limits
+
+        if use_measured:
+            plimits = np.delete(plimits, self.remove_simulation_params, axis=0)
+            plimits = np.vstack((plimits, self.measured_param_limits))
+
+        if include_dense:
+            dlim = self.mf.get_limits()
+            if dlim is not None:
+                #Dense parameters go first as they are 'slow'
+                plimits = np.vstack([dlim, plimits])
+                assert np.shape(plimits)[1] == 2
+
+        return plimits
 
     def get_nsample_params(self):
         """Get the number of sparse parameters, those sampled by simulations."""
@@ -256,7 +278,7 @@ class Emulator:
         powerspectra = myspec.get_snapshot_list(base=di)
         return powerspectra
 
-    def get_emulator(self, max_z=4.2):
+    def get_emulator(self, max_z=4.2, use_measured_parameters=False, redshift_dependent_parameters=False):
         """ Build an emulator for the desired k_F and our simulations.
             kf gives the desired k bins in s/km.
             Mean flux rescaling is handled (if mean_flux=True) as follows:
@@ -264,10 +286,12 @@ class Emulator:
             2. Each flux power spectrum in the set is rescaled to the same mean flux.
             3.
         """
-        gp = self._get_custom_emulator(emuobj=None, max_z=max_z)
+        gp = self._get_custom_emulator(emuobj=None, max_z=max_z, use_measured_parameters=use_measured_parameters,
+                                       redshift_dependent_parameters=redshift_dependent_parameters)
         return gp
 
-    def get_flux_vectors(self, max_z=4.2, kfunits="kms", redshifts=None, pixel_resolution_km_s='default', fix_mean_flux_samples=False):
+    def get_flux_vectors(self, max_z=4.2, kfunits="kms", redshifts=None, pixel_resolution_km_s='default',
+                         use_measured_parameters=False, fix_mean_flux_samples=False):
         """Get the desired flux vectors and their parameters"""
         pvals = self.get_parameters()
         nparams = np.shape(pvals)[1]
@@ -311,6 +335,17 @@ class Emulator:
             kfmpc = powers[0].kf
             assert np.all(np.abs(powers[0].kf/ powers[-1].kf-1) < 1e-6)
             self.save_flux_vectors(aparams, kfmpc, kfkms, flux_vectors, mfc=mfc)
+
+        if use_measured_parameters:
+            if dpvals is not None:
+                index_adjustment = 1
+                measured_parameters = np.repeat(self.measured_sample_params, dpvals.shape[0], axis=0)
+            else:
+                index_adjustment = 0
+                measured_parameters = self.measured_sample_params
+            aparams = np.delete(aparams, self.remove_simulation_params + index_adjustment, axis=1)
+            aparams = np.concatenate((aparams, measured_parameters), axis=1)
+
         assert np.shape(flux_vectors)[0] == np.shape(aparams)[0]
         if kfunits == "kms":
             kf = kfkms
@@ -343,11 +378,19 @@ class Emulator:
         assert np.all(inparams - aparams < 1e-3)
         return kfmpc, kfkms, flux_vectors
 
-    def _get_custom_emulator(self, *, emuobj, max_z=4.2, redshifts=None, pixel_resolution_km_s='default'):
+    def _get_custom_emulator(self, *, emuobj, max_z=4.2, redshifts=None, pixel_resolution_km_s='default',
+                             use_measured_parameters=False, redshift_dependent_parameters=False):
         """Helper to allow supporting different emulators."""
-        aparams, kf, flux_vectors = self.get_flux_vectors(max_z=max_z, kfunits="mpc", redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s)
-        plimits = self.get_param_limits(include_dense=True)
-        gp = gpemulator.MultiBinGP(params=aparams, kf=kf, powers = flux_vectors, param_limits = plimits, singleGP=emuobj)
+        aparams, kf, flux_vectors = self.get_flux_vectors(max_z=max_z, kfunits="mpc", redshifts=redshifts,
+                                        pixel_resolution_km_s=pixel_resolution_km_s,
+                                        use_measured_parameters=use_measured_parameters)
+        plimits = self.get_param_limits(include_dense=True, use_measured=use_measured_parameters)
+        if redshift_dependent_parameters:
+            redshift_sensitivity = self.redshift_sensitivity
+        else:
+            redshift_sensitivity = np.ones((int(flux_vectors.shape[1] / kf.shape[0]), aparams.shape[1]), dtype=np.bool)
+        gp = gpemulator.MultiBinGP(params=aparams, kf=kf, powers = flux_vectors, param_limits = plimits,
+                                   singleGP=emuobj, redshift_sensitivity=redshift_sensitivity)
         return gp
 
 
@@ -466,7 +509,8 @@ class nCDMEmulator(Emulator):
         ev[pn['As']] = wmap / conv
         return ev
 
-    def get_emulator(self, max_z=None, redshifts='default', pixel_resolution_km_s=1.):
+    def get_emulator(self, max_z=None, redshifts='default', pixel_resolution_km_s=1., use_measured_parameters=False,
+                     redshift_dependent_parameters=False):
         """ Build an emulator for the desired k_F and our simulations.
             kf gives the desired k bins in s/km.
             Mean flux rescaling is handled (if mean_flux=True) as follows:
@@ -476,7 +520,9 @@ class nCDMEmulator(Emulator):
         """
         if redshifts is 'default':
             redshifts = self.redshifts
-        gp = self._get_custom_emulator(emuobj=None, max_z=max_z, redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s)
+        gp = self._get_custom_emulator(emuobj=None, max_z=max_z, redshifts=redshifts,
+                                       pixel_resolution_km_s=pixel_resolution_km_s, use_measured_parameters=use_measured_parameters,
+                                       redshift_dependent_parameters=redshift_dependent_parameters)
         return gp
 
 
