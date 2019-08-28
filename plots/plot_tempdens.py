@@ -11,14 +11,14 @@ import lyaemu.tempdens as td
 
 if __name__ == "__main__":
     emulator_base_directory = '/share/data2/keir/Simulations'
-    emulator_name = 'nCDM_test_512_filtering'
+    emulator_name = 'nCDM_test_emulator'
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name))
     emulator_instance.load()
 
-    snapshot_numbers = np.array([3, 4, 6])
+    snapshot_numbers = np.array([7, 8, 10])
     redshifts = emulator_instance.redshifts
 
-    savefile = os.path.join(emulator_base_directory, emulator_name, 'temperature_density_test_512_filtering.pdf')
+    savefile = os.path.join(emulator_base_directory, emulator_name, 'temperature_density_test_emulator.pdf')
     figure, axes = plt.subplots(nrows=2, ncols=1)
 
     T0 = np.zeros((emulator_instance.get_parameters().shape[0], snapshot_numbers.shape[0]))
