@@ -16,7 +16,7 @@ if __name__ == "__main__":
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name))
     emulator_instance.load()
 
-    snapshot_numbers = np.array([7, 8, 10])
+    snapshot_numbers = np.array([7, 8, 10]) - 4
     redshifts = emulator_instance.redshifts
 
     savefile = os.path.join(emulator_base_directory, emulator_name, 'temperature_density_%s.pdf'%emulator_name) #test_emulator.pdf')
