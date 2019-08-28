@@ -67,10 +67,10 @@ class Emulator:
             os.mkdir(basedir)
 
         self.measured_param_names = {}
-        self.measured_param_limits = np.array([[None, None],])
-        self.measured_sample_params = np.array([[None,],])
-        self.remove_simulation_params = np.array([None,])
-        self.redshift_sensitivity = np.array([[None,],])
+        self.measured_param_limits = None
+        self.measured_sample_params = None
+        self.remove_simulation_params = np.array([])
+        self.redshift_sensitivity = None
 
     def set_maxk(self):
         """Get the maximum k in Mpc/h that we will need."""
@@ -155,6 +155,33 @@ class Emulator:
         dirs = glob.glob(os.path.join(self.basedir, "*"))
         self.sample_params = np.array([self._recon_one(pdir) for pdir in dirs])
         assert np.shape(self.sample_params) == (len(dirs), np.size(self.param_limits[:,0]))
+
+    def dump_measured_parameters(self, measured_parameter_names, measured_sample_parameters,
+                                 remove_simulation_parameters, measured_parameter_limits='default',
+                                 redshift_sensitivity=None, dumpfile='emulator_params.json'):
+        """Dump measured parameters [e.g., T_0(z); gamma(z); u_0(z)] to a textfile"""
+        measured_parameter_indices = np.arange(len(self.measured_param_names), len(self.measured_param_names) + len(measured_parameter_names))
+        for i, measured_parameter_name in enumerate(measured_parameter_names):
+            self.measured_param_names.update({measured_parameter_name: measured_parameter_indices[i]})
+
+        if self.measured_sample_params is None:
+            self.measured_sample_params = measured_sample_parameters
+        else:
+            self.measured_sample_params = np.concatenate((self.measured_sample_params, measured_sample_parameters), axis=1)
+
+        if measured_parameter_limits == 'default':
+            measured_parameter_minima = np.min(measured_sample_parameters, axis=0).reshape(-1, 1)
+            measured_parameter_maxima = np.max(measured_sample_parameters, axis=0).reshape(-1, 1)
+            measured_parameter_limits = np.concatenate((measured_parameter_minima, measured_parameter_maxima), axis=1)
+        if self.measured_param_limits is None:
+            self.measured_param_limits = measured_parameter_limits
+        else:
+            self.measured_param_limits = np.concatenate((self.measured_param_limits, measured_parameter_limits), axis=0)
+
+        self.remove_simulation_params = np.sort(np.concatenate((self.remove_simulation_params, remove_simulation_parameters)))
+        self.redshift_sensitivity = redshift_sensitivity
+
+        self.dump(dumpfile=dumpfile)
 
     def dump(self, dumpfile="emulator_params.json"):
         """Dump parameters to a textfile."""
