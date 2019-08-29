@@ -162,9 +162,9 @@ class Emulator:
         """Dump measured parameters [e.g., T_0(z); gamma(z); u_0(z)] to a textfile"""
         measured_parameter_indices = np.arange(len(self.measured_param_names), len(self.measured_param_names) + len(measured_parameter_names))
         for i, measured_parameter_name in enumerate(measured_parameter_names):
-            self.measured_param_names.update({measured_parameter_name: measured_parameter_indices[i]})
+            self.measured_param_names.update({measured_parameter_name: int(measured_parameter_indices[i])})
 
-        if self.measured_sample_params is 'None':
+        if self.measured_sample_params == 'None':
             self.measured_sample_params = measured_sample_parameters
         else:
             self.measured_sample_params = np.concatenate((self.measured_sample_params, measured_sample_parameters), axis=1)
@@ -173,7 +173,7 @@ class Emulator:
             measured_parameter_minima = np.min(measured_sample_parameters, axis=0).reshape(-1, 1)
             measured_parameter_maxima = np.max(measured_sample_parameters, axis=0).reshape(-1, 1)
             measured_parameter_limits = np.concatenate((measured_parameter_minima, measured_parameter_maxima), axis=1)
-        if self.measured_param_limits is 'None':
+        if self.measured_param_limits == 'None':
             self.measured_param_limits = measured_parameter_limits
         else:
             self.measured_param_limits = np.concatenate((self.measured_param_limits, measured_parameter_limits), axis=0)
