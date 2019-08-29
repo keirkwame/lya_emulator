@@ -78,6 +78,7 @@ def hubble_factor(z, hubble, omega_m):
 def simulation_parameters_to_integrated_heating(z_range, TREECOOL, heat_amp, hubble, omega_m, omega_b,
                                                 helium_mass_fraction, T0, z_rei_HeII=3.):
     """Calculate the integrated heating [eV] per unit [proton] mass, given some simulation parameters"""
+    print(z_range, heat_amp, hubble, omega_m, omega_b, helium_mass_fraction, T0, z_rei_HeII)
     TREECOOL[:, 4:] *= heat_amp
     z = (10 ** TREECOOL[:, 0]) - 1.
 

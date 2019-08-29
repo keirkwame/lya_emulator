@@ -2,7 +2,10 @@
 
 import os
 import sys
+import copy as cp
 import numpy as np
+import matplotlib
+matplotlib.use('PDF')
 import matplotlib.pyplot as plt
 import astropy.units as u
 
@@ -22,7 +25,7 @@ if __name__ == "__main__":
 
     integrated_heating = np.zeros((emulator_instance.get_parameters().shape[0], emulator_instance.redshifts.shape[0]))
     for i, input_parameters in enumerate(emulator_instance.get_parameters()):
-        simulation_directory = emulator_instance.get_outdir(input_parameters)
+        simulation_directory = emulator_instance.get_outdir(input_parameters)[:-7]
         TREECOOL_path = os.path.join(simulation_directory, 'TREECOOL')
         TREECOOL = np.loadtxt(TREECOOL_path)
         heat_amp = input_parameters[emulator_instance.param_names['heat_amp']]
@@ -31,8 +34,9 @@ if __name__ == "__main__":
         T0 = emulator_instance.get_measured_parameters()[i, emulator_instance.measured_param_names['T_0_z_5.0']] * u.K
 
         for j, redshift in enumerate(emulator_instance.redshifts):
-            integrated_heating[i, j] = ih.simulation_parameters_to_integrated_heating(z_ranges[j], TREECOOL, heat_amp,
-                                            hubble, omega_m, omega_b, helium_mass_fraction, T0, z_rei_HeII=z_rei_HeII)
+            TREECOOL_single_z = cp.deepcopy(TREECOOL)
+            integrated_heating[i, j] = ih.simulation_parameters_to_integrated_heating(z_ranges[j], TREECOOL_single_z, heat_amp,
+                                            hubble, omega_m, omega_b, helium_mass_fraction, T0, z_rei_HeII=z_rei_HeII).value
 
     #Scatter plot integrated heating
     savefile = os.path.join(emulator_base_directory, emulator_name, 'integrated_heating_scatter_%s.pdf' % emulator_name)
@@ -41,9 +45,9 @@ if __name__ == "__main__":
         axes[i, 0].scatter(integrated_heating[:, i], emulator_instance.get_measured_parameters()[:, i], label=r'$z = %.2f$'%redshift)
         axes[i, 1].scatter(integrated_heating[:, i], emulator_instance.get_measured_parameters()[:, i+3])
         axes[i, 0].legend(frameon=True, fontsize=7.)
-        axes[i, 0].set_ylabel(r'$T_0 (z)$')
+        axes[i, 0].set_ylabel(r'$T_0 (z)$ [K]')
         axes[i, 1].set_ylabel(r'$\gamma (z)$')
-    x_label = r'$u_0 (z)$'
+    x_label = r'$u_0 (z)$ [eV / m_p]'
     axes[-1, 0].set_xlabel(x_label)
     axes[-1, 1].set_xlabel(x_label)
     plt.savefig(savefile)
@@ -58,5 +62,5 @@ if __name__ == "__main__":
     redshift_sensitivity[1, np.array([8, 11, 14])] = True
     redshift_sensitivity[2, np.array([9, 12, 15])] = True
 
-    emulator_instance.dump_measured_parameters(measured_parameter_names, integrated_heating.value,
+    emulator_instance.dump_measured_parameters(measured_parameter_names, integrated_heating,
                                                remove_simulation_parameters, redshift_sensitivity=redshift_sensitivity)
