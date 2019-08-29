@@ -69,7 +69,7 @@ class Emulator:
         self.measured_param_names = {}
         self.measured_param_limits = 'None'
         self.measured_sample_params = 'None'
-        self.remove_simulation_params = np.array([])
+        self.remove_simulation_params = np.array([], dtype=np.int)
         self.redshift_sensitivity = 'None'
 
     def set_maxk(self):
@@ -228,6 +228,10 @@ class Emulator:
     def get_parameters(self):
         """Get the list of parameter vectors in this emulator."""
         return self.sample_params
+
+    def get_measured_parameters(self):
+        """Get the list of measured parameter vectors in this emulator"""
+        return self.measured_sample_params
 
     def build_params(self, nsamples,limits = None, use_existing=False):
         """Build a list of directories and parameters from a hypercube sample"""

@@ -5,8 +5,8 @@ import numpy as np
 import scipy.integrate as spi
 import astropy.units as u
 
-#from .SimulationRunner.SimulationRunner import gen_UVB as uvb
-import SimulationRunner.gen_UVB as uvb
+from .SimulationRunner.SimulationRunner import gen_UVB as uvb
+#import SimulationRunner.gen_UVB as uvb
 
 def get_integrated_heating(z_min, z_max, TREECOOL, number_to_mass_density_ratios, hubble, omega_m):
     """Calculate the integrated heating [eV] per unit [proton] mass. Number to mass density ratio in [1 / m_p]"""
@@ -75,6 +75,17 @@ def hubble_factor(z, hubble, omega_m):
     """Get the Hubble factor"""
     return hubble * np.sqrt((omega_m * ((1. + z) ** 3)) + (1. - omega_m)) * 100. * u.km / u.s / u.Mpc
 
+def simulation_parameters_to_integrated_heating(z_range, TREECOOL, heat_amp, hubble, omega_m, omega_b,
+                                                helium_mass_fraction, T0, z_rei_HeII=3.):
+    """Calculate the integrated heating [eV] per unit [proton] mass, given some simulation parameters"""
+    TREECOOL[:, 4:] *= heat_amp
+    z = (10 ** TREECOOL[:, 0]) - 1.
+
+    species_fractions = get_species_fraction_Onorbe_analytical(z, TREECOOL, hubble, omega_b, helium_mass_fraction,
+                                                               T0=T0.to(u.K), z_rei_HeII=z_rei_HeII)
+    number_to_mass_density_ratios = species_fraction_to_density_ratio(species_fractions, helium_mass_fraction)
+    return get_integrated_heating(np.min(z_range), np.max(z_range), TREECOOL, number_to_mass_density_ratios, hubble, omega_m)
+
 if __name__ == "__main__":
     #TREECOOL = np.loadtxt('/Users/kwame/Software/SimulationRunner/SimulationRunner/TREECOOL_hm_2012')
     TREECOOL = np.loadtxt('/Users/kwame/Simulations/nCDM/nCDM_test_512/TREECOOL_Trei4e+04_HM12')
@@ -83,7 +94,8 @@ if __name__ == "__main__":
 
     hubble = np.sqrt(0.14345 / omega_m) #0.678
     z_rei = np.array([15., 15., 3.]) #8., 8., 3.])  # HI, HeI, HeII
-    z_min, z_max = (4.6, 13.)
+    z_min, z_max = (6., 13.)
+    #z_min, z_max = (4.6, 13.)
     #z_min, z_max = (4.2, 12.)
 
     omega_b = 0.04950 #0.0482
@@ -91,10 +103,10 @@ if __name__ == "__main__":
 
     TREECOOL[:, 4:] *= heat_amp_factor
     z = (10 ** TREECOOL[:, 0]) - 1.
-    species_fractions = get_species_fraction_Onorbe_analytical(z, TREECOOL, hubble, omega_b, helium_mass_fraction, T0=14911.*u.K)
+    #species_fractions = get_species_fraction_Onorbe_analytical(z, TREECOOL, hubble, omega_b, helium_mass_fraction, T0=8070.*u.K)
     #get_species_fraction_gen_UVB(z, z_rei)
     #get_species_fraction_simple_model(z, z_rei, delta_z_rei=1.5)
 
-    number_to_mass_density_ratios = species_fraction_to_density_ratio(species_fractions, helium_mass_fraction)
-    integrated_heating = get_integrated_heating(z_min, z_max, TREECOOL, number_to_mass_density_ratios, hubble, omega_m)
-    print('Total integrated heating [eV] per proton mass =', integrated_heating)
+    #number_to_mass_density_ratios = species_fraction_to_density_ratio(species_fractions, helium_mass_fraction)
+    #integrated_heating = get_integrated_heating(z_min, z_max, TREECOOL, number_to_mass_density_ratios, hubble, omega_m)
+    #print('Total integrated heating [eV] per proton mass =', integrated_heating)
