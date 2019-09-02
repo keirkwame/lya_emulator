@@ -233,6 +233,11 @@ class Emulator:
         """Get the list of measured parameter vectors in this emulator"""
         return self.measured_sample_params
 
+    def get_combined_params(self):
+        """Get the list of parameter vectors (combined input and measured) in this emulator"""
+        input_parameters = np.delete(self.get_parameters(), self.remove_simulation_params, axis=1)
+        return np.concatenate((input_parameters, self.get_measured_parameters()), axis=1)
+
     def build_params(self, nsamples,limits = None, use_existing=False):
         """Build a list of directories and parameters from a hypercube sample"""
         if limits is None:

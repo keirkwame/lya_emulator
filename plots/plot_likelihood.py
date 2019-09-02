@@ -8,6 +8,7 @@ import numpy as np
 import lyaemu.distinct_colours_py3 as dc
 import lyaemu.lyman_data as lyman_data
 import lyaemu.likelihood as likeh
+import lyaemu.coarse_grid as cg
 from lyaemu.coarse_grid import get_simulation_parameters_s8
 import matplotlib
 matplotlib.use('PDF')
@@ -23,22 +24,38 @@ def get_k_z(likelihood_instance):
     n_z = z.size
     return k_los, z, n_k_los, n_z
 
-def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1.):
-    """Make a plot of the power spectra, with redshift, the BOSS power and the sigmas. Four plots stacked."""
-    sdss = lyman_data.BOSSData()
+def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_class='BOSS',
+                                 pixel_resolution_km_s='default', mean_flux_label='s'):
+    """Make a plot of the power spectra, with redshift, the data power and the sigmas. Four plots stacked."""
+    if data_class == 'BOSS':
+        lyman_data_instance = lyman_data.BOSSData()
+    elif data_class == 'Boera':
+        lyman_data_instance = lyman_data.BoeraData()
+    else:
+        raise ValueError('Data class not recognised')
+
+    if (mean_flux_label == 'c') or (mean_flux_label == 's'):
+        mean_flux_model = 'low_z'
+    elif (mean_flux_label == 'c_high_z') or (mean_flux_label == 's_high_z'):
+        mean_flux_model = 'high_z'
+    else:
+        raise ValueError('Mean flux label not recognised')
+
     #'Data' now is a simulation
-    k_los = sdss.get_kf()
+    k_los = lyman_data_instance.get_kf()
     n_k_los = k_los.size
     z = like.zout #Highest redshift first
     n_z = z.size
 
     assert params[1] == t0
-    data_fluxpower = likeh.load_data(datadir, kf=k_los, t0=t0)
+    data_fluxpower = likeh.load_data(datadir, kf=k_los, max_z=np.max(z), redshifts=z,
+                                     pixel_resolution_km_s=pixel_resolution_km_s, t0=t0,
+                                     mean_flux_model=mean_flux_model)
     exact_flux_power = data_fluxpower.reshape(n_z, n_k_los)
 
     ekf, emulated_flux_power, emulated_flux_power_std = like.get_predicted(params)
 
-    data_flux_power = like.sdss.pf.reshape(-1, n_k_los)[:n_z][::-1]
+    data_flux_power = like.lyman_data_instance.pf.reshape(-1, n_k_los)[:n_z][::-1]
 
     figure, axes = plt.subplots(nrows=4, ncols=1, figsize=(6.4*2., 10.))
     distinct_colours = dc.get_distinct(n_z)
@@ -46,7 +63,7 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1.):
         idp = np.where(k_los >= ekf[i][0])
 
         scaling_factor = ekf[i]/ mh.pi
-        data_flux_power_std_single_z = np.sqrt(like.sdss.get_covar(z[i]).diagonal())
+        data_flux_power_std_single_z = np.sqrt(like.lyman_data_instance.get_covar(z[i]).diagonal())
         exact_flux_power_std_single_z = np.sqrt(np.diag(like.get_data_covariance(i)))
 #         print('Diagonal elements of BOSS covariance matrix at single redshift:', data_flux_power_std_single_z)
 
@@ -104,7 +121,7 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1.):
 
     figure.subplots_adjust(hspace=0)
     plt.savefig(savefile)
-    plt.show()
+    #plt.show()
 
     print(datadir)
 
@@ -158,19 +175,31 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
 #     subplot_instance.add_legend(legend_labels, legend_loc='upper right', colored_text=True, figure=True)
     plt.savefig(savefile)
 
-def run_likelihood_test(testdir, emudir, savedir=None, plot=True, mean_flux_label='s', t0_training_value=1., emulator_class="standard"):
+def run_likelihood_test(testdir, emudir, savedir=None, test_simulation_parameters=None, plot=True, mean_flux_label='s',
+                        max_z=4.2, redshifts=None, pixel_resolution_km_s='default', t0_training_value=1.,
+                        emulator_class="standard", use_measured_parameters=False, redshift_dependent_parameters=False,
+                        data_class='BOSS'):
     """Generate some likelihood samples"""
-
     #Find all subdirectories
-    subdirs = glob.glob(testdir + "/*/")
-    assert len(subdirs) > 1
+    if test_simulation_parameters is None:
+        subdirs = glob.glob(testdir + "/*/")
+        assert len(subdirs) > 1
+    else:
+        subdirs = testdir
 
-    like = likeh.LikelihoodClass(basedir=emudir, mean_flux=mean_flux_label, t0_training_value = t0_training_value, emulator_class=emulator_class)
+    like = likeh.LikelihoodClass(basedir=emudir, mean_flux=mean_flux_label, max_z=max_z, redshifts=redshifts,
+                                 pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value = t0_training_value,
+                                 emulator_class=emulator_class, use_measured_parameters=use_measured_parameters,
+                                 redshift_dependent_parameters=redshift_dependent_parameters, data_class=data_class)
+    parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)
     for sdir in subdirs:
-        single_likelihood_plot(sdir, like, savedir=savedir, plot=plot, t0=t0_training_value)
+        single_likelihood_plot(sdir, like, savedir=savedir, plot=plot, t0=t0_training_value,
+                               true_parameter_values=test_simulation_parameters, data_class=data_class,
+                               mean_flux_label=mean_flux_label, parameter_names=parameter_names)
     return like
 
-def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1.):
+def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter_values=None, data_class='BOSS',
+                           pixel_resolution_km_s='default', mean_flux_label='s', parameter_names=None):
     """Make a likelihood and error plot for a single simulation."""
     sname = os.path.basename(os.path.abspath(sdir))
     if t0 != 1.0:
@@ -178,28 +207,51 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1.):
     chainfile = os.path.join(savedir, 'chain_' + sname + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
-    true_parameter_values = get_simulation_parameters_s8(sdir, t0=t0)
+    if true_parameter_values is None:
+        true_parameter_values = get_simulation_parameters_s8(sdir, t0=t0)
     if plot is True:
         fp_savefile = os.path.join(savedir, 'flux_power_'+sname + ".pdf")
-        make_plot_flux_power_spectra(like, true_parameter_values, datadir, savefile=fp_savefile, t0=t0)
+        make_plot_flux_power_spectra(like, true_parameter_values, datadir, savefile=fp_savefile, t0=t0,
+                                     data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
+                                     mean_flux_label=mean_flux_label)
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
         like.do_sampling(chainfile, datadir=datadir)
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
         savefile = os.path.join(savedir, 'corner_'+sname + ".pdf")
-        make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, ranges=like.param_limits)
+        make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=parameter_names, ranges=like.param_limits)
 
 if __name__ == "__main__":
-    sim_rootdir = "simulations2"
-    plotdir = 'plots/simulations2'
-    gpsavedir=os.path.join(plotdir,"hires_s8")
-    quadsavedir = os.path.join(plotdir, "hires_s8_quad_quad")
-    emud = os.path.join(sim_rootdir,'hires_s8')
-    quademud = os.path.join(sim_rootdir, "hires_s8_quadratic")
-    testdirs = os.path.join(sim_rootdir,'hires_s8_test')
+    sim_rootdir = '/share/data2/keir/Simulations' #"simulations2"
+    plotdir = 'Plots' #'plots/simulations2'
+    gpsavedir=os.path.join(plotdir,"nCDM") #hires_s8")
+    #quadsavedir = os.path.join(plotdir, "hires_s8_quad_quad")
+    emud = os.path.join(sim_rootdir,'nCDM_test_emulator') #hires_s8')
+    #quademud = os.path.join(sim_rootdir, "hires_s8_quadratic")
+    testdirs = os.path.join(sim_rootdir,'nCDM_test_thermal2') #hires_s8_test')
 
-    gplike09 = run_likelihood_test(testdirs, emud, savedir=gpsavedir, plot=True, t0_training_value=0.9)
+    lyman_data_instance = lyman_data.BoeraData()
+    redshifts = lyman_data_instance.redshifts_unique[::-1]
+    max_z = np.max(redshifts)
+    pixel_resolution_km_s = 1.
+
+    # Get test simulation parameters
+    t0_test_value = 1.
+    test_simulation_number = 0
+    test_emulator_instance = cg.nCDMEmulator(testdirs)
+    test_emulator_instance.load()
+    test_simulation_directory = test_emulator_instance.get_outdir(test_emulator_instance.get_parameters()[test_simulation_number])[:-7]
+    test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
+    test_simulation_parameters = np.concatenate((np.array([0., t0_test_value]), test_simulation_parameters))
+
+    gplike09 = run_likelihood_test(test_simulation_directory, emud, savedir=gpsavedir,
+                                   test_simulation_parameters=test_simulation_parameters, plot=True,
+                                   mean_flux_label='s_high_z', max_z=max_z, redshifts=redshifts,
+                                   pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value=t0_test_value,
+                                   emulator_class='nCDM', use_measured_parameters=True,
+                                   redshift_dependent_parameters=True, data_class='Boera') #0.9)
+
 #     gplike = run_likelihood_test(testdirs, emud, savedir=gpsavedir, plot=True)
-    quadlike09 = run_likelihood_test(testdirs, quademud, savedir=quadsavedir, plot=True, t0_training_value=0.9, emulator_class="quadratic")
+    #quadlike09 = run_likelihood_test(testdirs, quademud, savedir=quadsavedir, plot=True, t0_training_value=0.9, emulator_class="quadratic")
 #     quadlike = run_likelihood_test(testdirs, quademud, savedir=quadsavedir, plot=True, emulator_class="quadratic")
