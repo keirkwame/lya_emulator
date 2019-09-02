@@ -191,7 +191,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, test_simulation_parameter
                                  pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value = t0_training_value,
                                  emulator_class=emulator_class, use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters, data_class=data_class)
-    parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)
+    parameter_names = np.concatenate(([r'd $\tau_0$'], like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)))
     for sdir in subdirs:
         single_likelihood_plot(sdir, like, savedir=savedir, plot=plot, t0=t0_training_value,
                                true_parameter_values=test_simulation_parameters, data_class=data_class,
@@ -216,7 +216,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
                                      mean_flux_label=mean_flux_label)
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
-        like.do_sampling(chainfile, datadir=datadir)
+        like.do_sampling(chainfile, datadir=datadir, nwalkers=100, burnin=100, nsamples=100, while_loop=False)
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
         savefile = os.path.join(savedir, 'corner_'+sname + ".pdf")
