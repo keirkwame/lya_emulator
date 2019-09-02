@@ -470,7 +470,7 @@ class nCDMEmulator(Emulator):
         param_names = {'ns': 0, 'As': 1, 'heat_slope': 2, 'heat_amp': 3, 'omega_m': 4, 'alpha': 5, 'beta': 6, 'gamma': 7, 'z_rei': 8, 'T_rei': 9}
         param_limits = np.array([[0.9, 0.995], [1.2e-9, 2.5e-9], [-1.3, 0.7], [0.05, 3.5], [0.26, 0.33],
                                  [0., 0.1], [1., 10.], [-10., 0.], [6., 15.], [1.5e+4, 4.e+4]])
-        if kf or z is None:
+        if (kf is None) or (z is None):
             data_instance = lyman_data.BoeraData()
             if kf is None:
                 kf = data_instance.get_kf()

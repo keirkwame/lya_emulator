@@ -229,7 +229,7 @@ if __name__ == "__main__":
     #quadsavedir = os.path.join(plotdir, "hires_s8_quad_quad")
     emud = os.path.join(sim_rootdir,'nCDM_test_emulator') #hires_s8')
     #quademud = os.path.join(sim_rootdir, "hires_s8_quadratic")
-    testdirs = os.path.join(sim_rootdir,'nCDM_test_thermal2') #hires_s8_test')
+    testdirs = os.path.join(sim_rootdir,'nCDM_test_emulator') #hires_s8_test')
 
     lyman_data_instance = lyman_data.BoeraData()
     redshifts = lyman_data_instance.redshifts_unique[::-1]
@@ -238,7 +238,7 @@ if __name__ == "__main__":
 
     # Get test simulation parameters
     t0_test_value = 1.
-    test_simulation_number = 0
+    test_simulation_number = 1
     test_emulator_instance = cg.nCDMEmulator(testdirs)
     test_emulator_instance.load()
     test_simulation_directory = test_emulator_instance.get_outdir(test_emulator_instance.get_parameters()[test_simulation_number])[:-7]
