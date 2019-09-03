@@ -185,13 +185,16 @@ def run_likelihood_test(testdir, emudir, savedir=None, test_simulation_parameter
         subdirs = glob.glob(testdir + "/*/")
         assert len(subdirs) > 1
     else:
-        subdirs = testdir
+        subdirs = [testdir,]
 
     like = likeh.LikelihoodClass(basedir=emudir, mean_flux=mean_flux_label, max_z=max_z, redshifts=redshifts,
                                  pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value = t0_training_value,
                                  emulator_class=emulator_class, use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters, data_class=data_class)
-    parameter_names = np.concatenate(([r'd $\tau_0$'], like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)))
+    parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 0]
+    print(parameter_names, parameter_names.shape)
+    parameter_names = np.concatenate(([r'd $\tau_0$',], parameter_names))
+    print(parameter_names)
     for sdir in subdirs:
         single_likelihood_plot(sdir, like, savedir=savedir, plot=plot, t0=t0_training_value,
                                true_parameter_values=test_simulation_parameters, data_class=data_class,

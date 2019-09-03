@@ -147,6 +147,7 @@ def map_to_unit_cube(param_vec, param_limits):
     Returns:
     vector of parameters, all in [0,1].
     """
+    print(np.size(param_vec), np.shape(param_limits))
     assert (np.size(param_vec),2) == np.shape(param_limits)
     assert np.all(param_vec-1e-16 <= param_limits[:,1])
     assert np.all(param_vec+1e-16 >= param_limits[:,0])
