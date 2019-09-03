@@ -225,7 +225,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
                                      mean_flux_label=mean_flux_label)
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
-        like.do_sampling(chainfile, datadir=datadir, nwalkers=100, burnin=100, nsamples=100, while_loop=False)
+        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=False)
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
         savefile = os.path.join(savedir, 'corner_'+sname + ".pdf")
