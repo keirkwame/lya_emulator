@@ -147,7 +147,7 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}
     print(prange)
-    posterior_MCsamples = gd.MCSamples(samples=samples, names=pnames, labels=pnames, label='') #, ranges=prange)
+    posterior_MCsamples = gd.MCSamples(samples=samples, names=pnames, labels=pnames, label='', ranges=prange)
 
     print("Sim=",savefile)
     #Get and print the confidence limits
@@ -225,7 +225,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
                                      mean_flux_label=mean_flux_label)
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
-        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=False)
+        like.do_sampling(chainfile, datadir=datadir, nwalkers=100, burnin=100, nsamples=100, while_loop=False)
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
         savefile = os.path.join(savedir, 'corner_'+sname + ".pdf")
@@ -251,15 +251,16 @@ if __name__ == "__main__":
     test_emulator_instance = cg.nCDMEmulator(testdirs)
     test_emulator_instance.load()
     test_simulation_directory = test_emulator_instance.get_outdir(test_emulator_instance.get_parameters()[test_simulation_number])[:-7]
-    test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
+    #test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
+    test_simulation_parameters = test_emulator_instance.get_parameters()[test_simulation_number]
     test_simulation_parameters = np.concatenate((np.array([0., t0_test_value]), test_simulation_parameters))
 
     gplike09 = run_likelihood_test(test_simulation_directory, emud, savedir=gpsavedir,
                                    test_simulation_parameters=test_simulation_parameters, plot=True,
                                    mean_flux_label='s_high_z', max_z=max_z, redshifts=redshifts,
                                    pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value=t0_test_value,
-                                   emulator_class='nCDM', use_measured_parameters=True,
-                                   redshift_dependent_parameters=True, data_class='Boera') #0.9)
+                                   emulator_class='nCDM', use_measured_parameters=False,
+                                   redshift_dependent_parameters=False, data_class='Boera') #0.9)
 
 #     gplike = run_likelihood_test(testdirs, emud, savedir=gpsavedir, plot=True)
     #quadlike09 = run_likelihood_test(testdirs, quademud, savedir=quadsavedir, plot=True, t0_training_value=0.9, emulator_class="quadratic")
