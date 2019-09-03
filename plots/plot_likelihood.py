@@ -64,6 +64,8 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_cl
 
         scaling_factor = ekf[i]/ mh.pi
         data_flux_power_std_single_z = np.sqrt(like.lyman_data_instance.get_covar(z[i]).diagonal())
+        print(i, like.get_data_covariance(i))
+        print(like.get_data_covariance(i).shape)
         exact_flux_power_std_single_z = np.sqrt(np.diag(like.get_data_covariance(i)))
 #         print('Diagonal elements of BOSS covariance matrix at single redshift:', data_flux_power_std_single_z)
 
@@ -92,15 +94,16 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_cl
     axes[0].plot([], color='gray', ls='-', label=r'exact')
     axes[0].plot([], color='gray', ls='--', label=r'emulated')
     axes[0].legend(frameon=False, fontsize=fontsize)
-    axes[0].set_xlim(xlim)  # 4.e-2])
-    #axes[0].set_xscale('log')
+    #axes[0].set_xlim(xlim)  # 4.e-2])
+    axes[0].set_xscale('log')
     axes[0].set_yscale('log')
     axes[0].set_xlabel(xlabel)
     axes[0].set_ylabel(ylabel)
 
-    axes[1].plot([], color='gray', label=r'BOSS data')
+    axes[1].plot([], color='gray', label=r'Data')
     axes[1].legend(frameon=False, fontsize=fontsize)
-    axes[1].set_xlim(xlim)
+    #axes[1].set_xlim(xlim)
+    axes[1].set_xscale('log')
     axes[1].set_yscale('log')
     axes[1].set_xlabel(xlabel)
     axes[1].set_ylabel(ylabel)
@@ -108,14 +111,16 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_cl
     axes[2].plot([], color='gray', ls='-', label=r'measurement sigma')
     axes[2].plot([], color='gray', ls='--', label=r'emulated sigma')
     axes[2].legend(frameon=False, fontsize=fontsize)
-    axes[2].set_xlim(xlim)
+    #axes[2].set_xlim(xlim)
+    axes[2].set_xscale('log')
     axes[2].set_yscale('log')
     axes[2].set_xlabel(xlabel)
     axes[2].set_ylabel(r'sigma / exact P(k)')
 
     axes[3].axhline(y=1., color='black', ls=':', lw=line_width)
-    axes[3].set_xlim(xlim)
+    #axes[3].set_xlim(xlim)
     #axes[3].set_yscale('log')
+    axes[3].set_xscale('log')
     axes[3].set_xlabel(xlabel)
     axes[3].set_ylabel(r'emulated P(k) / exact P(k)') #BOSS sigma / BOSS P(k)')
 
@@ -141,7 +146,8 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
     prange = None
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}
-    posterior_MCsamples = gd.MCSamples(samples=samples, names=pnames, labels=pnames, label='', ranges=prange)
+    print(prange)
+    posterior_MCsamples = gd.MCSamples(samples=samples, names=pnames, labels=pnames, label='') #, ranges=prange)
 
     print("Sim=",savefile)
     #Get and print the confidence limits
@@ -191,13 +197,13 @@ def run_likelihood_test(testdir, emudir, savedir=None, test_simulation_parameter
                                  pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value = t0_training_value,
                                  emulator_class=emulator_class, use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters, data_class=data_class)
-    parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 0]
+    parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
     print(parameter_names, parameter_names.shape)
-    parameter_names = np.concatenate(([r'd $\tau_0$',], parameter_names))
+    parameter_names = np.concatenate(([r'd \tau_0',], parameter_names))
     print(parameter_names)
     for sdir in subdirs:
         single_likelihood_plot(sdir, like, savedir=savedir, plot=plot, t0=t0_training_value,
-                               true_parameter_values=test_simulation_parameters, data_class=data_class,
+                               true_parameter_values=test_simulation_parameters, data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
                                mean_flux_label=mean_flux_label, parameter_names=parameter_names)
     return like
 

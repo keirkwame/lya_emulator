@@ -45,7 +45,7 @@ class MultiBinGP:
             if self.redshift_sensitivity is None:
                 zparams_single_redshift = zparams
             else:
-                zparams_single_redshift = zparams[:][self.redshift_sensitivity[i]]
+                zparams_single_redshift = zparams[:, self.redshift_sensitivity[i]]
             if not use_updated_training_set:
                 (m, s) = gp.predict(zparams_single_redshift)
             else:

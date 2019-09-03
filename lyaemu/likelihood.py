@@ -289,6 +289,7 @@ class LikelihoodClass:
             covar_bin = self.lyman_data_instance.get_covar(lyman_data_redshifts)
         else:
             covar_bin = self.lyman_data_instance.get_covar(lyman_data_redshifts[zbin])
+        print(covar_bin.shape)
         return covar_bin
 
     def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=True, include_emulator_error=True, maxsample=20):
@@ -300,7 +301,7 @@ class LikelihoodClass:
                                         mean_flux_model=self.mean_flux_model)
         #Set up mean flux
         if self.mf_slope:
-            pnames = np.concatenate(np.array([['dtau0',r'd\tau_0'],]), pnames, axis=0)
+            pnames = np.concatenate((np.array([['dtau0',r'd\tau_0'],]), pnames), axis=0)
         with open(savefile+"_names.txt",'w') as ff:
             for pp in pnames:
                 ff.write("%s %s\n" % tuple(pp))
@@ -313,7 +314,8 @@ class LikelihoodClass:
         emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.likelihood, args=(include_emulator_error,))
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
         #Check things are reasonable
-        assert np.all(emcee_sampler.acceptance_fraction > 0.01)
+        print('The fraction of proposed steps that were accepted =', emcee_sampler.acceptance_fraction)
+        #assert np.all(emcee_sampler.acceptance_fraction > 0.01)
         emcee_sampler.reset()
         self.cur_results = emcee_sampler
         gr = 10.
