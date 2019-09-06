@@ -1,5 +1,6 @@
 """Module for plotting generated likelihood chains"""
 import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import re
 import glob
 import math as mh
