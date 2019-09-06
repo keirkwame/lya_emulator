@@ -187,7 +187,7 @@ class LikelihoodClass:
         if self.use_measured_parameters:
             index_adjustment = lambda index: np.sum(self.emulator.remove_simulation_params < index)
         else:
-            index_adjustment = lambda index: 0.
+            index_adjustment = lambda index: 0
         if self.emulator.param_names.get('hub', None) is not None:
             hindex = ndense + self.emulator.param_names["hub"]
             hindex -= index_adjustment(self.emulator.param_names["hub"])
@@ -195,7 +195,9 @@ class LikelihoodClass:
             omega_m = self.emulator.omegamh2/hubble**2
         elif self.emulator.param_names.get('omega_m', None) is not None:
             omega_m_index = ndense + self.emulator.param_names['omega_m']
+            print(omega_m_index)
             omega_m_index -= index_adjustment(self.emulator.param_names['omega_m'])
+            print(omega_m_index)
             omega_m = nparams[omega_m_index]
             hubble = np.sqrt(self.emulator.omegamh2 / omega_m)
         else:
@@ -235,9 +237,9 @@ class LikelihoodClass:
             assert np.shape(np.outer(std_bin,std_bin)) == np.shape(covar_bin)
             if include_emu:
                 #Assume each k bin is independent
-#                 covar_emu = np.diag(std_bin**2)
+                covar_emu = np.diag(std_bin**2)
                 #Assume completely correlated emulator errors within this bin
-                covar_emu = np.outer(std_bin, std_bin)
+                #covar_emu = np.outer(std_bin, std_bin)
                 covar_bin += covar_emu
             icov_bin = np.linalg.inv(covar_bin)
             (_, cdet) = np.linalg.slogdet(covar_bin)

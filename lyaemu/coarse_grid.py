@@ -178,7 +178,7 @@ class Emulator:
         else:
             self.measured_param_limits = np.concatenate((self.measured_param_limits, measured_parameter_limits), axis=0)
 
-        self.remove_simulation_params = np.sort(np.concatenate((self.remove_simulation_params, remove_simulation_parameters)))
+        self.remove_simulation_params = np.sort(np.concatenate((self.remove_simulation_params, remove_simulation_parameters))).astype(np.int)
         self.redshift_sensitivity = redshift_sensitivity
 
         self.dump(dumpfile=dumpfile)
