@@ -170,6 +170,18 @@ class LikelihoodClass:
                                                         redshift_dependent_parameters=redshift_dependent_parameters)
         print('Finished generating emulator at', str(datetime.now()))
 
+    def log_gaussian_prior(self, parameter_vector, parameter_names, means, standard_deviations):
+        """The natural logarithm of an un-normalised (multi-variate) Gaussian prior distribution"""
+        mean_vector = np.ones_like(parameter_vector)
+        inverse_variance_vector = np.zeros_like(parameter_vector)
+        for i, parameter_name in enumerate(parameter_names):
+            parameter_index_number = self.emulator._get_parameter_index_number(parameter_name,
+                                        use_measured_parameters=self.use_measured_parameters,
+                                        include_mean_flux_slope=self.mf_slope)
+            mean_vector[parameter_index_number] = means[i]
+            inverse_variance_vector[parameter_index_number] = 1. / (standard_deviations[i] ** 2)
+        return -0.5 * np.sum(((parameter_vector - mean_vector) ** 2) * inverse_variance_vector)
+
     def get_predicted(self, params, use_updated_training_set=False):
         """Helper function to get the predicted flux power spectrum and error, rebinned to match the desired kbins."""
         nparams = params
@@ -183,21 +195,15 @@ class LikelihoodClass:
         # .predict should take [{list of parameters: t0; cosmo.; thermal},]
         # Here: emulating @ cosmo.; thermal; sampled t0 * [tau0_fac from above]
         predicted_nat, std_nat = self.gpemu.predict(np.array(nparams).reshape(1,-1), tau0_factors = tau0_fac, use_updated_training_set=use_updated_training_set)
-        ndense = len(self.emulator.mf.dense_param_names)
-        if self.use_measured_parameters:
-            index_adjustment = lambda index: np.sum(self.emulator.remove_simulation_params < index)
-        else:
-            index_adjustment = lambda index: 0
-        if self.emulator.param_names.get('hub', None) is not None:
-            hindex = ndense + self.emulator.param_names["hub"]
-            hindex -= index_adjustment(self.emulator.param_names["hub"])
+
+        hubble_parameter_name, omega_m_parameter_name = ('hub', 'omega_m')
+        if self.emulator.param_names.get(hubble_parameter_name, None) is not None:
+            hindex = self.emulator._get_parameter_index_number(hubble_parameter_name, use_measured_parameters=self.use_measured_parameters)
             hubble = nparams[hindex]
             omega_m = self.emulator.omegamh2/hubble**2
-        elif self.emulator.param_names.get('omega_m', None) is not None:
-            omega_m_index = ndense + self.emulator.param_names['omega_m']
-            print(omega_m_index)
-            omega_m_index -= index_adjustment(self.emulator.param_names['omega_m'])
-            print(omega_m_index)
+        elif self.emulator.param_names.get(omega_m_parameter_name, None) is not None:
+            omega_m_index = self.emulator._get_parameter_index_number(omega_m_parameter_name,
+                                                               use_measured_parameters=self.use_measured_parameters)
             omega_m = nparams[omega_m_index]
             hubble = np.sqrt(self.emulator.omegamh2 / omega_m)
         else:
@@ -294,7 +300,8 @@ class LikelihoodClass:
         print(covar_bin.shape)
         return covar_bin
 
-    def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=True, include_emulator_error=True, maxsample=20):
+    def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, prior_function='uniform',
+                    while_loop=True, include_emulator_error=True, maxsample=20, n_threads=1):
         """Initialise and run emcee."""
         pnames = self.emulator.print_pnames(use_measured_parameters=self.use_measured_parameters)
         #Load the data directory
@@ -312,8 +319,15 @@ class LikelihoodClass:
         #Priors are assumed to be in the middle.
         cent = (self.param_limits[:,1]+self.param_limits[:,0])/2.
         p0 = [cent+2*pr/16.*np.random.rand(self.ndim)-pr/16. for _ in range(nwalkers)]
-        assert np.all([np.isfinite(self.likelihood(pp, include_emu=include_emulator_error)) for pp in p0])
-        emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.likelihood, args=(include_emulator_error,))
+
+        #Form posterior distribution
+        if prior_function == 'uniform':
+            prior_function = lambda parameter_vector: 0.
+        posterior = lambda parameter_vector, include_emulator_error: self.likelihood(parameter_vector, include_emu=
+                                                            include_emulator_error) + prior_function(parameter_vector)
+
+        assert np.all([np.isfinite(posterior(pp, include_emulator_error)) for pp in p0])
+        emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, posterior, args=(include_emulator_error,), threads=n_threads)
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
         #Check things are reasonable
         print('The fraction of proposed steps that were accepted =', emcee_sampler.acceptance_fraction)

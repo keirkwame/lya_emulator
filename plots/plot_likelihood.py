@@ -188,10 +188,11 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
 #     subplot_instance.add_legend(legend_labels, legend_loc='upper right', colored_text=True, figure=True)
     plt.savefig(savefile)
 
-def run_likelihood_test(testdir, emudir, savedir=None, test_simulation_parameters=None, plot=True, mean_flux_label='s',
-                        max_z=4.2, redshifts=None, pixel_resolution_km_s='default', t0_training_value=1.,
-                        emulator_class="standard", use_measured_parameters=False, redshift_dependent_parameters=False,
-                        data_class='BOSS', plot_parameter_indices=None, emulator_json_file='emulator_params.json'):
+def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform', prior_function_args=None,
+                        test_simulation_parameters=None, plot=True, mean_flux_label='s', max_z=4.2, redshifts=None,
+                        pixel_resolution_km_s='default', t0_training_value=1., emulator_class="standard",
+                        use_measured_parameters=False, redshift_dependent_parameters=False, data_class='BOSS',
+                        plot_parameter_indices=None, emulator_json_file='emulator_params.json', n_threads_mcmc=1):
     """Generate some likelihood samples"""
     #Find all subdirectories
     if test_simulation_parameters is None:
@@ -204,18 +205,27 @@ def run_likelihood_test(testdir, emudir, savedir=None, test_simulation_parameter
                                  pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value = t0_training_value,
                                  emulator_class=emulator_class, emulator_json_file=emulator_json_file, use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters, data_class=data_class)
+
+    if prior_function == 'Gaussian':
+        prior_function = lambda parameter_vector: like.log_gaussian_prior(parameter_vector,
+                            parameter_names=prior_function_args[0], means=prior_function_args[1],
+                            standard_deviations=prior_function_args[2])
+
     parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
     print(parameter_names, parameter_names.shape)
     parameter_names = np.concatenate(([r'd \tau_0',], parameter_names))
     print(parameter_names)
     for sdir in subdirs:
-        single_likelihood_plot(sdir, like, savedir=savedir, plot=plot, t0=t0_training_value,
-                               true_parameter_values=test_simulation_parameters, data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
-                               mean_flux_label=mean_flux_label, parameter_names=parameter_names, plot_parameter_indices=plot_parameter_indices)
+        single_likelihood_plot(sdir, like, savedir=savedir, prior_function=prior_function, plot=plot,
+                               t0=t0_training_value, true_parameter_values=test_simulation_parameters,
+                               data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
+                               mean_flux_label=mean_flux_label, parameter_names=parameter_names,
+                               plot_parameter_indices=plot_parameter_indices, n_threads_mcmc=n_threads_mcmc)
     return like
 
-def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter_values=None, data_class='BOSS',
-                           pixel_resolution_km_s='default', mean_flux_label='s', parameter_names=None, plot_parameter_indices=None):
+def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=True, t0=1., true_parameter_values=None,
+                           data_class='BOSS', pixel_resolution_km_s='default', mean_flux_label='s',
+                           parameter_names=None, plot_parameter_indices=None, n_threads_mcmc=1):
     """Make a likelihood and error plot for a single simulation."""
     sname = os.path.basename(os.path.abspath(sdir))
     if t0 != 1.0:
@@ -232,10 +242,12 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
                                      mean_flux_label=mean_flux_label)
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
-        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=False, include_emulator_error=False)
+        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=3000, nsamples=3000,
+                         prior_function=prior_function, while_loop=False, include_emulator_error=False,
+                         n_threads=n_threads_mcmc)
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
-        savefile = os.path.join(savedir, 'corner_'+sname + "_no_emu_measured_TDR_3000.pdf")
+        savefile = os.path.join(savedir, 'corner_'+sname + "_no_emu_3000_2.pdf")
         make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=parameter_names, ranges=like.param_limits, parameter_indices=plot_parameter_indices)
 
 if __name__ == "__main__":
@@ -256,18 +268,28 @@ if __name__ == "__main__":
     t0_test_value = 1.
     test_simulation_number = 0
     test_emulator_instance = cg.nCDMEmulator(testdirs)
-    test_emulator_instance.load(dumpfile='emulator_params_measured_TDR.json')
+    test_emulator_instance.load() #dumpfile='emulator_params_measured_TDR.json')
     test_simulation_directory = test_emulator_instance.get_outdir(test_emulator_instance.get_parameters()[test_simulation_number])[:-7]
-    test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
-    #test_simulation_parameters = test_emulator_instance.get_parameters()[test_simulation_number]
+    #test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
+    test_simulation_parameters = test_emulator_instance.get_parameters()[test_simulation_number]
     test_simulation_parameters = np.concatenate((np.array([0., t0_test_value]), test_simulation_parameters))
 
-    gplike09 = run_likelihood_test(test_simulation_directory, emud, savedir=gpsavedir,
+    #Prior distribution
+    prior_parameter_names = np.array(['ns', 'As', 'omega_m'])
+    prior_means = test_simulation_parameters[np.array(2, 3, 6)]
+    prior_standard_deviations = np.array([0.1, 0.1, 0.1])
+    #prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
+    prior_function_args = None
+
+    gplike09 = run_likelihood_test(test_simulation_directory, emud, savedir=gpsavedir, prior_function='uniform',
+                                   prior_function_args=prior_function_args,
                                    test_simulation_parameters=test_simulation_parameters, plot=True,
                                    mean_flux_label='s_high_z', max_z=max_z, redshifts=redshifts,
                                    pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value=t0_test_value,
-                                   emulator_class='nCDM', use_measured_parameters=True,
-                                   redshift_dependent_parameters=True, data_class='Boera', emulator_json_file='emulator_params_measured_TDR.json') #, plot_parameter_indices=np.array([7, 8, 9])) #0.9)
+                                   emulator_class='nCDM', use_measured_parameters=False,
+                                   redshift_dependent_parameters=False, data_class='Boera',
+                                   emulator_json_file='emulator_params.json', n_threads_mcmc=1) #_measured_TDR
+    #, plot_parameter_indices=np.array([7, 8, 9])) #0.9)
 
 #     gplike = run_likelihood_test(testdirs, emud, savedir=gpsavedir, plot=True)
     #quadlike09 = run_likelihood_test(testdirs, quademud, savedir=quadsavedir, plot=True, t0_training_value=0.9, emulator_class="quadratic")

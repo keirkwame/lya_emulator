@@ -72,6 +72,14 @@ class Emulator:
         self.remove_simulation_params = np.array([], dtype=np.int)
         self.redshift_sensitivity = 'None'
 
+    def _get_parameter_index_number(self, parameter_name, use_measured_parameters=False, include_mean_flux_slope=False):
+        """Get the index number for a given parameter"""
+        index_number = len(self.mf.dense_param_names) + include_mean_flux_slope
+        if use_measured_parameters:
+            return index_number + self.get_combined_params()[parameter_name]
+        else:
+            return index_number + self.param_names[parameter_name]
+
     def set_maxk(self):
         """Get the maximum k in Mpc/h that we will need."""
         #Corresponds to omega_m = (0.23, 0.31) which should be enough.
@@ -237,6 +245,19 @@ class Emulator:
         """Get the list of parameter vectors (combined input and measured) in this emulator"""
         input_parameters = np.delete(self.get_parameters(), self.remove_simulation_params, axis=1)
         return np.concatenate((input_parameters, self.get_measured_parameters()), axis=1)
+
+    def get_combined_param_names(self):
+        """Get the dictionary of parameter names (combined input and measured) in this emulator"""
+        combined_parameter_names = {}
+        combined_parameter_index_number = 0
+        for parameter_name in self.param_names.keys():
+            if self.param_names[parameter_name] not in self.remove_simulation_params:
+                combined_parameter_names[parameter_name] = combined_parameter_index_number
+                combined_parameter_index_number += 1
+
+        for parameter_name in self.measured_param_names.keys():
+            combined_parameter_names[parameter_name] = combined_parameter_index_number
+            combined_parameter_index_number += 1
 
     def build_params(self, nsamples,limits = None, use_existing=False):
         """Build a list of directories and parameters from a hypercube sample"""
