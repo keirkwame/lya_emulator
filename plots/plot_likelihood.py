@@ -276,7 +276,7 @@ if __name__ == "__main__":
 
     #Prior distribution
     prior_parameter_names = np.array(['ns', 'As', 'omega_m'])
-    prior_means = test_simulation_parameters[np.array(2, 3, 6)]
+    prior_means = test_simulation_parameters[np.array([2, 3, 6])]
     prior_standard_deviations = np.array([0.1, 0.1, 0.1])
     #prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
     prior_function_args = None
@@ -288,7 +288,7 @@ if __name__ == "__main__":
                                    pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value=t0_test_value,
                                    emulator_class='nCDM', use_measured_parameters=False,
                                    redshift_dependent_parameters=False, data_class='Boera',
-                                   emulator_json_file='emulator_params.json', n_threads_mcmc=1) #_measured_TDR
+                                   emulator_json_file='emulator_params.json', n_threads_mcmc=80) #_measured_TDR
     #, plot_parameter_indices=np.array([7, 8, 9])) #0.9)
 
 #     gplike = run_likelihood_test(testdirs, emud, savedir=gpsavedir, plot=True)

@@ -182,6 +182,10 @@ class LikelihoodClass:
             inverse_variance_vector[parameter_index_number] = 1. / (standard_deviations[i] ** 2)
         return -0.5 * np.sum(((parameter_vector - mean_vector) ** 2) * inverse_variance_vector)
 
+    def log_uniform_prior(self, parameter_vector):
+        """The natural logarithm of an un-normalised uniform prior distribution"""
+        return 0.
+
     def get_predicted(self, params, use_updated_training_set=False):
         """Helper function to get the predicted flux power spectrum and error, rebinned to match the desired kbins."""
         nparams = params
@@ -300,6 +304,12 @@ class LikelihoodClass:
         print(covar_bin.shape)
         return covar_bin
 
+    def log_posterior(self, parameter_vector, prior_function='uniform', include_emulator_error=True):
+        """Evaluate the natural logarithm of the posterior distribution"""
+        if prior_function == 'uniform':
+            prior_function = self.log_uniform_prior
+        return self.likelihood(parameter_vector, include_emu=include_emulator_error) + prior_function(parameter_vector)
+
     def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, prior_function='uniform',
                     while_loop=True, include_emulator_error=True, maxsample=20, n_threads=1):
         """Initialise and run emcee."""
@@ -319,15 +329,10 @@ class LikelihoodClass:
         #Priors are assumed to be in the middle.
         cent = (self.param_limits[:,1]+self.param_limits[:,0])/2.
         p0 = [cent+2*pr/16.*np.random.rand(self.ndim)-pr/16. for _ in range(nwalkers)]
-
-        #Form posterior distribution
-        if prior_function == 'uniform':
-            prior_function = lambda parameter_vector: 0.
-        posterior = lambda parameter_vector, include_emulator_error: self.likelihood(parameter_vector, include_emu=
-                                                            include_emulator_error) + prior_function(parameter_vector)
-
-        assert np.all([np.isfinite(posterior(pp, include_emulator_error)) for pp in p0])
-        emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, posterior, args=(include_emulator_error,), threads=n_threads)
+        assert np.all([np.isfinite(self.log_posterior(pp, prior_function=prior_function, include_emulator_error=include_emulator_error)) for pp in p0])
+        emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior,
+                            kwargs={prior_function: prior_function, include_emulator_error: include_emulator_error},
+                            threads=n_threads)
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
         #Check things are reasonable
         print('The fraction of proposed steps that were accepted =', emcee_sampler.acceptance_fraction)
