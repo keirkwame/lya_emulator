@@ -281,9 +281,15 @@ class Emulator:
                 self.sample_params = np.vstack([self.sample_params, samples])
         else:
             self.sample_params = samples
+
+        if type(npart) is not np.ndarray:
+            npart = np.array([npart,] * samples.shape[0])
+        if type(box) is not np.ndarray:
+            box = np.array([box,] * samples.shape[0])
+
         #Generate ICs for each set of parameter inputs
-        for ev in samples:
-            self._do_ic_generation(ev, npart, box)
+        for i, ev in enumerate(samples):
+            self._do_ic_generation(ev, npart[i], box[i])
         self.dump()
 
     def _do_ic_generation(self,ev,npart,box):
