@@ -248,7 +248,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
                          n_threads=n_threads_mcmc)
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
-        savefile = os.path.join(savedir, 'corner_'+sname + "_no_emu_3000_2.pdf")
+        savefile = os.path.join(savedir, 'corner_'+sname + "_no_emu_3000_Gaussian.pdf")
         make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=parameter_names, ranges=like.param_limits, parameter_indices=plot_parameter_indices)
 
 if __name__ == "__main__":
@@ -279,17 +279,17 @@ if __name__ == "__main__":
     prior_parameter_names = np.array(['ns', 'As', 'omega_m'])
     prior_means = test_simulation_parameters[np.array([2, 3, 6])]
     prior_standard_deviations = np.array([0.1, 0.1, 0.1])
-    #prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
-    prior_function_args = None
+    prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
+    #prior_function_args = None
 
-    gplike09 = run_likelihood_test(test_simulation_directory, emud, savedir=gpsavedir, prior_function='uniform',
+    gplike09 = run_likelihood_test(test_simulation_directory, emud, savedir=gpsavedir, prior_function='Gaussian',
                                    prior_function_args=prior_function_args,
                                    test_simulation_parameters=test_simulation_parameters, plot=True,
                                    mean_flux_label='s_high_z', max_z=max_z, redshifts=redshifts,
                                    pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value=t0_test_value,
                                    emulator_class='nCDM', use_measured_parameters=False,
                                    redshift_dependent_parameters=False, data_class='Boera',
-                                   emulator_json_file='emulator_params.json', n_threads_mcmc=80) #_measured_TDR
+                                   emulator_json_file='emulator_params.json', n_threads_mcmc=1) #_measured_TDR
     #, plot_parameter_indices=np.array([7, 8, 9])) #0.9)
 
 #     gplike = run_likelihood_test(testdirs, emud, savedir=gpsavedir, plot=True)
