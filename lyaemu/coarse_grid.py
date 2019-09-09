@@ -76,7 +76,7 @@ class Emulator:
         """Get the index number for a given parameter"""
         index_number = len(self.mf.dense_param_names) + include_mean_flux_slope
         if use_measured_parameters:
-            return index_number + self.get_combined_params()[parameter_name]
+            return index_number + self.get_combined_param_names()[parameter_name]
         else:
             return index_number + self.param_names[parameter_name]
 
@@ -260,6 +260,8 @@ class Emulator:
         for parameter_name in self.measured_param_names.keys():
             combined_parameter_names[parameter_name] = combined_parameter_index_number
             combined_parameter_index_number += 1
+
+        return combined_parameter_names
 
     def build_params(self, nsamples,limits = None, use_existing=False):
         """Build a list of directories and parameters from a hypercube sample"""
