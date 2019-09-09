@@ -80,8 +80,17 @@ if __name__ == '__main__':
     #emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, 'nCDM_test_emulator'))
     #emulator_instance.gen_simulations(50, npart=256, box=10.)
 
-    #Convergence tests
+    #nCDM_test_convergence
     n_simulations = 5
     samples_fiducial_nCDM = [0.9635, 1.8296e-9, 0., 1., 0.3209, 0., 1., -1., 8., 2.e+4]
     samples_nCDM_test = np.array(samples_fiducial_nCDM * n_simulations).reshape(n_simulations, -1)
-    #samples_nCDM_test[:3, 5] =
+    #nCDM
+    samples_nCDM_test[:3, 5] = 0.0227
+    samples_nCDM_test[:3, 6] = 2.24
+    samples_nCDM_test[:3, 7] = -4.46
+    #npart & box
+    npart = np.array([256, 512, 768, 768, 768])
+    box = np.array([10., 10., 10., 10., 15.])
+
+    emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, 'nCDM_test_convergence'))
+    emulator_instance.gen_simulations(None, npart=npart, box=box, samples=samples_nCDM_test)
