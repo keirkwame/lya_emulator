@@ -96,7 +96,7 @@ class Emulator:
         #Comes out to k ~ 5, which is a bit larger than strictly necessary.
         self.maxk = np.max(self.kf) * velfac(1/(1+self.maxz)) * 2
 
-    def build_dirname(self,params, include_dense=False, strsz=3):
+    def build_dirname(self,params, include_dense=False, strsz=3, extra_flag=0):
         """Make a directory name for a given set of parameter values"""
         ndense = include_dense * len(self.mf.dense_param_names)
         parts = ['',]*(len(self.param_names) + ndense)
@@ -108,6 +108,8 @@ class Emulator:
         for nn,val in self.param_names.items():
             parts[ndense+val] = nn+fstr % params[ndense+val]
         name = ''.join(str(elem) for elem in parts)
+        if extra_flag > 0:
+            name += '_' + str(extra_flag)
         return name
 
     def print_pnames(self, use_measured_parameters=False):
@@ -289,7 +291,7 @@ class Emulator:
 
         #Generate ICs for each set of parameter inputs
         for i, ev in enumerate(samples):
-            self._do_ic_generation(ev, npart[i], box[i])
+            self._do_ic_generation(ev, npart[i], box[i], extra_flag=i+1)
         self.dump()
 
     def _do_ic_generation(self,ev,npart,box):
@@ -509,9 +511,9 @@ class nCDMEmulator(Emulator):
         self._scalar_pivot_scale_ratio = 0.05 / 2. #Ratio between CMB and Lyman-a forest scalar power spectrum pivots
         super().__init__(basedir=basedir, param_names=param_names, param_limits=param_limits, kf=kf, mf=mf, z=z, omegamh2=omegamh2)
 
-    def _do_ic_generation(self, ev, npart, box): #To be modified!!!
+    def _do_ic_generation(self, ev, npart, box, extra_flag=0): #To be modified!!!
         """Generate initial conditions"""
-        outdir = os.path.join(self.basedir, self.build_dirname(ev))
+        outdir = os.path.join(self.basedir, self.build_dirname(ev, extra_flag=extra_flag))
         pn = self.param_names
         rescale_slope = ev[pn['heat_slope']]
         rescale_amp = ev[pn['heat_amp']]
