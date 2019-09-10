@@ -164,11 +164,18 @@ class LikelihoodClass:
                 self.gpemu = self.emulator.get_emulator(redshifts=self.data_redshifts,
                                 pixel_resolution_km_s=self.pixel_resolution_km_s,
                                 use_measured_parameters=use_measured_parameters,
-                                redshift_dependent_parameters=redshift_dependent_parameters)
+                                redshift_dependent_parameters=redshift_dependent_parameters,
+                                k_max_emulated_h_Mpc=self._get_k_max_emulated_h_Mpc())
             else:
                 self.gpemu = self.emulator.get_emulator(max_z=max_z, use_measured_parameters=use_measured_parameters,
                                                         redshift_dependent_parameters=redshift_dependent_parameters)
         print('Finished generating emulator at', str(datetime.now()))
+
+    def _get_k_max_emulated_h_Mpc(self):
+        """Calculate the maximum comoving wavenumber (in h/Mpc) that needs to be emulated"""
+        omega_m_index = self.emulator._get_parameter_index_number('omega_m')
+        omega_m_max = self.emulator.get_param_limits(include_dense=False)[omega_m_index, 1]
+        return np.max(self.kf) * flux_power.velocity_factor(np.max(self.zout), omega_m_max)
 
     def log_gaussian_prior(self, parameter_vector, parameter_names, means, standard_deviations):
         """The natural logarithm of an un-normalised (multi-variate) Gaussian prior distribution"""

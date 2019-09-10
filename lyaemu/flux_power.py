@@ -7,16 +7,20 @@ import numpy as np
 from fake_spectra import spectra
 from fake_spectra import abstractsnapshot as absn
 
+def velocity_factor(redshift, omega_m, omega_l=None):
+    """Physical_velocity = H(z) * scale_factor * comoving_distance"""
+    if omega_l is None:
+        omega_l = 1. - omega_m
+    return 1./(1.+redshift) * 100.0* np.sqrt(omega_m * ((1 + redshift)**3.) + omega_l)
+
 def rebin_power_to_kms(kfkms, kfmpc, flux_powers, zbins, omega_m, omega_l = None):
     """Rebins a power spectrum to constant km/s bins.
     Bins larger than the box are discarded. The return type is thus a list,
     with each redshift bin having potentially different lengths."""
-    if omega_l is None:
-        omega_l = 1 - omega_m
     nz = np.size(zbins)
     nk = np.size(kfmpc)
     assert np.size(flux_powers) == nz * nk
-    velfac = lambda zz: 1./(1+zz) * 100.0* np.sqrt(omega_m * (1 + zz)**3 + omega_l)
+    velfac = lambda zz: velocity_factor(zz, omega_m, omega_l=omega_l)
     rebinned=[scipy.interpolate.interpolate.interp1d(kfmpc,flux_powers[ii*nk:(ii+1)*nk]) for ii in range(nz)]
     okmsbins = [kfkms[np.where(kfkms >= np.min(kfmpc)/velfac(zz))] for zz in zbins]
     flux_rebinned = [rebinned[ii](okmsbins[ii]*velfac(zz)) for ii, zz in enumerate(zbins)]

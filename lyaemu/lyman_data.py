@@ -30,7 +30,7 @@ class SDSSData(object):
         self.covar_diag = data[:, 3] ** 2
 
     def get_kf(self, kf_bin_nums=None):
-        """Get the (unique) flux k values"""
+        """Get the flux k values"""
         kf_array = np.sort(np.array(list(set(self.kf))))
         if kf_bin_nums is None:
             return kf_array

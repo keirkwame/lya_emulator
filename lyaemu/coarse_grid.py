@@ -446,7 +446,7 @@ class Emulator:
         return kfmpc, kfkms, flux_vectors
 
     def _get_custom_emulator(self, *, emuobj, max_z=4.2, redshifts=None, pixel_resolution_km_s='default',
-                             use_measured_parameters=False, redshift_dependent_parameters=False):
+                             use_measured_parameters=False, redshift_dependent_parameters=False, k_max_emulated_h_Mpc=None):
         """Helper to allow supporting different emulators."""
         aparams, kf, flux_vectors = self.get_flux_vectors(max_z=max_z, kfunits="mpc", redshifts=redshifts,
                                         pixel_resolution_km_s=pixel_resolution_km_s,
@@ -457,7 +457,8 @@ class Emulator:
         else:
             redshift_sensitivity = np.ones((int(flux_vectors.shape[1] / kf.shape[0]), aparams.shape[1]), dtype=np.bool)
         gp = gpemulator.MultiBinGP(params=aparams, kf=kf, powers = flux_vectors, param_limits = plimits,
-                                   singleGP=emuobj, redshift_sensitivity=redshift_sensitivity)
+                                   singleGP=emuobj, k_max_emulated=k_max_emulated_h_Mpc,
+                                   redshift_sensitivity=redshift_sensitivity)
         return gp
 
 
@@ -577,7 +578,7 @@ class nCDMEmulator(Emulator):
         return ev
 
     def get_emulator(self, max_z=None, redshifts='default', pixel_resolution_km_s=1., use_measured_parameters=False,
-                     redshift_dependent_parameters=False):
+                     redshift_dependent_parameters=False, k_max_emulated_h_Mpc=None):
         """ Build an emulator for the desired k_F and our simulations.
             kf gives the desired k bins in s/km.
             Mean flux rescaling is handled (if mean_flux=True) as follows:
@@ -588,8 +589,10 @@ class nCDMEmulator(Emulator):
         if redshifts is 'default':
             redshifts = self.redshifts
         gp = self._get_custom_emulator(emuobj=None, max_z=max_z, redshifts=redshifts,
-                                       pixel_resolution_km_s=pixel_resolution_km_s, use_measured_parameters=use_measured_parameters,
-                                       redshift_dependent_parameters=redshift_dependent_parameters)
+                                       pixel_resolution_km_s=pixel_resolution_km_s,
+                                       use_measured_parameters=use_measured_parameters,
+                                       redshift_dependent_parameters=redshift_dependent_parameters,
+                                       k_max_emulated_h_Mpc=k_max_emulated_h_Mpc)
         return gp
 
 

@@ -13,11 +13,19 @@ class MultiBinGP:
     """A wrapper around the emulator that constructs a separate emulator for each bin.
     Each one has a separate mean flux parameter.
     The t0 parameter fed to the emulator should be constant factors."""
-    def __init__(self, *, params, kf, powers, param_limits, singleGP=None, redshift_sensitivity=None):
+    def __init__(self, *, params, kf, powers, param_limits, singleGP=None, k_max_emulated=None, redshift_sensitivity=None):
         #Build an emulator for each redshift separately. This means that the
         #mean flux for each bin can be separated.
         if singleGP is None:
             singleGP = SkLearnGP
+        if k_max_emulated is not None:
+            slice_array = (kf <= k_max_emulated)
+            correction_index = np.min(np.where(slice_array == False))
+            slice_array[correction_index] = True
+            powers_reshaped = powers.reshape(powers.shape[0], -1, kf.size)
+            powers_reshaped = powers_reshaped[:, :, slice_array]
+            powers = powers_reshaped.reshape(powers_reshaped.shape[0], -1)
+            kf = kf[slice_array]
         self.kf = kf
         self.nk = np.size(kf)
         assert np.shape(powers)[1] % self.nk == 0
