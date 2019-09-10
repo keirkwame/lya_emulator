@@ -72,9 +72,15 @@ class Emulator:
         self.remove_simulation_params = np.array([], dtype=np.int)
         self.redshift_sensitivity = 'None'
 
-    def _get_parameter_index_number(self, parameter_name, use_measured_parameters=False, include_mean_flux_slope=False):
+    def _get_parameter_index_number(self, parameter_name, use_measured_parameters=False, include_mean_flux=True, include_mean_flux_slope=False):
         """Get the index number for a given parameter"""
-        index_number = len(self.mf.dense_param_names) + include_mean_flux_slope
+        if include_mean_flux:
+            index_number = len(self.mf.dense_param_names)
+        else:
+            index_number = 0
+
+        index_number += include_mean_flux_slope
+
         if use_measured_parameters:
             return index_number + self.get_combined_param_names()[parameter_name]
         else:

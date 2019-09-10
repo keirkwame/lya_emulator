@@ -173,9 +173,11 @@ class LikelihoodClass:
 
     def _get_k_max_emulated_h_Mpc(self):
         """Calculate the maximum comoving wavenumber (in h/Mpc) that needs to be emulated"""
-        omega_m_index = self.emulator._get_parameter_index_number('omega_m')
+        omega_m_index = self.emulator._get_parameter_index_number('omega_m', include_mean_flux=False)
         omega_m_max = self.emulator.get_param_limits(include_dense=False)[omega_m_index, 1]
-        return np.max(self.kf) * flux_power.velocity_factor(np.max(self.zout), omega_m_max)
+        k_max = np.max(self.kf) * flux_power.velocity_factor(np.max(self.zout), omega_m_max)
+        print('k_max_emulated_h_Mpc =', k_max, np.max(self.kf), np.max(self.zout), omega_m_max)
+        return k_max
 
     def log_gaussian_prior(self, parameter_vector, parameter_names, means, standard_deviations):
         """The natural logarithm of an un-normalised (multi-variate) Gaussian prior distribution"""
