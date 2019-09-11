@@ -122,7 +122,7 @@ class LikelihoodClass:
                 slopelow = np.min(mflux.mean_flux_slope_to_factor(np.linspace(2.2, max_z, 11),-0.25))
                 dense_limits = np.array([np.array(t0_factor) * np.array([slopelow, slopehigh])])
                 mf = mflux.MeanFluxFactor(dense_limits = dense_limits)
-        elif (mean_flux == 'c_high_z') or (mean_flux == 's_high_z'):
+        elif (mean_flux == 'c_high_z') or (mean_flux == 's_high_z') or (mean_flux == 'free_high_z'):
             self.mean_flux_model = 'high_z'
             if mean_flux == 'c_high_z':
                 mf = mflux.ConstMeanFluxHighRedshift(value=t0_training_value)
@@ -133,6 +133,8 @@ class LikelihoodClass:
             elif mean_flux == 's_high_z':
                 self.mf_slope = True
                 mf = mflux.MeanFluxFactorHighRedshift()
+            elif mean_flux == 'free_high_z':
+                mf = mflux.FreeMeanFlux()
         else:
             mf = mflux.MeanFluxFactor()
         self.mean_flux_instance = mf
