@@ -37,7 +37,7 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_cl
 
     if (mean_flux_label == 'c') or (mean_flux_label == 's'):
         mean_flux_model = 'low_z'
-    elif (mean_flux_label == 'c_high_z') or (mean_flux_label == 's_high_z'):
+    elif (mean_flux_label == 'c_high_z') or (mean_flux_label == 's_high_z') or (mean_flux_label == 'free_high_z'):
         mean_flux_model = 'high_z'
     else:
         raise ValueError('Mean flux label not recognised')
@@ -214,7 +214,10 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
 
     parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
     print(parameter_names, parameter_names.shape)
-    parameter_names = np.concatenate(([r'd \tau_0',], parameter_names))
+    if mean_flux_label == 'free_high_z':
+        parameter_names = np.concatenate((['tau0_%.2f'%redshift for redshift in like.zout], parameter_names[1:]))
+    else:
+        parameter_names = np.concatenate(([r'd \tau_0',], parameter_names))
     print(parameter_names)
     for sdir in subdirs:
         single_likelihood_plot(sdir, like, savedir=savedir, prior_function=prior_function, plot=plot,

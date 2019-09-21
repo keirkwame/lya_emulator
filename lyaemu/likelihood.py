@@ -77,13 +77,22 @@ def load_data(datadir, *, kf, max_z=4.2, redshifts=None, pixel_resolution_km_s='
     assert np.size(data_fluxpower) % np.size(kf) == 0
     return data_fluxpower
 
+def measured_parameter_power_law_model(redshift, amplitude, slope, redshift_pivot=4.6):
+    """Power law redshift model for measured parameters (e.g., T0, gamma, u0)"""
+    return amplitude * ((redshift / redshift_pivot) ** slope)
+
+
 class LikelihoodClass:
     """Class to contain likelihood computations."""
-    def __init__(self, basedir, mean_flux='s', max_z = 4.2, redshifts=None, pixel_resolution_km_s='default',
-                 emulator_class="standard", t0_training_value = 1., optimise_GP=True,
+    def __init__(self, basedir, mean_flux='s', measured_parameter_names_z_model=None, max_z = 4.2, redshifts=None,
+                 pixel_resolution_km_s='default', emulator_class="standard", t0_training_value = 1., optimise_GP=True,
                  emulator_json_file='emulator_params.json', use_measured_parameters=False,
-                 redshift_dependent_parameters=False, data_class='BOSS'):
+                 redshift_dependent_parameters=False, data_class='BOSS',
+                 measured_parameter_z_model=measured_parameter_power_law_model,
+                 measured_parameter_z_model_parameter_limits=None):
         """Initialise the emulator by loading the flux power spectra from the simulations."""
+        self.measured_parameter_names_z_model = measured_parameter_names_z_model
+        self.measured_parameter_z_model = measured_parameter_z_model
 
         #Stored covariance matrix
         self._inverse_covariance_full = None
@@ -107,6 +116,7 @@ class LikelihoodClass:
         self.lyman_data_flux_power = self.lyman_data_instance.pf.reshape(-1, self.kf.shape[0])[:self.zout.shape[0]][::-1] #km / s; n_z * n_k
 
         self.mf_slope = False
+        self.mf_free = False
         #Param limits on t0
         t0_factor = np.array([0.75,1.25])
         t0_slope = np.array([-0.25, 0.25])
@@ -134,6 +144,7 @@ class LikelihoodClass:
                 self.mf_slope = True
                 mf = mflux.MeanFluxFactorHighRedshift()
             elif mean_flux == 'free_high_z':
+                self.mf_free = True
                 mf = mflux.FreeMeanFlux()
         else:
             mf = mflux.MeanFluxFactor()
@@ -158,6 +169,17 @@ class LikelihoodClass:
             #Shrink param limits t0 so that even with
             #a slope they are within the emulator range
             self.param_limits[1,:] = t0_factor
+        elif mean_flux == 'free_high_z':
+            mean_flux_param_limits = t0_factor.reshape(1, -1)
+            for i in range(self.zout.size - 1):
+                mean_flux_param_limits = np.concatenate((mean_flux_param_limits, t0_factor.reshape(1, -1)))
+            self.param_limits = np.vstack((mean_flux_param_limits, self.param_limits[1:]))
+
+        if self.measured_parameter_names_z_model is not None:
+            param_limits_remove_indices = self._get_measured_parameter_indices_to_remove()
+            self.param_limits = np.delete(self.param_limits, param_limits_remove_indices, axis=0)
+            self.param_limits = np.vstack((self.param_limits, measured_parameter_z_model_parameter_limits))
+
         self.ndim = np.shape(self.param_limits)[0]
         assert np.shape(self.param_limits)[1] == 2
         print('Beginning to generate emulator at', str(datetime.now()))
@@ -186,9 +208,15 @@ class LikelihoodClass:
         mean_vector = np.ones_like(parameter_vector)
         inverse_variance_vector = np.zeros_like(parameter_vector)
         for i, parameter_name in enumerate(parameter_names):
-            parameter_index_number = self.emulator._get_parameter_index_number(parameter_name,
+            if (parameter_name[-1] == 'A') or (parameter_name[-1] == 'S'):
+                parameter_index_number = (-2 * self.measured_parameter_names_z_model.size) + (
+                        2 * np.where(self.measured_parameter_names_z_model == parameter_name[:-2])[0][0])
+                if parameter_name[-1] == 'S':
+                    parameter_index_number += 1
+            else:
+                parameter_index_number = self.emulator._get_parameter_index_number(parameter_name,
                                         use_measured_parameters=self.use_measured_parameters,
-                                        include_mean_flux_slope=self.mf_slope)
+                                        include_mean_flux_slope=self.mf_slope, include_mean_flux_free=self.mf_free)
             mean_vector[parameter_index_number] = means[i]
             inverse_variance_vector[parameter_index_number] = 1. / (standard_deviations[i] ** 2)
         return -0.5 * np.sum(((parameter_vector - mean_vector) ** 2) * inverse_variance_vector)
@@ -205,8 +233,22 @@ class LikelihoodClass:
             # Divided by lowest redshift case
             tau0_fac = mflux.mean_flux_slope_to_factor(self.zout, params[0], redshift_pivot=self.mean_flux_instance.redshift_pivot)
             nparams = params[1:] #Keep only t0 sampling parameter (of mean flux parameters)
+        elif self.mf_free:
+            tau0_fac = params[:self.zout.size]
+            nparams = np.concatenate(([1.,], params[self.zout.size:]))
         else: #Otherwise bug if choose mean_flux = 'c'
             tau0_fac = None
+
+        if self.measured_parameter_names_z_model is not None:
+            nparams = nparams[:-2 * self.measured_parameter_names_z_model.size] #Slice off amplitudes, slopes
+            for i, measured_parameter_name in enumerate(self.measured_parameter_names_z_model):
+                params_index = (-2 * self.measured_parameter_names_z_model.size) + (i * 2)
+                measured_parameter_values = self.measured_parameter_z_model(self.zout, params[params_index],
+                                                                            params[params_index + 1])
+                nparams_index = self.emulator._get_parameter_index_number(measured_parameter_name +
+                                    '_z_%.1f'%self.zout[0], use_measured_parameters=True)
+                nparams = np.insert(nparams, nparams_index, measured_parameter_values)
+
         # .predict should take [{list of parameters: t0; cosmo.; thermal},]
         # Here: emulating @ cosmo.; thermal; sampled t0 * [tau0_fac from above]
         predicted_nat, std_nat = self.gpemu.predict(np.array(nparams).reshape(1,-1), tau0_factors = tau0_fac, use_updated_training_set=use_updated_training_set)
@@ -321,6 +363,17 @@ class LikelihoodClass:
             prior_function = self.log_uniform_prior
         return self.likelihood(parameter_vector, include_emu=include_emulator_error) + prior_function(parameter_vector)
 
+    def _get_measured_parameter_indices_to_remove(self):
+        """Get the indices for measured parameters so that they can be removed (because a redshift model is being
+        sampled instead)"""
+        remove_indices = []
+        for measured_parameter_name in self.measured_parameter_names_z_model:
+            for z in self.zout:
+                remove_indices.append(self.emulator._get_parameter_index_number(
+                    measured_parameter_name + '_z_%.1f' % z, include_mean_flux_slope=self.mf_slope,
+                    include_mean_flux_free=self.mf_free))
+        return remove_indices
+
     def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, prior_function='uniform',
                     while_loop=True, include_emulator_error=True, maxsample=20, n_threads=1):
         """Initialise and run emcee."""
@@ -332,6 +385,17 @@ class LikelihoodClass:
         #Set up mean flux
         if self.mf_slope:
             pnames = np.concatenate((np.array([['dtau0',r'd\tau_0'],]), pnames), axis=0)
+        elif self.mf_free:
+            pnames = np.concatenate(([['tau0_%.2f'%redshift, r'\tau_0(z=%.2f)'%redshift] for redshift in self.zout], pnames))
+
+        if self.measured_parameter_names_z_model is not None:
+            pnames_remove_indices = self._get_measured_parameter_indices_to_remove()
+            pnames = np.delete(pnames, pnames_remove_indices, axis=0)
+            pnames = np.concatenate((pnames,
+                        [[['%s_A'%measured_parameter_name, r'%s_A'%measured_parameter_name],
+                          ['%s_S'%measured_parameter_name, r'%s_S'%measured_parameter_name]]
+                         for measured_parameter_name in self.measured_parameter_names_z_model]))
+
         with open(savefile+"_names.txt",'w') as ff:
             for pp in pnames:
                 ff.write("%s %s\n" % tuple(pp))

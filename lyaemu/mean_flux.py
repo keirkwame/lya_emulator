@@ -128,8 +128,10 @@ class MeanFluxFactorHighRedshift(MeanFluxFactor):
 class FreeMeanFlux(MeanFluxFactorHighRedshift):
     """Class which implements a mean flux model where each redshift has its own parameter"""
     def __init__(self, dense_samples=10, dense_limits=None, dense_parameter_names=None, redshifts=np.array([4.24, 4.58, 4.95])):
-        if dense_parameter_names is None:
-            dense_parameter_names = {'tau0_%.2f'%redshift : i for i, redshift in enumerate(np.sort(redshifts)[::-1])}
+        '''if dense_parameter_names is None:
+            dense_parameter_names = {'tau0_%.2f'%redshift : i for i, redshift in enumerate(np.sort(redshifts)[::-1])}'''
+        if dense_limits is None:
+            dense_limits = np.array([[0.75, 1.25]])
         super().__init__(dense_samples=dense_samples, dense_limits=dense_limits,
                          dense_parameter_names=dense_parameter_names, redshifts=redshifts)
 
