@@ -53,7 +53,7 @@ if __name__ == "__main__":
     plt.savefig(savefile)
 
     #Dump data to JSON
-    measured_parameter_names = np.array(['T_0_z_5.0', 'T_0_z_4_6', 'T_0_z_4_2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
+    measured_parameter_names = np.array(['T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
     measured_sample_parameters = np.concatenate((T0, gamma), axis=1)
     remove_simulation_parameters = np.array([2, 3])
     emulator_instance.dump_measured_parameters(measured_parameter_names, measured_sample_parameters, remove_simulation_parameters)
