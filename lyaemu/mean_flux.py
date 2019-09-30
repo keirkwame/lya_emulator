@@ -130,8 +130,12 @@ class FreeMeanFlux(MeanFluxFactorHighRedshift):
     def __init__(self, dense_samples=10, dense_limits=None, dense_parameter_names=None, redshifts=np.array([4.24, 4.58, 4.95])):
         '''if dense_parameter_names is None:
             dense_parameter_names = {'tau0_%.2f'%redshift : i for i, redshift in enumerate(np.sort(redshifts)[::-1])}'''
+        redshift_pivot = redshifts[mh.floor(redshifts.size / 2)]
         if dense_limits is None:
-            dense_limits = np.array([[0.75, 1.25]])
+            #dense_limits = np.array([[0.75, 1.25]])
+            tau_factor_maximum = np.max(mean_flux_slope_to_factor(redshifts, 0.25, redshift_pivot=redshift_pivot))
+            tau_factor_minimum = np.min(mean_flux_slope_to_factor(redshifts, -0.25, redshift_pivot=redshift_pivot))
+            dense_limits = np.array([[0.75, 1.25]]) * np.array([tau_factor_minimum, tau_factor_maximum])
         super().__init__(dense_samples=dense_samples, dense_limits=dense_limits,
                          dense_parameter_names=dense_parameter_names, redshifts=redshifts)
 

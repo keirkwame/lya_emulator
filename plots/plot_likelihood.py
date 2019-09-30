@@ -203,8 +203,8 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
         subdirs = [testdir,]
 
     #Measured parameter redshift model
-    measured_parameter_names_z_model = None #np.array(['gamma',]) #'T_0', 'u_0'
-    measured_parameter_z_model_parameter_limits = None #np.array([[1., 1.6], [-2., 1.]]) #A, S
+    measured_parameter_names_z_model = np.array(['T_0', 'gamma',]) #'T_0', 'u_0'
+    measured_parameter_z_model_parameter_limits = np.array([[5000., 12000.], [-5., 1.], [1., 1.6], [-2., 1.]]) #A, S
 
     like = likeh.LikelihoodClass(basedir=emudir, mean_flux=mean_flux_label,
                                  measured_parameter_names_z_model=measured_parameter_names_z_model, max_z=max_z,
@@ -222,7 +222,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
     print(parameter_names, parameter_names.shape)
     if mean_flux_label == 'free_high_z':
-        parameter_names = np.concatenate((['tau0_%.2f'%redshift for redshift in like.zout], parameter_names[1:]))
+        parameter_names = np.concatenate(([r'tau0_%.2f'%redshift for redshift in like.zout], parameter_names[1:]))
     else:
         parameter_names = np.concatenate(([r'd \tau_0',], parameter_names))
     print(parameter_names)
@@ -241,7 +241,10 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     sname = os.path.basename(os.path.abspath(sdir))
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
-    chainfile = os.path.join(savedir, 'chain_' + sname + '.txt')
+
+    filename_suffix = '_mf_free_prior_measured_TDR_power_law'
+
+    chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
     if true_parameter_values is None:
@@ -253,13 +256,16 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
                                      mean_flux_label=mean_flux_label)
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
-        like.do_sampling(chainfile, datadir=datadir, nwalkers=10, burnin=30, nsamples=30,
+        like.do_sampling(chainfile, datadir=datadir, nwalkers=50, burnin=30, nsamples=30,
                          prior_function=prior_function, while_loop=False, include_emulator_error=False,
                          n_threads=n_threads_mcmc)
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
-        savefile = os.path.join(savedir, 'corner_'+sname + "_test.pdf") #no_emu_measured_TDR_3000_Gaussian_Planck_omega_m_tight_emu_less.pdf")
-        make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=parameter_names, ranges=like.param_limits, parameter_indices=plot_parameter_indices)
+        savefile = os.path.join(savedir, 'corner_'+sname + filename_suffix + ".pdf") #no_emu_measured_TDR_3000_Gaussian_Planck_omega_m_tight_emu_less.pdf")
+        plot_parameter_names = like.likelihood_parameter_names[:, 1]
+        plot_parameter_limits = like.param_limits
+        print(plot_parameter_names, plot_parameter_limits)
+        make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=plot_parameter_names, ranges=plot_parameter_limits, parameter_indices=plot_parameter_indices)
 
 if __name__ == "__main__":
     sim_rootdir = '/share/data2/keir/Simulations' #"simulations2"
@@ -279,28 +285,30 @@ if __name__ == "__main__":
     t0_test_value = 1.
     test_simulation_number = 0
     test_emulator_instance = cg.nCDMEmulator(testdirs)
-    test_emulator_instance.load() #dumpfile='emulator_params_measured_TDR.json')
+    test_emulator_instance.load(dumpfile='emulator_params_measured_TDR.json')
     test_simulation_directory = test_emulator_instance.get_outdir(test_emulator_instance.get_parameters()[test_simulation_number])[:-7]
-    #test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
-    test_simulation_parameters = test_emulator_instance.get_parameters()[test_simulation_number]
-    test_simulation_parameters = np.concatenate((np.array([0., t0_test_value]), test_simulation_parameters))
+    test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
+    #test_simulation_parameters = test_emulator_instance.get_parameters()[test_simulation_number]
+    #test_simulation_parameters = np.concatenate((np.array([0., t0_test_value]), test_simulation_parameters))
+    #test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters))
+    test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters[:-6], np.array([test_simulation_parameters[-5], 0., test_simulation_parameters[-2], 0.])))
 
     #Prior distribution
-    prior_parameter_names = np.array(['ns', 'As', 'omega_m'])
-    prior_means = test_simulation_parameters[np.array([2, 3, 6])]
+    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m'])
+    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 5])] #7
     #prior_means = np.array([0.93, 2.3 * 1.e-9, 0.27])
-    prior_standard_deviations = np.array([0.0057, 0.030 * 1.e-9, 0.001]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
+    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
     prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
     #prior_function_args = None
 
     gplike09 = run_likelihood_test(test_simulation_directory, emud, savedir=gpsavedir, prior_function='Gaussian',
                                    prior_function_args=prior_function_args,
                                    test_simulation_parameters=test_simulation_parameters, plot=True,
-                                   mean_flux_label='s_high_z', max_z=max_z, redshifts=redshifts,
+                                   mean_flux_label='free_high_z', max_z=max_z, redshifts=redshifts,
                                    pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value=t0_test_value,
-                                   emulator_class='nCDM', use_measured_parameters=False,
-                                   redshift_dependent_parameters=False, data_class='Boera',
-                                   emulator_json_file='emulator_params.json', n_threads_mcmc=1) #_measured_TDR
+                                   emulator_class='nCDM', use_measured_parameters=True,
+                                   redshift_dependent_parameters=True, data_class='Boera',
+                                   emulator_json_file='emulator_params_measured_TDR.json', n_threads_mcmc=1) #_measured_TDR
     #, plot_parameter_indices=np.array([7, 8, 9])) #0.9)
 
 #     gplike = run_likelihood_test(testdirs, emud, savedir=gpsavedir, plot=True)

@@ -370,7 +370,7 @@ class LikelihoodClass:
         for measured_parameter_name in self.measured_parameter_names_z_model:
             for z in self.zout:
                 remove_indices.append(self.emulator._get_parameter_index_number(
-                    measured_parameter_name + '_z_%.1f' % z, include_mean_flux_slope=self.mf_slope,
+                    measured_parameter_name + '_z_%.1f' % z, use_measured_parameters=True, include_mean_flux_slope=self.mf_slope,
                     include_mean_flux_free=self.mf_free))
         return remove_indices
 
@@ -386,15 +386,17 @@ class LikelihoodClass:
         if self.mf_slope:
             pnames = np.concatenate((np.array([['dtau0',r'd\tau_0'],]), pnames), axis=0)
         elif self.mf_free:
+            pnames = pnames[1:]
             pnames = np.concatenate(([['tau0_%.2f'%redshift, r'\tau_0(z=%.2f)'%redshift] for redshift in self.zout], pnames))
 
         if self.measured_parameter_names_z_model is not None:
             pnames_remove_indices = self._get_measured_parameter_indices_to_remove()
             pnames = np.delete(pnames, pnames_remove_indices, axis=0)
             pnames = np.concatenate((pnames,
-                        [[['%s_A'%measured_parameter_name, r'%s_A'%measured_parameter_name],
+                        np.array([[['%s_A'%measured_parameter_name, r'%s_A'%measured_parameter_name],
                           ['%s_S'%measured_parameter_name, r'%s_S'%measured_parameter_name]]
-                         for measured_parameter_name in self.measured_parameter_names_z_model]))
+                         for measured_parameter_name in self.measured_parameter_names_z_model]).reshape(-1, 2)))
+        self.likelihood_parameter_names = pnames
 
         with open(savefile+"_names.txt",'w') as ff:
             for pp in pnames:
