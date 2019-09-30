@@ -21,7 +21,7 @@ from .mean_flux import ConstMeanFluxHighRedshift
 def get_latex(key):
     """Get a latex name if it exists, otherwise return the key."""
     #Names for pretty-printing some parameters in Latex
-    print_names = { 'ns': r'n_\mathrm{s}', 'As': r'A_\mathrm{s}', 'heat_slope': r'H_\mathrm{S}', 'heat_amp': r'H_\mathrm{A}', 'hub':'h', 'omega_m': r'\Omega_\mathrm{m}', 'alpha': r'\alpha', 'beta': r'\beta', 'gamma': r'\gamma', 'T_0_z_5.0': r'T_0(z=5)', 'T_0_z_4_6': r'T_0(z=4.6)', 'T_0_z_4_2': r'T_0(z=4.2)', 'gamma_z_5.0': r'\gamma(z=5)', 'gamma_z_4.6': r'\gamma(z=4.6)','gamma_z_4.2': r'\gamma(z=4.2)', 'u_0_z_5.0': r'u_0(z=5)', 'u_0_z_4.6': r'u_0(z=4.6)', 'u_0_z_4.2': r'u_0(z=4.2)', 'tau0':r'\tau_0', 'dtau0':r'd\tau_0'}
+    print_names = { 'ns': r'n_\mathrm{s}', 'As': r'A_\mathrm{s}', 'heat_slope': r'H_\mathrm{S}', 'heat_amp': r'H_\mathrm{A}', 'hub':'h', 'omega_m': r'\Omega_\mathrm{m}', 'alpha': r'\alpha', 'beta': r'\beta', 'gamma': r'\gamma', 'T_0_z_5.0': r'T_0(z=5)', 'T_0_z_4.6': r'T_0(z=4.6)', 'T_0_z_4.2': r'T_0(z=4.2)', 'gamma_z_5.0': r'\gamma(z=5)', 'gamma_z_4.6': r'\gamma(z=4.6)','gamma_z_4.2': r'\gamma(z=4.2)', 'u_0_z_5.0': r'u_0(z=5)', 'u_0_z_4.6': r'u_0(z=4.6)', 'u_0_z_4.2': r'u_0(z=4.2)', 'tau0':r'\tau_0', 'dtau0':r'd\tau_0'}
     try:
         return print_names[key]
     except KeyError:

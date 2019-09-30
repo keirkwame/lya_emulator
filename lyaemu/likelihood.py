@@ -393,8 +393,8 @@ class LikelihoodClass:
             pnames_remove_indices = self._get_measured_parameter_indices_to_remove()
             pnames = np.delete(pnames, pnames_remove_indices, axis=0)
             pnames = np.concatenate((pnames,
-                        np.array([[['%s_A'%measured_parameter_name, r'%s_A'%measured_parameter_name],
-                          ['%s_S'%measured_parameter_name, r'%s_S'%measured_parameter_name]]
+                        np.array([[['%s_A'%measured_parameter_name, r'%sA'%measured_parameter_name],
+                          ['%s_S'%measured_parameter_name, r'%sS'%measured_parameter_name]]
                          for measured_parameter_name in self.measured_parameter_names_z_model]).reshape(-1, 2)))
         self.likelihood_parameter_names = pnames
 
