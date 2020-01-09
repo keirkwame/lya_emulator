@@ -11,7 +11,7 @@ import lyaemu.mean_flux as mef
 
 if __name__ == "__main__":
     emulator_base_directory = '/share/data2/keir/Simulations'
-    emulator_names = ['nCDM_test_emulator',] #'nCDM_test_512_HM12']
+    emulator_names = ['nCDM_emulator_512',] #'nCDM_test_512_HM12']
     simulation_indices = [np.arange(50),] #np.arange(1)]
 
     default_emulator_index = 0

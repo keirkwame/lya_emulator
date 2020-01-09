@@ -243,9 +243,9 @@ class Emulator:
         self.basedir = real_basedir
         self.set_maxk()
 
-    def get_outdir(self, pp, strsz=3):
+    def get_outdir(self, pp, strsz=3, extra_flag=0):
         """Get the simulation output directory path for a parameter set."""
-        return os.path.join(os.path.join(self.basedir, self.build_dirname(pp, strsz=strsz)),"output")
+        return os.path.join(os.path.join(self.basedir, self.build_dirname(pp, strsz=strsz, extra_flag=extra_flag)),"output")
 
     def get_parameters(self):
         """Get the list of parameter vectors in this emulator."""
@@ -351,7 +351,9 @@ class Emulator:
 
     def _get_fv(self, pp,myspec):
         """Helper function to get a single flux vector."""
-        di = self.get_outdir(pp, strsz=3)
+        di = self.get_outdir(pp, strsz=3, extra_flag=1)
+        if not os.path.exists(di):
+            di = self.get_outdir(pp, strsz=3)
         if not os.path.exists(di):
             di = self.get_outdir(pp, strsz=2)
         powerspectra = myspec.get_snapshot_list(base=di)
