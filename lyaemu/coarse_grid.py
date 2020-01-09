@@ -349,9 +349,9 @@ class Emulator:
         """Get the number of sparse parameters, those sampled by simulations."""
         return np.shape(self.param_limits)[0]
 
-    def _get_fv(self, pp,myspec):
+    def _get_fv(self, pp,myspec, extra_flag=0):
         """Helper function to get a single flux vector."""
-        di = self.get_outdir(pp, strsz=3, extra_flag=1)
+        di = self.get_outdir(pp, strsz=3, extra_flag=extra_flag)
         if not os.path.exists(di):
             di = self.get_outdir(pp, strsz=3)
         if not os.path.exists(di):
@@ -402,7 +402,7 @@ class Emulator:
             kfmpc, kfkms, flux_vectors = self.load_flux_vectors(aparams, mfc=mfc)
         except (AssertionError, OSError):
             print("Could not load flux vectors, regenerating from disc")
-            powers = [self._get_fv(pp, myspec) for pp in pvals]
+            powers = [self._get_fv(pp, myspec, extra_flag=simulation_index+1) for simulation_index, pp in enumerate(pvals)]
             mef = lambda pp: self.mf.get_mean_flux(myspec.zout, params=pp)[0]
             if dpvals is not None:
                 flux_vectors = np.array([powers[i].get_power_native_binning(mean_fluxes = mef(dp+nuggets[i])) for dp in dpvals for i in range(nsims)])
