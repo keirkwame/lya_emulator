@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     for i, input_parameters in enumerate(emulator_instance.get_parameters()):
         print(input_parameters)
-        simulation_directory = emulator_instance.get_outdir(input_parameters)
+        simulation_directory = emulator_instance.get_outdir(input_parameters, extra_flag=i+1)
         for j, snapshot_number in enumerate(snapshot_numbers):
             T0[i, j], gamma[i, j] = td.fit_td_rel_plot(snapshot_number, simulation_directory, plot=False)
         axes[0].plot(redshifts, T0[i], label=i) #input_parameters)
