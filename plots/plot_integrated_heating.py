@@ -25,7 +25,7 @@ if __name__ == "__main__":
 
     integrated_heating = np.zeros((emulator_instance.get_parameters().shape[0], emulator_instance.redshifts.shape[0]))
     for i, input_parameters in enumerate(emulator_instance.get_parameters()):
-        simulation_directory = emulator_instance.get_outdir(input_parameters)[:-7]
+        simulation_directory = emulator_instance.get_outdir(input_parameters, extra_flag=i+1)[:-7]
         TREECOOL_path = os.path.join(simulation_directory, 'TREECOOL')
         TREECOOL = np.loadtxt(TREECOOL_path)
         heat_amp = input_parameters[emulator_instance.param_names['heat_amp']]
