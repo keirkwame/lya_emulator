@@ -66,8 +66,6 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_cl
 
         scaling_factor = ekf[i]/ mh.pi
         data_flux_power_std_single_z = np.sqrt(like.lyman_data_instance.get_covar(z[i]).diagonal())
-        print(i, like.get_data_covariance(i))
-        print(like.get_data_covariance(i).shape)
         exact_flux_power_std_single_z = np.sqrt(np.diag(like.get_data_covariance(i)))
 #         print('Diagonal elements of BOSS covariance matrix at single redshift:', data_flux_power_std_single_z)
 
@@ -130,8 +128,6 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_cl
     plt.savefig(savefile)
     #plt.show()
 
-    print(datadir)
-
     return like
 
 def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, ranges=None, parameter_indices=None):
@@ -155,7 +151,6 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
     prange = None
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}
-    print(prange)
     posterior_MCsamples = gd.MCSamples(samples=samples, names=pnames, labels=pnames, label='', ranges=prange)
 
     print("Sim=",savefile)
@@ -206,7 +201,6 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     #Measured parameter redshift model
     measured_parameter_names_z_model = None #np.array(['gamma',]) #'T_0', 'u_0'
     measured_parameter_z_model_parameter_limits = np.array([[0.75, 1.75], [-1., 1.]]) #A, S #[5000., 12000.], [-1., 1.]
-
     like = likeh.LikelihoodClass(basedir=emudir, mean_flux=mean_flux_label,
                                  measured_parameter_names_z_model=measured_parameter_names_z_model, max_z=max_z,
                                  redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s,
@@ -221,12 +215,10 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                             standard_deviations=prior_function_args[2])
 
     parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
-    print(parameter_names, parameter_names.shape)
     if mean_flux_label == 'free_high_z':
         parameter_names = np.concatenate(([r'tau0_%.2f'%redshift for redshift in like.zout], parameter_names[1:]))
     else:
         parameter_names = np.concatenate(([r'd \tau_0',], parameter_names))
-    print(parameter_names)
     for sdir in subdirs:
         single_likelihood_plot(sdir, like, savedir=savedir, prior_function=prior_function, plot=plot,
                                t0=t0_training_value, true_parameter_values=test_simulation_parameters,
@@ -243,8 +235,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_mf_free_T0_gamma_u0_free' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
-
+    filename_suffix = '_real_data_mf_free_TDR_free' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -256,6 +247,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
                                      data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
                                      mean_flux_label=mean_flux_label)
     if not os.path.exists(chainfile):
+        datadir = 'use_real_data'
         print('Beginning to sample likelihood at', str(datetime.now()))
         like.do_sampling(chainfile, datadir=datadir, nwalkers=100, burnin=300, nsamples=300,
                          prior_function=prior_function, while_loop=False, include_emulator_error=False,
@@ -265,7 +257,6 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         savefile = os.path.join(savedir, 'corner_'+sname + filename_suffix + ".pdf") #no_emu_measured_TDR_3000_Gaussian_Planck_omega_m_tight_emu_less.pdf")
         plot_parameter_names = like.likelihood_parameter_names[:, 1]
         plot_parameter_limits = like.param_limits
-        print(plot_parameter_names, plot_parameter_limits)
         make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=plot_parameter_names, ranges=plot_parameter_limits, parameter_indices=plot_parameter_indices)
 
 if __name__ == "__main__":
@@ -307,7 +298,7 @@ if __name__ == "__main__":
 
     #Prior distribution
     prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2'])
-    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 5, 9, 10, 11])] #7
+    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 5, 11, 12, 13])] #7
     #prior_means = np.array([0.93, 2.3 * 1.e-9, 0.27])
     prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 3000., 3000., 3000.]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
     prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)

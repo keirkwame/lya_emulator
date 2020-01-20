@@ -354,7 +354,6 @@ class LikelihoodClass:
             covar_bin = self.lyman_data_instance.get_covar(lyman_data_redshifts)
         else:
             covar_bin = self.lyman_data_instance.get_covar(lyman_data_redshifts[zbin])
-        print(covar_bin.shape)
         return covar_bin
 
     def log_posterior(self, parameter_vector, prior_function='uniform', include_emulator_error=True):
@@ -379,9 +378,12 @@ class LikelihoodClass:
         """Initialise and run emcee."""
         pnames = self.emulator.print_pnames(use_measured_parameters=self.use_measured_parameters)
         #Load the data directory
-        self.data_fluxpower = load_data(datadir, kf=self.kf, max_z=self.max_z, redshifts=self.data_redshifts,
-                                        pixel_resolution_km_s=self.pixel_resolution_km_s, t0=self.t0_training_value,
-                                        mean_flux_model=self.mean_flux_model)
+        if datadir == 'use_real_data':
+            self.data_fluxpower = self.lyman_data_flux_power[::-1].flatten()
+        else:
+            self.data_fluxpower = load_data(datadir, kf=self.kf, max_z=self.max_z, redshifts=self.data_redshifts,
+                                            pixel_resolution_km_s=self.pixel_resolution_km_s, t0=self.t0_training_value,
+                                            mean_flux_model=self.mean_flux_model) #1D array with lowest redshift first
         #Set up mean flux
         if self.mf_slope:
             pnames = np.concatenate((np.array([['dtau0',r'd\tau_0'],]), pnames), axis=0)
