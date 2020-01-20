@@ -66,8 +66,6 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_cl
 
         scaling_factor = ekf[i]/ mh.pi
         data_flux_power_std_single_z = np.sqrt(like.lyman_data_instance.get_covar(z[i]).diagonal())
-        print(i, like.get_data_covariance(i))
-        print(like.get_data_covariance(i).shape)
         exact_flux_power_std_single_z = np.sqrt(np.diag(like.get_data_covariance(i)))
 #         print('Diagonal elements of BOSS covariance matrix at single redshift:', data_flux_power_std_single_z)
 
@@ -130,8 +128,6 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_cl
     plt.savefig(savefile)
     #plt.show()
 
-    print(datadir)
-
     return like
 
 def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, ranges=None, parameter_indices=None):
@@ -155,7 +151,6 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
     prange = None
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}
-    print(prange)
     posterior_MCsamples = gd.MCSamples(samples=samples, names=pnames, labels=pnames, label='', ranges=prange)
 
     print("Sim=",savefile)
@@ -221,12 +216,10 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                             standard_deviations=prior_function_args[2])
 
     parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
-    print(parameter_names, parameter_names.shape)
     if mean_flux_label == 'free_high_z':
         parameter_names = np.concatenate(([r'tau0_%.2f'%redshift for redshift in like.zout], parameter_names[1:]))
     else:
         parameter_names = np.concatenate(([r'd \tau_0',], parameter_names))
-    print(parameter_names)
     for sdir in subdirs:
         single_likelihood_plot(sdir, like, savedir=savedir, prior_function=prior_function, plot=plot,
                                t0=t0_training_value, true_parameter_values=test_simulation_parameters,
@@ -256,6 +249,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
                                      data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
                                      mean_flux_label=mean_flux_label)
     if not os.path.exists(chainfile):
+        datadir = 'use_real_data'
         print('Beginning to sample likelihood at', str(datetime.now()))
         like.do_sampling(chainfile, datadir=datadir, nwalkers=15, burnin=300, nsamples=300,
                          prior_function=prior_function, while_loop=False, include_emulator_error=False,
@@ -265,7 +259,6 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         savefile = os.path.join(savedir, 'corner_'+sname + filename_suffix + ".pdf") #no_emu_measured_TDR_3000_Gaussian_Planck_omega_m_tight_emu_less.pdf")
         plot_parameter_names = like.likelihood_parameter_names[:, 1]
         plot_parameter_limits = like.param_limits
-        print(plot_parameter_names, plot_parameter_limits)
         make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=plot_parameter_names, ranges=plot_parameter_limits, parameter_indices=plot_parameter_indices)
 
 if __name__ == "__main__":
