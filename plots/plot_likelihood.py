@@ -157,8 +157,12 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
     #Get and print the confidence limits
     for i in range(len(pnames)):
         strr = pnames[i]+" 1-sigma, 2-sigma: "
-        for j in (0.16, 1-0.16, 0.025, 1-0.025):
-            strr += str(round(posterior_MCsamples.confidence(i, j),5)) + " "
+        if i == 6:
+            for j in (0.32, 0.05):
+                strr += str(round(posterior_MCsamples.confidence(i, j, upper=True),5)) + " "
+        else:
+            for j in (0.16, 1-0.16, 0.025, 1-0.025):
+                strr += str(round(posterior_MCsamples.confidence(i, j),5)) + " "
         print(strr)
     subplot_instance = gdp.getSubplotPlotter()
     subplot_instance.triangle_plot([posterior_MCsamples], filled=True)
@@ -235,7 +239,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_real_data_mf_free_TDR_free' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_real_data_mf_free_TDR_free_gamma_prior_emu_err_off_diag_FDM_3000' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -249,13 +253,13 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if not os.path.exists(chainfile):
         datadir = 'use_real_data'
         print('Beginning to sample likelihood at', str(datetime.now()))
-        like.do_sampling(chainfile, datadir=datadir, nwalkers=100, burnin=300, nsamples=300,
-                         prior_function=prior_function, while_loop=False, include_emulator_error=False,
+        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=3000, nsamples=3000,
+                         prior_function=prior_function, while_loop=False, include_emulator_error=True,
                          n_threads=n_threads_mcmc)
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
         savefile = os.path.join(savedir, 'corner_'+sname + filename_suffix + ".pdf") #no_emu_measured_TDR_3000_Gaussian_Planck_omega_m_tight_emu_less.pdf")
-        plot_parameter_names = like.likelihood_parameter_names[:, 1]
+        plot_parameter_names = like.likelihood_parameter_names[:, 1] #parameter_names
         plot_parameter_limits = like.param_limits
         make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=plot_parameter_names, ranges=plot_parameter_limits, parameter_indices=plot_parameter_indices)
 
@@ -297,10 +301,12 @@ if __name__ == "__main__":
     #test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters[:-3], np.array([test_simulation_parameters[-2], 0.])))
 
     #Prior distribution
-    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2'])
-    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 5, 11, 12, 13])] #7
+    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'beta', 'gamma', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
+    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 5, 7, 8, 11, 12, 13, 14, 15, 16])] #7
+    prior_means[6] = 5.55
+    prior_means[7] = -1.8
     #prior_means = np.array([0.93, 2.3 * 1.e-9, 0.27])
-    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 3000., 3000., 3000.]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
+    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 0.1, 0.1, 3000., 3000., 3000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
     prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
     #prior_function_args = None
 
