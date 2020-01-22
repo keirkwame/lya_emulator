@@ -1,12 +1,13 @@
 """Script containing details of nCDM emulators"""
 
 import os
+import sys
 import numpy as np
 
 import lyaemu.coarse_grid as cg
 
 if __name__ == '__main__':
-    emulator_base_directory = '/share/data2/keir/Simulations'
+    emulator_base_directory = sys.argv[1]  # '/share/data2/keir/Simulations'
 
     #nCDM_test
     '''n_simulations = 10
@@ -80,9 +81,15 @@ if __name__ == '__main__':
     #emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, 'nCDM_emulator_512'))
     #emulator_instance.gen_simulations(50, npart=512, box=10.)
 
+    #nCDM_emulator_512_refined
+    emulator_name = sys.argv[2] #'nCDM_emulator_512'
+    emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name))
+    emulator_instance.load()
+
+
     #nCDM_test_convergence
     #nCDM_convergence_768_WDM
-    n_simulations = 5
+    '''n_simulations = 5
     samples_fiducial_nCDM = [0.9635, 1.8296e-9, 0., 1., 0.3209, 0., 1., -1., 8., 2.e+4]
     samples_nCDM_test = np.array(samples_fiducial_nCDM * n_simulations).reshape(n_simulations, -1)
     #nCDM
@@ -94,7 +101,7 @@ if __name__ == '__main__':
     box = np.array([10., 10., 10., 10., 15.])
 
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, 'nCDM_convergence_768_WDM'))
-    emulator_instance.gen_simulations(None, npart=npart, box=box, samples=samples_nCDM_test)
+    emulator_instance.gen_simulations(None, npart=npart, box=box, samples=samples_nCDM_test)'''
 
     #nCDM_convergence_512_256
     '''n_simulations = 2

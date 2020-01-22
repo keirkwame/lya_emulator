@@ -245,11 +245,6 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     datadir = os.path.join(sdir, "output")
     if true_parameter_values is None:
         true_parameter_values = get_simulation_parameters_s8(sdir, t0=t0)
-    if plot is True:
-        fp_savefile = os.path.join(savedir, 'flux_power_'+sname + ".pdf")
-        make_plot_flux_power_spectra(like, true_parameter_values, datadir, savefile=fp_savefile, t0=t0,
-                                     data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
-                                     mean_flux_label=mean_flux_label)
     if not os.path.exists(chainfile):
         datadir = 'use_real_data'
         print('Beginning to sample likelihood at', str(datetime.now()))
@@ -258,6 +253,11 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
                          n_threads=n_threads_mcmc)
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
+        fp_savefile = os.path.join(savedir, 'flux_power_'+sname + ".pdf")
+        make_plot_flux_power_spectra(like, true_parameter_values, datadir, savefile=fp_savefile, t0=t0,
+                                     data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
+                                     mean_flux_label=mean_flux_label)
+
         savefile = os.path.join(savedir, 'corner_'+sname + filename_suffix + ".pdf") #no_emu_measured_TDR_3000_Gaussian_Planck_omega_m_tight_emu_less.pdf")
         plot_parameter_names = like.likelihood_parameter_names[:, 1] #parameter_names
         plot_parameter_limits = like.param_limits

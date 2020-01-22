@@ -286,11 +286,15 @@ class Emulator:
             prior_points = self.sample_params[ii]
         return latin_hypercube.get_hypercube_samples(limits, nsamples,prior_points=prior_points)
 
-    def gen_simulations(self, nsamples, npart=256.,box=40,samples=None):
+    def gen_simulations(self, nsamples, npart=256.,box=40,samples=None, refine=False):
         """Initialise the emulator by generating simulations for various parameters."""
+        n_existing_samples = 0
         if nsamples is not None:
             if len(self.sample_params) == 0:
                 self.sample_params = self.build_params(nsamples)
+            if refine:
+                n_existing_samples = self.sample_params.shape[0]
+                samples = self.build_params(nsamples, use_existing=True)
             if samples is None:
                 samples = self.sample_params
             else:
@@ -305,10 +309,10 @@ class Emulator:
 
         #Generate ICs for each set of parameter inputs
         for i, ev in enumerate(samples):
-            self._do_ic_generation(ev, npart[i], box[i], extra_flag=i+1)
+            self._do_ic_generation(ev, npart[i], box[i], extra_flag=n_existing_samples+i+1)
         self.dump()
 
-    def _do_ic_generation(self,ev,npart,box):
+    def _do_ic_generation(self,ev,npart,box, extra_flag=0):
         """Do the actual IC generation."""
         outdir = os.path.join(self.basedir, self.build_dirname(ev))
         pn = self.param_names
@@ -493,7 +497,7 @@ class KnotEmulator(Emulator):
         #Used for early iterations.
         #self.knot_pos = [0.15,0.475,0.75,1.19]
 
-    def _do_ic_generation(self,ev,npart,box):
+    def _do_ic_generation(self,ev,npart,box, extra_flag=0):
         """Do the actual IC generation."""
         outdir = os.path.join(self.basedir, self.build_dirname(ev))
         pn = self.param_names
@@ -528,7 +532,7 @@ class nCDMEmulator(Emulator):
         self._scalar_pivot_scale_ratio = 0.05 / 2. #Ratio between CMB and Lyman-a forest scalar power spectrum pivots
         super().__init__(basedir=basedir, param_names=param_names, param_limits=param_limits, kf=kf, mf=mf, z=z, omegamh2=omegamh2)
 
-    def _do_ic_generation(self, ev, npart, box, extra_flag=0): #To be modified!!!
+    def _do_ic_generation(self, ev, npart, box, extra_flag=0):
         """Generate initial conditions"""
         outdir = os.path.join(self.basedir, self.build_dirname(ev, extra_flag=extra_flag))
         pn = self.param_names
