@@ -85,7 +85,7 @@ if __name__ == '__main__':
     emulator_name = sys.argv[2] #'nCDM_emulator_512'
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name))
     emulator_instance.load()
-
+    emulator_instance.gen_simulations(101, npart=512, box=10., fill_in=True)
 
     #nCDM_test_convergence
     #nCDM_convergence_768_WDM

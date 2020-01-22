@@ -275,7 +275,7 @@ class Emulator:
 
         return combined_parameter_names
 
-    def build_params(self, nsamples,limits = None, use_existing=False):
+    def build_params(self, nsamples,limits = None, use_existing=False, fill_in=False):
         """Build a list of directories and parameters from a hypercube sample"""
         if limits is None:
             limits = self.param_limits
@@ -284,19 +284,21 @@ class Emulator:
         if use_existing:
             ii = np.where(np.all(self.sample_params > limits[:,0],axis=1)*np.all(self.sample_params < limits[:,1],axis=1))
             prior_points = self.sample_params[ii]
-        return latin_hypercube.get_hypercube_samples(limits, nsamples,prior_points=prior_points)
+        return latin_hypercube.get_hypercube_samples(limits, nsamples,prior_points=prior_points, fill_in=fill_in)
 
-    def gen_simulations(self, nsamples, npart=256.,box=40,samples=None, refine=False):
+    def gen_simulations(self, nsamples, npart=256., box=40, samples=None, fill_in=False):
         """Initialise the emulator by generating simulations for various parameters."""
         n_existing_samples = 0
         if nsamples is not None:
             if len(self.sample_params) == 0:
                 self.sample_params = self.build_params(nsamples)
-            if refine:
-                n_existing_samples = self.sample_params.shape[0]
-                samples = self.build_params(nsamples, use_existing=True)
             if samples is None:
-                samples = self.sample_params
+                if fill_in:
+                    n_existing_samples = self.sample_params.shape[0]
+                    self.sample_params = self.build_params(nsamples, use_existing=True, fill_in=fill_in)
+                    samples = self.sample_params[n_existing_samples:]
+                else:
+                    samples = self.sample_params
             else:
                 self.sample_params = np.vstack([self.sample_params, samples])
         else:

@@ -125,7 +125,7 @@ def lhscentered(n, samples, prior_points = None, fill_in=False):
             else:
                 H[:,j] = _center
             new_center, not_taken = remove_single_parameter(H[:, j], prior_points[:,j])
-            H[not_taken, j] = np.random.permutation(new_center)
+            H[:, j] = np.concatenate((prior_points[:, j], np.random.permutation(new_center)), axis=0)
         else:
             H[:, j] = np.random.permutation(_center)
     assert np.shape(H) == (samples, n)
