@@ -11,16 +11,16 @@ import lyaemu.mean_flux as mef
 
 if __name__ == "__main__":
     emulator_base_directory = '/share/data2/keir/Simulations'
-    emulator_names = ['nCDM_convergence_512_256',] #'nCDM_test_512_HM12']
-    simulation_indices = [np.arange(18, 20),] #np.arange(1)]
+    emulator_names = ['nCDM_convergence_768_WDM',] #'nCDM_test_512_HM12']
+    simulation_indices = [np.arange(45, 50),] #np.arange(1)]
 
     default_emulator_index = 0
-    default_simulation_index = 0
+    default_simulation_index = 2
     n_simulations = np.sum(
         [np.size(simulation_indices_single_emulator) for simulation_indices_single_emulator in simulation_indices])
 
-    savefile = os.path.join(emulator_base_directory, emulator_names[0], 'flux_power_convergence_512_256_mean_flux_10.pdf')
-    figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 2. / 10.))
+    savefile = os.path.join(emulator_base_directory, emulator_names[0], 'flux_power_convergence_768_WDM_mean_flux_10.pdf')
+    figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 5. / 10.))
 
     plot_start_index = 0
     input_parameters_all = []

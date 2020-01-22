@@ -14,7 +14,7 @@ def convert_to_simulation_parameters(input_parameters, omegamh2=0.1199, omegab=0
     AsCLASS = input_parameters[1] * ((5.e-2 / (2. * np.pi / 8.)) ** (input_parameters[0] - 1.))
     return {'Omega0': omegam, 'OmegaLambda': 1. - omegam, 'OmegaBaryon': omegab, 'HubbleParam': input_parameters[4], 'PrimordialIndex': input_parameters[0], 'PrimordialAmp': AsCLASS}
 
-def get_hypercube_samples(param_limits, nsamples, prior_points = None):
+def get_hypercube_samples(param_limits, nsamples, prior_points = None, fill_in=False):
     """This function is the main wrapper. Given limits on a set of
     parameters (and optionally some prior points), it will generate a hypercube design."""
     ndim,nlims = np.shape(param_limits)
@@ -24,7 +24,7 @@ def get_hypercube_samples(param_limits, nsamples, prior_points = None):
             prior_points = None
         else:
             prior_points = np.array([map_to_unit_cube(pp, param_limits) for pp in prior_points])
-    (sample_points, _) = maximinlhs(ndim, nsamples, prior_points=prior_points)
+    (sample_points, _) = maximinlhs(ndim, nsamples, prior_points=prior_points, fill_in=fill_in)
     remapped = np.array([map_from_unit_cube(pp, param_limits) for pp in sample_points])
     assert np.shape(remapped) == (nsamples, ndim)
     return remapped
@@ -50,7 +50,7 @@ def default_metric_func(lhs):
     assert np.shape(minn) == (nsamples - 1,)
     return np.sqrt(np.sum(minn))
 
-def maximinlhs(n, samples, prior_points = None, metric_func = None, maxlhs = 10000):
+def maximinlhs(n, samples, prior_points = None, fill_in=False, metric_func = None, maxlhs = 10000):
     """Generate multiple latin hypercubes and pick the one that maximises the metric function.
     Arguments:
     n: dimensionality of the cube to sample [0-1]^n
@@ -67,7 +67,7 @@ def maximinlhs(n, samples, prior_points = None, metric_func = None, maxlhs = 100
     metric = -1
     group = 1000
     for _ in range(maxlhs//group):
-        new = [lhscentered(n, samples, prior_points = prior_points) for _ in range(group)]
+        new = [lhscentered(n, samples, prior_points = prior_points, fill_in=fill_in) for _ in range(group)]
         new_metric = [metric_func(nn) for nn in new]
         best = np.argmax(new_metric)
         if new_metric[best] > metric:
@@ -88,7 +88,7 @@ def remove_single_parameter(center, prior_points):
     assert np.size(new_center) == np.size(center) - np.size(prior_points)
     return new_center,not_taken
 
-def lhscentered(n, samples, prior_points = None):
+def lhscentered(n, samples, prior_points = None, fill_in=False):
     """
     Generate a latin hypercube design where all samples are
     centered on their respective cells. Can specify an already
@@ -101,22 +101,30 @@ def lhscentered(n, samples, prior_points = None):
 
     npriors = np.shape(prior_points)[0]
     # Generate the intervals
-    cut = np.linspace(0, 1, samples + 1)
+    if fill_in:
+        cut_n_samples = samples
+    else:
+        cut_n_samples = samples + 1
+    cut = np.linspace(0, 1, cut_n_samples)
 
     # Fill points uniformly in each interval
     # Number of stratified layers used is samples desired + prior_points.
-    a = cut[:samples]
-    b = cut[1:samples + 1]
-    #Get list of central values
-    _center = (a + b)/2
+    if not fill_in:
+        a = cut[:samples]
+        b = cut[1:samples + 1]
+        #Get list of central values
+        _center = (a + b)/2
     # Choose a permutation so each sample is in one bin for each factor.
     H = np.zeros((samples, n))
     for j in range(n):
         #Remove all values within cells covered by prior samples for this parameter.
         #The prior samples must also be a latin hypercube!
         if npriors > 0:
-            H[:,j] = _center
-            new_center, not_taken = remove_single_parameter(_center, prior_points[:,j])
+            if fill_in:
+                H[:, j] = cut
+            else:
+                H[:,j] = _center
+            new_center, not_taken = remove_single_parameter(H[:, j], prior_points[:,j])
             H[not_taken, j] = np.random.permutation(new_center)
         else:
             H[:, j] = np.random.permutation(_center)
@@ -147,7 +155,6 @@ def map_to_unit_cube(param_vec, param_limits):
     Returns:
     vector of parameters, all in [0,1].
     """
-    print(np.size(param_vec), np.shape(param_limits))
     assert (np.size(param_vec),2) == np.shape(param_limits)
     assert np.all(param_vec-1e-16 <= param_limits[:,1])
     assert np.all(param_vec+1e-16 >= param_limits[:,0])
