@@ -4,6 +4,7 @@ import argparse
 import os.path
 import scipy.interpolate
 import numpy as np
+import numpy.testing as npt
 from fake_spectra import spectra
 from fake_spectra import abstractsnapshot as absn
 
@@ -180,10 +181,11 @@ class MySpectra(object):
             ss.save_file()
         #Check we have the same spectra
         try:
-            assert np.all(ss.cofm == self.cofm)
+            print(snap, base, ss.cofm, self.cofm, ss.box, self.box_length_kpc_h)
+            npt.assert_allclose(ss.cofm, self.cofm * ss.box / self.box_length_kpc_h)
         except AttributeError:
             #If this is the first load, we just want to use the snapshot values.
-            (self.cofm, self.axis) = (ss.cofm, ss.axis)
+            (self.cofm, self.axis, self.box_length_kpc_h) = (ss.cofm, ss.axis, ss.box)
         return ss
 
     def get_snapshot_list(self, base, snappref="SPECTRA_"):
