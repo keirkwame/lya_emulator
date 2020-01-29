@@ -13,6 +13,7 @@ if __name__ == "__main__":
     emulator_base_directory = '/share/data2/keir/Simulations'
     emulator_names = ['nCDM_convergence_768_WDM', 'nCDM_convergence_512_256']
     simulation_indices = [np.arange(1), np.arange(2)]
+    interpolate_to_same_k = True
 
     default_emulator_index = 0
     default_simulation_index = 0
@@ -57,11 +58,16 @@ if __name__ == "__main__":
 
             for j, redshift in enumerate(emulator_instance.redshifts): #Loop over redshifts
                 k_cut = k_parallel[a][b, j] < 0.2
-                #print(a, b, j, k_parallel[a][b, j][k_cut])
-                #print(flux_powers[a][b, j])
-                axes[i][0].plot(np.log10(k_parallel[a][b, j][k_cut]), np.log10(flux_powers[a][b, j] * k_parallel[a][b, j] / np.pi)[k_cut], label=r'$z = %.2f$'%redshift)
-                #axes[i][1].plot(np.log10(k_parallel[a][b, j][k_cut]), (flux_powers[a][b, j] / flux_powers[default_emulator_index][default_simulation_index, j])[k_cut],
-                #                label=r'$z = %.2f$' % redshift)
+                k_plot = k_parallel[a][b, j]
+                if interpolate_to_same_k:
+                    flux_powers_default = np.interp(k_plot[k_cut],
+                                                    k_parallel[default_emulator_index][default_simulation_index, j],
+                                                    flux_powers[default_emulator_index][default_simulation_index, j])
+                else:
+                    flux_powers_default = flux_powers[default_emulator_index][default_simulation_index, j][k_cut]
+                axes[i][0].plot(np.log10(k_plot[k_cut]), np.log10(flux_powers[a][b, j] * k_plot / np.pi)[k_cut], label=r'$z = %.2f$'%redshift)
+                axes[i][1].plot(np.log10(k_plot[k_cut]), flux_powers[a][b, j][k_cut] / flux_powers_default,
+                                label=r'$z = %.2f$' % redshift)
         plot_start_index += simulation_indices[a].size
 
     axes[0, 0].legend(frameon=False, fontsize=7.)
