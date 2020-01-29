@@ -11,23 +11,23 @@ import lyaemu.mean_flux as mef
 
 if __name__ == "__main__":
     emulator_base_directory = '/share/data2/keir/Simulations'
-    emulator_names = ['nCDM_convergence_768_WDM',] #'nCDM_test_512_HM12']
-    simulation_indices = [np.arange(36, 40),] #np.arange(1)]
+    emulator_names = ['nCDM_convergence_768_WDM', 'nCDM_convergence_512_256']
+    simulation_indices = [np.arange(1), np.arange(2)]
 
     default_emulator_index = 0
-    default_simulation_index = 2
+    default_simulation_index = 0
     n_simulations = np.sum(
         [np.size(simulation_indices_single_emulator) for simulation_indices_single_emulator in simulation_indices])
 
-    savefile = os.path.join(emulator_base_directory, emulator_names[0], 'flux_power_convergence_768_WDM_mean_flux_10.pdf')
-    figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 5. / 10.))
+    savefile = os.path.join(emulator_base_directory, emulator_names[0], 'flux_power_convergence_15_10_ConstFlux.pdf')
+    figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 3. / 10.))
 
     plot_start_index = 0
     input_parameters_all = []
     k_parallel = []
     flux_powers = []
     for a, emulator_name in enumerate(emulator_names):
-        emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name), mf=mef.MeanFluxFactorHighRedshift(dense_samples=10))
+        emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name), mf=mef.ConstMeanFluxHighRedshift(value=1.)) #MeanFluxFactorHighRedshift(dense_samples=10))
         emulator_instance.load()
 
         input_parameters_all_single_emulator, k_parallel_single_emulator, flux_powers_single_emulator = emulator_instance.get_flux_vectors(
@@ -57,10 +57,11 @@ if __name__ == "__main__":
 
             for j, redshift in enumerate(emulator_instance.redshifts): #Loop over redshifts
                 k_cut = k_parallel[a][b, j] < 0.2
+                #print(a, b, j, k_parallel[a][b, j][k_cut])
                 #print(flux_powers[a][b, j])
                 axes[i][0].plot(np.log10(k_parallel[a][b, j][k_cut]), np.log10(flux_powers[a][b, j] * k_parallel[a][b, j] / np.pi)[k_cut], label=r'$z = %.2f$'%redshift)
-                axes[i][1].plot(np.log10(k_parallel[a][b, j][k_cut]), (flux_powers[a][b, j] / flux_powers[default_emulator_index][default_simulation_index, j])[k_cut],
-                                label=r'$z = %.2f$' % redshift)
+                #axes[i][1].plot(np.log10(k_parallel[a][b, j][k_cut]), (flux_powers[a][b, j] / flux_powers[default_emulator_index][default_simulation_index, j])[k_cut],
+                #                label=r'$z = %.2f$' % redshift)
         plot_start_index += simulation_indices[a].size
 
     axes[0, 0].legend(frameon=False, fontsize=7.)
