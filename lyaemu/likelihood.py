@@ -94,6 +94,10 @@ class LikelihoodClass:
         self.measured_parameter_names_z_model = measured_parameter_names_z_model
         self.measured_parameter_z_model = measured_parameter_z_model
 
+        self.dark_matter_model = None
+        self.dark_matter_parameter_names = None
+        self.dark_matter_parameter_limits = None
+
         #Stored covariance matrix
         self._inverse_covariance_full = None
         #Use the covariance matrix
@@ -180,6 +184,14 @@ class LikelihoodClass:
             self.param_limits = np.delete(self.param_limits, param_limits_remove_indices, axis=0)
             self.param_limits = np.vstack((self.param_limits, measured_parameter_z_model_parameter_limits))
 
+        if self.dark_matter_parameter_names is not None:
+            idx = self.emulator._get_parameter_index_number('alpha',
+                    use_measured_parameters=self.use_measured_parameters, include_mean_flux_slope=self.mf_slope,
+                    include_mean_flux_free=self.mf_free)
+            param_limits_remove_indices_nCDM = np.arange(idx, idx + 3)
+            self.param_limits = np.delete(self.param_limits, param_limits_remove_indices_nCDM, axis=0)
+            self.param_limits = np.vstack((self.param_limits, self.dark_matter_parameter_limits))
+
         self.ndim = np.shape(self.param_limits)[0]
         assert np.shape(self.param_limits)[1] == 2
         print('Beginning to generate emulator at', str(datetime.now()))
@@ -238,6 +250,16 @@ class LikelihoodClass:
             nparams = np.concatenate(([1.,], params[self.zout.size:]))
         else: #Otherwise bug if choose mean_flux = 'c'
             tau0_fac = None
+
+        if self.dark_matter_parameter_names is not None:
+            nparams = nparams[:-1 * self.dark_matter_parameter_names.size]
+            nCDM_parameters = self.dark_matter_model(params[-1 * self.dark_matter_parameter_names.size:])
+            #nparams_indices_nCDM = np.array([self.emulator._get_parameter_index_number(param_name,
+            #                        use_measured_parameters=self.use_measured_parameters) for param_name in
+            #                        ['alpha', 'beta', 'gamma']])
+            nparams_index_nCDM = self.emulator._get_parameter_index_number('alpha',
+                                    use_measured_parameters=self.use_measured_parameters)
+            nparams = np.insert(nparams, nparams_index_nCDM, nCDM_parameters)
 
         if self.measured_parameter_names_z_model is not None:
             nparams = nparams[:-2 * self.measured_parameter_names_z_model.size] #Slice off amplitudes, slopes
