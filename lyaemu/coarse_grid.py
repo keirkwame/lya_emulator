@@ -90,13 +90,19 @@ class Emulator:
         if use_measured_parameters:
             index_number += self.get_combined_param_names()[parameter_name]
             if remove_nCDM:
-                if index_number > 
+                if self.get_combined_param_names()[parameter_name] > self.get_combined_param_names()['gamma']:
+                    return index_number - 3
+                else:
+                    return index_number
             else:
                 return index_number
         else:
             index_number += self.param_names[parameter_name]
             if remove_nCDM:
-
+                if self.param_names[parameter_name] > self.param_names['gamma']:
+                    return index_number - 3
+                else:
+                    return index_number
             else:
                 return index_number
 
