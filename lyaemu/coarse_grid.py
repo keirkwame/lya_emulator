@@ -73,7 +73,7 @@ class Emulator:
         self.redshift_sensitivity = 'None'
 
     def _get_parameter_index_number(self, parameter_name, use_measured_parameters=False, include_mean_flux=True,
-                                    include_mean_flux_slope=False, include_mean_flux_free=False):
+                                    include_mean_flux_slope=False, include_mean_flux_free=False, remove_nCDM=False):
         """Get the index number for a given parameter"""
         if include_mean_flux_free:
             if parameter_name[:5] == 'tau0_':
@@ -88,9 +88,23 @@ class Emulator:
         index_number += include_mean_flux_slope
 
         if use_measured_parameters:
-            return index_number + self.get_combined_param_names()[parameter_name]
+            index_number += self.get_combined_param_names()[parameter_name]
+            if remove_nCDM:
+                if self.get_combined_param_names()[parameter_name] > self.get_combined_param_names()['gamma']:
+                    return index_number - 3
+                else:
+                    return index_number
+            else:
+                return index_number
         else:
-            return index_number + self.param_names[parameter_name]
+            index_number += self.param_names[parameter_name]
+            if remove_nCDM:
+                if self.param_names[parameter_name] > self.param_names['gamma']:
+                    return index_number - 3
+                else:
+                    return index_number
+            else:
+                return index_number
 
     def set_maxk(self):
         """Get the maximum k in Mpc/h that we will need."""

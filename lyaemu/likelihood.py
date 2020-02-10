@@ -77,9 +77,31 @@ def load_data(datadir, *, kf, max_z=4.2, redshifts=None, pixel_resolution_km_s='
     assert np.size(data_fluxpower) % np.size(kf) == 0
     return data_fluxpower
 
+def transfer_function_nCDM(k, alpha, beta, gamma):
+    """Square root of ratio of linear power spectrum in presence of nCDM with respect to that in presence of CDM."""
+    return (1. + ((alpha * k) ** beta)) ** gamma
+
 def measured_parameter_power_law_model(redshift, amplitude, slope, redshift_pivot=4.6):
     """Power law redshift model for measured parameters (e.g., T0, gamma, u0)"""
     return amplitude * ((redshift / redshift_pivot) ** slope)
+
+def ultra_light_axion_analytical_model(ultra_light_axion_parameters, nCDM_parameter_limits, h=0.7):
+    """Model to map ultra-light axion parameters to nCDM parameters using an analytical approximation
+    (arxiv.org/pdf/astro-ph/0003365.pdf)"""
+    mass_22 = 10. ** (ultra_light_axion_parameters[0] + 22.)
+    k_half_h_Mpc = 4.5 * (mass_22 ** (4. / 9.)) / h
+    k_h_Mpc = 10. ** (np.linspace(np.log10(k_half_h_Mpc / 10.), np.log10(k_half_h_Mpc * 10.)))
+    k_J_h_Mpc = 9. * np.sqrt(mass_22) / h
+    x = 1.61 * (mass_22 ** (1. / 18.)) * k_h_Mpc / k_J_h_Mpc
+    T_k = np.cos(x ** 3.) / (1. + (x ** 8.))
+    p0 = np.array([0.05, 5., -2.])
+    bounds = tuple(nCDM_parameter_limits.T)
+    nCDM_parameters, nCDM_covariance = spo.curve_fit(transfer_function_nCDM, k_h_Mpc, T_k, p0=p0, bounds=bounds)
+    return nCDM_parameters
+
+def ultra_light_axion_numerical_model():
+    """Model to map ultra-light axion parameters to nCDM parameters using a numerical Einstein-Boltzmann solver"""
+    pass
 
 
 class LikelihoodClass:
@@ -89,10 +111,16 @@ class LikelihoodClass:
                  emulator_json_file='emulator_params.json', use_measured_parameters=False,
                  redshift_dependent_parameters=False, data_class='BOSS',
                  measured_parameter_z_model=measured_parameter_power_law_model,
-                 measured_parameter_z_model_parameter_limits=None):
+                 measured_parameter_z_model_parameter_limits=None, dark_matter_model=None,
+                 dark_matter_parameter_names=None, dark_matter_parameter_limits=None, use_dark_matter=False):
         """Initialise the emulator by loading the flux power spectra from the simulations."""
         self.measured_parameter_names_z_model = measured_parameter_names_z_model
         self.measured_parameter_z_model = measured_parameter_z_model
+
+        self.dark_matter_model = dark_matter_model
+        self.dark_matter_parameter_names = dark_matter_parameter_names
+        self.dark_matter_parameter_limits = dark_matter_parameter_limits
+        self.use_dark_matter_model = use_dark_matter
 
         #Stored covariance matrix
         self._inverse_covariance_full = None
@@ -180,6 +208,14 @@ class LikelihoodClass:
             self.param_limits = np.delete(self.param_limits, param_limits_remove_indices, axis=0)
             self.param_limits = np.vstack((self.param_limits, measured_parameter_z_model_parameter_limits))
 
+        if self.use_dark_matter_model:
+            idx = self.emulator._get_parameter_index_number('alpha',
+                    use_measured_parameters=self.use_measured_parameters, include_mean_flux_slope=self.mf_slope,
+                    include_mean_flux_free=self.mf_free)
+            param_limits_remove_indices_nCDM = np.arange(idx, idx + 3)
+            self.param_limits = np.delete(self.param_limits, param_limits_remove_indices_nCDM, axis=0)
+            self.param_limits = np.vstack((self.param_limits, self.dark_matter_parameter_limits))
+
         self.ndim = np.shape(self.param_limits)[0]
         assert np.shape(self.param_limits)[1] == 2
         print('Beginning to generate emulator at', str(datetime.now()))
@@ -213,10 +249,16 @@ class LikelihoodClass:
                         2 * np.where(self.measured_parameter_names_z_model == parameter_name[:-2])[0][0])
                 if parameter_name[-1] == 'S':
                     parameter_index_number += 1
+                if self.use_dark_matter_model:
+                    parameter_index_number -= self.dark_matter_parameter_names.shape[0]
+            elif parameter_name in self.dark_matter_parameter_names[:, 0]:
+                parameter_index_number = (-1 * self.dark_matter_parameter_names.shape[0]) + (
+                        np.where(self.dark_matter_parameter_names[:, 0] == parameter_name)[0][0])
             else:
                 parameter_index_number = self.emulator._get_parameter_index_number(parameter_name,
                                         use_measured_parameters=self.use_measured_parameters,
-                                        include_mean_flux_slope=self.mf_slope, include_mean_flux_free=self.mf_free)
+                                        include_mean_flux_slope=self.mf_slope, include_mean_flux_free=self.mf_free,
+                                        remove_nCDM=self.use_dark_matter_model)
             mean_vector[parameter_index_number] = means[i]
             inverse_variance_vector[parameter_index_number] = 1. / (standard_deviations[i] ** 2)
         return -0.5 * np.sum(((parameter_vector - mean_vector) ** 2) * inverse_variance_vector)
@@ -238,6 +280,16 @@ class LikelihoodClass:
             nparams = np.concatenate(([1.,], params[self.zout.size:]))
         else: #Otherwise bug if choose mean_flux = 'c'
             tau0_fac = None
+
+        if self.use_dark_matter_model:
+            nparams = nparams[:-1 * self.dark_matter_parameter_names.shape[0]]
+            nCDM_parameters = self.dark_matter_model(params[-1 * self.dark_matter_parameter_names.shape[0]:])
+            #nparams_indices_nCDM = np.array([self.emulator._get_parameter_index_number(param_name,
+            #                        use_measured_parameters=self.use_measured_parameters) for param_name in
+            #                        ['alpha', 'beta', 'gamma']])
+            nparams_index_nCDM = self.emulator._get_parameter_index_number('alpha',
+                                    use_measured_parameters=self.use_measured_parameters)
+            nparams = np.insert(nparams, nparams_index_nCDM, nCDM_parameters)
 
         if self.measured_parameter_names_z_model is not None:
             nparams = nparams[:-2 * self.measured_parameter_names_z_model.size] #Slice off amplitudes, slopes
@@ -279,7 +331,7 @@ class LikelihoodClass:
         if data_power is None:
             data_power = self.data_fluxpower
         #Set parameter limits as the hull of the original emulator.
-        if np.any(params >= self.param_limits[:,1]) or np.any(params <= self.param_limits[:,0]):
+        if np.any(params > self.param_limits[:,1]) or np.any(params < self.param_limits[:,0]):
             return -np.inf
 
         okf, predicted, std = self.get_predicted(params, use_updated_training_set=use_updated_training_set)
@@ -398,6 +450,15 @@ class LikelihoodClass:
                         np.array([[['%s_A'%measured_parameter_name, r'%sA'%measured_parameter_name],
                           ['%s_S'%measured_parameter_name, r'%sS'%measured_parameter_name]]
                          for measured_parameter_name in self.measured_parameter_names_z_model]).reshape(-1, 2)))
+
+        if self.use_dark_matter_model:
+            idx = self.emulator._get_parameter_index_number('alpha',
+                    use_measured_parameters=self.use_measured_parameters, include_mean_flux_slope=self.mf_slope,
+                    include_mean_flux_free=self.mf_free)
+            pnames_remove_indices_nCDM = np.arange(idx, idx + 3)
+            pnames = np.delete(pnames, pnames_remove_indices_nCDM, axis=0)
+            pnames = np.concatenate((pnames, self.dark_matter_parameter_names))
+
         self.likelihood_parameter_names = pnames
 
         with open(savefile+"_names.txt",'w') as ff:
@@ -454,7 +515,7 @@ class LikelihoodClass:
 
     def get_covar_det(self, params, include_emu):
         """Get the determinant of the covariance matrix.for certain parameters"""
-        if np.any(params >= self.param_limits[:,1]) or np.any(params <= self.param_limits[:,0]):
+        if np.any(params > self.param_limits[:,1]) or np.any(params < self.param_limits[:,0]):
             return -np.inf
         lyman_data_redshifts = self.lyman_data_instance.get_redshifts()
         #Fix maximum redshift bug
@@ -580,3 +641,33 @@ class LikelihoodClass:
         grid_y = grid_y * (self.param_limits[j,1] - self.param_limits[j,0]) + self.param_limits[j,0]
         grid = scipy.interpolate.griddata(rsamples[:,(i,j)], randscores,(grid_x,grid_y),fill_value = 0)
         return grid
+
+
+class DarkMatterLikelihoodClass(LikelihoodClass):
+    """Class to contain computations for a generic dark matter model likelihood."""
+    def __init__(self, basedir, dark_matter_model, dark_matter_parameter_names, dark_matter_parameter_limits,
+                 use_dark_matter=True, **kwargs):
+        super().__init__(basedir=basedir, dark_matter_model=dark_matter_model,
+                         dark_matter_parameter_names=dark_matter_parameter_names,
+                         dark_matter_parameter_limits=dark_matter_parameter_limits, use_dark_matter=use_dark_matter,
+                         **kwargs)
+
+
+class UltraLightAxionLikelihoodClass(DarkMatterLikelihoodClass):
+    """Class to contain computations for an ultra-light axion dark matter model likelihood."""
+    def __init__(self, basedir, dark_matter_model=ultra_light_axion_analytical_model, dark_matter_parameter_names=None,
+                 dark_matter_parameter_limits=None, use_dark_matter=True, **kwargs):
+        if dark_matter_parameter_names is None:
+            dark_matter_parameter_names = np.array([['log(m_a)', r'logma'],])
+        if dark_matter_parameter_limits is None:
+            dark_matter_parameter_limits = np.array([[-22., -19.],])
+        super().__init__(basedir=basedir, dark_matter_model=dark_matter_model,
+                         dark_matter_parameter_names=dark_matter_parameter_names,
+                         dark_matter_parameter_limits=dark_matter_parameter_limits, use_dark_matter=use_dark_matter,
+                         **kwargs)
+
+
+class BaryonDarkMatterLikelihoodClass(DarkMatterLikelihoodClass):
+    """Class to contain likelihood computations for a model with baryon-dark matter interactions."""
+    def __init__(self, basedir, **kwargs):
+        super().__init__(basedir=basedir, **kwargs)

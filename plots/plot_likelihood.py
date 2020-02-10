@@ -239,7 +239,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_real_data_mf_free_TDR_free_gamma_prior_emu_err_off_diag_FDM_3000' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_real_data_mf_free_TDR_free_gamma_prior_emu_err_off_diag_FDM_anal_3000' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -303,8 +303,8 @@ if __name__ == "__main__":
     #Prior distribution
     prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'beta', 'gamma', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
     prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 5, 7, 8, 11, 12, 13, 14, 15, 16])] #7
-    prior_means[6] = 5.55
-    prior_means[7] = -1.8
+    prior_means[6] = 7.18 #5.55
+    prior_means[7] = -10. #-1.8
     #prior_means = np.array([0.93, 2.3 * 1.e-9, 0.27])
     prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 0.1, 0.1, 3000., 3000., 3000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
     prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
