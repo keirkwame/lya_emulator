@@ -77,13 +77,27 @@ def load_data(datadir, *, kf, max_z=4.2, redshifts=None, pixel_resolution_km_s='
     assert np.size(data_fluxpower) % np.size(kf) == 0
     return data_fluxpower
 
+def transfer_function_nCDM(k, alpha, beta, gamma):
+    """Square root of ratio of linear power spectrum in presence of nCDM with respect to that in presence of CDM."""
+    return (1. + ((alpha * k) ** beta)) ** gamma
+
 def measured_parameter_power_law_model(redshift, amplitude, slope, redshift_pivot=4.6):
     """Power law redshift model for measured parameters (e.g., T0, gamma, u0)"""
     return amplitude * ((redshift / redshift_pivot) ** slope)
 
-def ultra_light_axion_analytical_model(ultra_light_axion_parameters):
-    """Model to map ultra-light axion parameters to nCDM parameters using an analytical approximation"""
-    
+def ultra_light_axion_analytical_model(ultra_light_axion_parameters, nCDM_parameter_limits, h=0.7):
+    """Model to map ultra-light axion parameters to nCDM parameters using an analytical approximation
+    (arxiv.org/pdf/astro-ph/0003365.pdf)"""
+    mass_22 = 10. ** (ultra_light_axion_parameters[0] + 22.)
+    k_half_h_Mpc = 4.5 * (mass_22 ** (4. / 9.)) / h
+    k_h_Mpc = 10. ** (np.linspace(np.log10(k_half_h_Mpc / 10.), np.log10(k_half_h_Mpc * 10.)))
+    k_J_h_Mpc = 9. * np.sqrt(mass_22) / h
+    x = 1.61 * (mass_22 ** (1. / 18.)) * k_h_Mpc / k_J_h_Mpc
+    T_k = np.cos(x ** 3.) / (1. + (x ** 8.))
+    p0 = np.array([0.05, 5., -2.])
+    bounds = tuple(nCDM_parameter_limits.T)
+    nCDM_parameters, nCDM_covariance = spo.curve_fit(transfer_function_nCDM, k_h_Mpc, T_k, p0=p0, bounds=bounds)
+    return nCDM_parameters
 
 def ultra_light_axion_numerical_model():
     """Model to map ultra-light axion parameters to nCDM parameters using a numerical Einstein-Boltzmann solver"""
