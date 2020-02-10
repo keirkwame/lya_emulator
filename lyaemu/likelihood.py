@@ -331,7 +331,7 @@ class LikelihoodClass:
         if data_power is None:
             data_power = self.data_fluxpower
         #Set parameter limits as the hull of the original emulator.
-        if np.any(params >= self.param_limits[:,1]) or np.any(params <= self.param_limits[:,0]):
+        if np.any(params > self.param_limits[:,1]) or np.any(params < self.param_limits[:,0]):
             return -np.inf
 
         okf, predicted, std = self.get_predicted(params, use_updated_training_set=use_updated_training_set)
@@ -515,7 +515,7 @@ class LikelihoodClass:
 
     def get_covar_det(self, params, include_emu):
         """Get the determinant of the covariance matrix.for certain parameters"""
-        if np.any(params >= self.param_limits[:,1]) or np.any(params <= self.param_limits[:,0]):
+        if np.any(params > self.param_limits[:,1]) or np.any(params < self.param_limits[:,0]):
             return -np.inf
         lyman_data_redshifts = self.lyman_data_instance.get_redshifts()
         #Fix maximum redshift bug
