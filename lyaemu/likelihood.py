@@ -2,6 +2,7 @@
 import math
 from datetime import datetime
 import mpmath as mmh
+import copy as cp
 import numpy as np
 import numpy.linalg as npl
 import numpy.random as npr
@@ -216,6 +217,7 @@ class LikelihoodClass:
                     use_measured_parameters=self.use_measured_parameters, include_mean_flux_slope=self.mf_slope,
                     include_mean_flux_free=self.mf_free)
             param_limits_remove_indices_nCDM = np.arange(idx, idx + 3)
+            self.param_limits_nCDM = cp.deepcopy(self.param_limits[param_limits_remove_indices_nCDM])
             self.param_limits = np.delete(self.param_limits, param_limits_remove_indices_nCDM, axis=0)
             self.param_limits = np.vstack((self.param_limits, self.dark_matter_parameter_limits))
 
@@ -284,9 +286,26 @@ class LikelihoodClass:
         else: #Otherwise bug if choose mean_flux = 'c'
             tau0_fac = None
 
+        hubble_parameter_name, omega_m_parameter_name = ('hub', 'omega_m')
+        if self.emulator.param_names.get(hubble_parameter_name, None) is not None:
+            hindex = self.emulator._get_parameter_index_number(hubble_parameter_name,
+                        use_measured_parameters=self.use_measured_parameters, remove_nCDM=self.use_dark_matter_model)
+            hubble = nparams[hindex]
+            omega_m = self.emulator.omegamh2/hubble**2
+        elif self.emulator.param_names.get(omega_m_parameter_name, None) is not None:
+            omega_m_index = self.emulator._get_parameter_index_number(omega_m_parameter_name,
+                                use_measured_parameters=self.use_measured_parameters,
+                                remove_nCDM=self.use_dark_matter_model)
+            omega_m = nparams[omega_m_index]
+            hubble = np.sqrt(self.emulator.omegamh2 / omega_m)
+        else:
+            raise ValueError('Neither Hubble parameter nor matter density are specified!')
+        assert 0.5 < hubble < 1
+
         if self.use_dark_matter_model:
             nparams = nparams[:-1 * self.dark_matter_parameter_names.shape[0]]
-            nCDM_parameters = self.dark_matter_model(params[-1 * self.dark_matter_parameter_names.shape[0]:])
+            nCDM_parameters = self.dark_matter_model(params[-1 * self.dark_matter_parameter_names.shape[0]:],
+                                                     self.param_limits_nCDM, h=hubble)
             #nparams_indices_nCDM = np.array([self.emulator._get_parameter_index_number(param_name,
             #                        use_measured_parameters=self.use_measured_parameters) for param_name in
             #                        ['alpha', 'beta', 'gamma']])
@@ -308,19 +327,6 @@ class LikelihoodClass:
         # Here: emulating @ cosmo.; thermal; sampled t0 * [tau0_fac from above]
         predicted_nat, std_nat = self.gpemu.predict(np.array(nparams).reshape(1,-1), tau0_factors = tau0_fac, use_updated_training_set=use_updated_training_set)
 
-        hubble_parameter_name, omega_m_parameter_name = ('hub', 'omega_m')
-        if self.emulator.param_names.get(hubble_parameter_name, None) is not None:
-            hindex = self.emulator._get_parameter_index_number(hubble_parameter_name, use_measured_parameters=self.use_measured_parameters)
-            hubble = nparams[hindex]
-            omega_m = self.emulator.omegamh2/hubble**2
-        elif self.emulator.param_names.get(omega_m_parameter_name, None) is not None:
-            omega_m_index = self.emulator._get_parameter_index_number(omega_m_parameter_name,
-                                                               use_measured_parameters=self.use_measured_parameters)
-            omega_m = nparams[omega_m_index]
-            hubble = np.sqrt(self.emulator.omegamh2 / omega_m)
-        else:
-            raise ValueError('Neither Hubble parameter nor matter density are specified!')
-        assert 0.5 < hubble < 1
         okf, predicted = flux_power.rebin_power_to_kms(kfkms=self.kf, kfmpc=self.gpemu.kf, flux_powers = predicted_nat[0], zbins=self.zout, omega_m = omega_m)
         _, std= flux_power.rebin_power_to_kms(kfkms=self.kf, kfmpc=self.gpemu.kf, flux_powers = std_nat[0], zbins=self.zout, omega_m = omega_m)
         return okf, predicted, std
