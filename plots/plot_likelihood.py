@@ -239,7 +239,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_real_data_mf_free_TDR_free_gamma_prior_emu_err_off_diag_FDM_anal_3000' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_real_data_mf_free_TDR_free_gamma_prior_emu_err_off_diag_ULA_anal_300' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -248,11 +248,14 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if not os.path.exists(chainfile):
         #datadir = 'use_real_data'
         print('Beginning to sample likelihood at', str(datetime.now()))
-        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=3000, nsamples=3000,
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
                          prior_function=prior_function, while_loop=False, include_emulator_error=True,
                          n_threads=n_threads_mcmc)
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
+        if like.use_dark_matter_model:
+            true_parameter_values = np.delete(true_parameter_values, np.arange(6, 9))
+            true_parameter_values = np.concatenate((true_parameter_values, np.array([-21.,])))
         fp_savefile = os.path.join(savedir, 'flux_power_'+sname + ".pdf")
         make_plot_flux_power_spectra(like, true_parameter_values, datadir, savefile=fp_savefile, t0=t0,
                                      data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
@@ -261,9 +264,9 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         savefile = os.path.join(savedir, 'corner_'+sname + filename_suffix + ".pdf") #no_emu_measured_TDR_3000_Gaussian_Planck_omega_m_tight_emu_less.pdf")
         plot_parameter_names = like.likelihood_parameter_names[:, 1] #parameter_names
         plot_parameter_limits = like.param_limits
-        if like.use_dark_matter_model:
-            true_parameter_values = np.delete(true_parameter_values, np.arange(6, 9))
-            true_parameter_values = np.concatenate((true_parameter_values, np.array([-21.,])))
+        #if like.use_dark_matter_model:
+        #    true_parameter_values = np.delete(true_parameter_values, np.arange(6, 9))
+        #    true_parameter_values = np.concatenate((true_parameter_values, np.array([-21.,])))
         make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=plot_parameter_names, ranges=plot_parameter_limits, parameter_indices=plot_parameter_indices)
 
 if __name__ == "__main__":
