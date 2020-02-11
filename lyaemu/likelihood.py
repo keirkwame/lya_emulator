@@ -112,7 +112,7 @@ class LikelihoodClass:
                  redshift_dependent_parameters=False, data_class='BOSS',
                  measured_parameter_z_model=measured_parameter_power_law_model,
                  measured_parameter_z_model_parameter_limits=None, dark_matter_model=None,
-                 dark_matter_parameter_names=None, dark_matter_parameter_limits=None, use_dark_matter=False):
+                 dark_matter_parameter_names=np.array([[None,],]), dark_matter_parameter_limits=None, use_dark_matter=False):
         """Initialise the emulator by loading the flux power spectra from the simulations."""
         self.measured_parameter_names_z_model = measured_parameter_names_z_model
         self.measured_parameter_z_model = measured_parameter_z_model

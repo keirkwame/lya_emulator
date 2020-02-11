@@ -246,9 +246,9 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if true_parameter_values is None:
         true_parameter_values = get_simulation_parameters_s8(sdir, t0=t0)
     if not os.path.exists(chainfile):
-        datadir = 'use_real_data'
+        #datadir = 'use_real_data'
         print('Beginning to sample likelihood at', str(datetime.now()))
-        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=3000, nsamples=3000,
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=3000, nsamples=3000,
                          prior_function=prior_function, while_loop=False, include_emulator_error=True,
                          n_threads=n_threads_mcmc)
         print('Done sampling likelihood at', str(datetime.now()))
