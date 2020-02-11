@@ -190,6 +190,9 @@ class LikelihoodClass:
             raise ValueError("Emulator class not recognised")
         self.emulator.load(dumpfile=emulator_json_file)
         self.use_measured_parameters = use_measured_parameters
+
+        self._get_likelihood_parameter_names()
+
         self.param_limits = self.emulator.get_param_limits(include_dense=True, use_measured=self.use_measured_parameters)
         if (mean_flux == 's') or (mean_flux == 's_high_z'):
             #Add a slope to the parameter limits
@@ -425,17 +428,10 @@ class LikelihoodClass:
                     include_mean_flux_free=self.mf_free))
         return remove_indices
 
-    def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, prior_function='uniform',
-                    while_loop=True, include_emulator_error=True, maxsample=20, n_threads=1):
-        """Initialise and run emcee."""
+    def _get_likelihood_parameter_names(self):
+        """Get the likelihood parameter names."""
         pnames = self.emulator.print_pnames(use_measured_parameters=self.use_measured_parameters)
-        #Load the data directory
-        if datadir == 'use_real_data':
-            self.data_fluxpower = self.lyman_data_flux_power[::-1].flatten()
-        else:
-            self.data_fluxpower = load_data(datadir, kf=self.kf, max_z=self.max_z, redshifts=self.data_redshifts,
-                                            pixel_resolution_km_s=self.pixel_resolution_km_s, t0=self.t0_training_value,
-                                            mean_flux_model=self.mean_flux_model) #1D array with lowest redshift first
+
         #Set up mean flux
         if self.mf_slope:
             pnames = np.concatenate((np.array([['dtau0',r'd\tau_0'],]), pnames), axis=0)
@@ -461,8 +457,19 @@ class LikelihoodClass:
 
         self.likelihood_parameter_names = pnames
 
+    def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, prior_function='uniform',
+                    while_loop=True, include_emulator_error=True, maxsample=20, n_threads=1):
+        """Initialise and run emcee."""
+        #Load the data directory
+        if datadir == 'use_real_data':
+            self.data_fluxpower = self.lyman_data_flux_power[::-1].flatten()
+        else:
+            self.data_fluxpower = load_data(datadir, kf=self.kf, max_z=self.max_z, redshifts=self.data_redshifts,
+                                            pixel_resolution_km_s=self.pixel_resolution_km_s, t0=self.t0_training_value,
+                                            mean_flux_model=self.mean_flux_model) #1D array with lowest redshift first
+
         with open(savefile+"_names.txt",'w') as ff:
-            for pp in pnames:
+            for pp in self.likelihood_parameter_names:
                 ff.write("%s %s\n" % tuple(pp))
         #Limits: we need to hard-prior to the volume of our emulator.
         pr = (self.param_limits[:,1]-self.param_limits[:,0])
