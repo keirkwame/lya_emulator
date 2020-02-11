@@ -11,28 +11,29 @@ import lyaemu.mean_flux as mef
 
 if __name__ == "__main__":
     emulator_base_directory = '/share/data2/keir/Simulations'
-    emulator_names = ['nCDM_convergence_768_WDM', 'nCDM_convergence_512_256']
-    simulation_indices = [np.arange(1), np.arange(2)]
-    interpolate_to_same_k = True
+    emulator_names = ['nCDM_emulator_512',] #'nCDM_convergence_512_256']
+    simulation_indices = [np.arange(101),] #np.arange(2)]
+    interpolate_to_same_k = False
 
     default_emulator_index = 0
     default_simulation_index = 0
     n_simulations = np.sum(
         [np.size(simulation_indices_single_emulator) for simulation_indices_single_emulator in simulation_indices])
 
-    savefile = os.path.join(emulator_base_directory, emulator_names[0], 'flux_power_convergence_15_10_ConstFlux.pdf')
-    figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 3. / 10.))
+    savefile = os.path.join(emulator_base_directory, emulator_names[0], 'flux_power_emulator_101.pdf')
+    figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 101. / 10.))
 
     plot_start_index = 0
     input_parameters_all = []
     k_parallel = []
     flux_powers = []
     for a, emulator_name in enumerate(emulator_names):
-        emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name), mf=mef.ConstMeanFluxHighRedshift(value=1.)) #MeanFluxFactorHighRedshift(dense_samples=10))
+        emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name), mf=mef.MeanFluxFactorHighRedshift(dense_samples=10))
+        #ConstMeanFluxHighRedshift(value=1.)
         emulator_instance.load()
 
         input_parameters_all_single_emulator, k_parallel_single_emulator, flux_powers_single_emulator = emulator_instance.get_flux_vectors(
-            redshifts=emulator_instance.redshifts, pixel_resolution_km_s=1., fix_mean_flux_samples=True)
+            redshifts=emulator_instance.redshifts, pixel_resolution_km_s=1., fix_mean_flux_samples=False)
         print(flux_powers_single_emulator.shape)
         flux_powers_single_emulator = flux_powers_single_emulator.reshape(k_parallel_single_emulator.shape)
 
