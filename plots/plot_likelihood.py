@@ -239,7 +239,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_real_data_mf_free_TDR_free_gamma_prior_emu_err_off_diag_ULA_anal_300' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_real_data_mf_free_TDR_free_gamma_prior_emu_err_off_diag_ULA_anal_3000' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -248,7 +248,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if not os.path.exists(chainfile):
         #datadir = 'use_real_data'
         print('Beginning to sample likelihood at', str(datetime.now()))
-        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=3000, nsamples=3000,
                          prior_function=prior_function, while_loop=False, include_emulator_error=True,
                          n_threads=n_threads_mcmc)
         print('Done sampling likelihood at', str(datetime.now()))
