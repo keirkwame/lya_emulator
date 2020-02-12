@@ -79,6 +79,12 @@ def fit_td_rel_plot(num, base, nhi=True, nbins=500, gas="raw", plot=True):
     print(dens.shape, dens, np.nanmax(dens), np.nanmin(dens), np.sum(np.isnan(dens)), dens[temp == 0.])
     print(temp.shape, temp, np.nanmax(temp), np.nanmin(temp), np.sum(np.isnan(temp)), np.min(temp[temp > 0.]), np.shape(temp[temp == 0.]), np.where(temp == 0.))
 
+    #Remove dens=0 particles from fit
+    if np.nanmin(dens) == 0.:
+        temp = temp[dens > 0.]
+        dens = dens[dens > 0.]
+        print('Removing problematic zero-density particles from TDR fit!')
+
     #Remove T=0 particles from fit
     if np.nanmin(temp) == 0.:
         dens = dens[temp > 0.]
