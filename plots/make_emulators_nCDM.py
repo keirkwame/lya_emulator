@@ -113,12 +113,12 @@ if __name__ == '__main__':
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, 'nCDM_convergence_512_256'))
     emulator_instance.gen_simulations(None, npart=npart, box=box, samples=samples_nCDM_test)'''
 
-    #nCDM_convergence_1024
+    #nCDM_convergence_896
     n_simulations = 1
     samples_fiducial_nCDM = [0.9635, 1.8296e-9, 0., 1., 0.3209, 0., 1., -1., 8., 2.e+4]
     samples_nCDM_test = np.array(samples_fiducial_nCDM * n_simulations).reshape(n_simulations, -1)
-    npart = 1024
-    box = 20.
+    npart = 896
+    box = 17.5
 
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name))
     emulator_instance.gen_simulations(None, npart=npart, box=box, samples=samples_nCDM_test)

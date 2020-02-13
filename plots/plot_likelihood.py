@@ -205,7 +205,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     #Measured parameter redshift model
     measured_parameter_names_z_model = None #np.array(['gamma',]) #'T_0', 'u_0'
     measured_parameter_z_model_parameter_limits = np.array([[0.75, 1.75], [-1., 1.]]) #A, S #[5000., 12000.], [-1., 1.]
-    like = likeh.UltraLightAxionLikelihoodClass(basedir=emudir, mean_flux=mean_flux_label,
+    like = likeh.LikelihoodClass(basedir=emudir, mean_flux=mean_flux_label,
                                  measured_parameter_names_z_model=measured_parameter_names_z_model, max_z=max_z,
                                  redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s,
                                  t0_training_value = t0_training_value, emulator_class=emulator_class,
@@ -239,7 +239,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_real_data_mf_free_TDR_free_gamma_prior_emu_err_off_diag_ULA_anal_3000' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_emu101' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -248,7 +248,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if not os.path.exists(chainfile):
         #datadir = 'use_real_data'
         print('Beginning to sample likelihood at', str(datetime.now()))
-        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=3000, nsamples=3000,
+        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=300, nsamples=300,
                          prior_function=prior_function, while_loop=False, include_emulator_error=True,
                          n_threads=n_threads_mcmc)
         print('Done sampling likelihood at', str(datetime.now()))
@@ -297,8 +297,8 @@ if __name__ == "__main__":
     test_simulation_directory = test_emulator_instance.get_outdir(test_emulator_instance.get_parameters()
                                                     [test_simulation_number], extra_flag=test_simulation_number+1)[:-7]
 
-    test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
-    #test_simulation_parameters = test_emulator_instance.get_parameters()[test_simulation_number]
+    #test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
+    test_simulation_parameters = test_emulator_instance.get_parameters()[test_simulation_number]
     #test_simulation_parameters = np.concatenate((np.array([0., t0_test_value]), test_simulation_parameters))
     test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters))
     #T_0; gamma power laws
@@ -307,12 +307,12 @@ if __name__ == "__main__":
     #test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters[:-3], np.array([test_simulation_parameters[-2], 0.])))
 
     #Prior distribution
-    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
-    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 5, 11, 12, 13, 14, 15, 16])] #7
+    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m']) #, 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
+    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 7])] #5, 11, 12, 13, 14, 15, 16])] #7
     #prior_means[6] = 7.18 #5.55
     #prior_means[7] = -10. #-1.8
     #prior_means = np.array([0.93, 2.3 * 1.e-9, 0.27])
-    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 3000., 3000., 3000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
+    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001]) #, 3000., 3000., 3000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
     prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
     #prior_function_args = None
 
