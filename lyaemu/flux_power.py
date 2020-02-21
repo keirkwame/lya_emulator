@@ -24,7 +24,6 @@ def rebin_power_to_kms(kfkms, kfmpc, flux_powers, zbins, omega_m, omega_l = None
     velfac = lambda zz: velocity_factor(zz, omega_m, omega_l=omega_l)
     rebinned=[scipy.interpolate.interpolate.interp1d(kfmpc,flux_powers[ii*nk:(ii+1)*nk]) for ii in range(nz)]
     okmsbins = [kfkms[np.where(kfkms >= np.min(kfmpc)/velfac(zz))] for zz in zbins]
-    print(okmsbins)
     flux_rebinned = [rebinned[ii](okmsbins[ii]*velfac(zz)) for ii, zz in enumerate(zbins)]
     return okmsbins, flux_rebinned
 
@@ -181,7 +180,6 @@ class MySpectra(object):
             ss.save_file()
         #Check we have the same spectra
         try:
-            print(snap, base, ss.cofm, self.cofm, ss.box, self.box_length_kpc_h)
             npt.assert_allclose(ss.cofm, self.cofm * ss.box / self.box_length_kpc_h)
         except AttributeError:
             #If this is the first load, we just want to use the snapshot values.

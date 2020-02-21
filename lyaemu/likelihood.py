@@ -356,7 +356,8 @@ class LikelihoodClass:
             diff_bin = predicted[bb] - data_power[nkf*bb:nkf*(bb+1)][idp]
             std_bin = std[bb]
             bindx = np.min(idp)
-            covar_bin = self.get_data_covariance(bb)[bindx:, bindx:]
+            covar_bin = cp.deepcopy(self.get_data_covariance(bb)[bindx:, bindx:])
+            #print('Data covariance =', covar_bin)
 
             assert np.shape(np.outer(std_bin,std_bin)) == np.shape(covar_bin)
             if include_emu:
@@ -364,9 +365,12 @@ class LikelihoodClass:
                 #covar_emu = np.diag(std_bin**2)
                 #Assume completely correlated emulator errors within this bin
                 covar_emu = np.outer(std_bin, std_bin)
+                #print('Emulator covariance =', covar_emu)
                 covar_bin += covar_emu
+                #print('Total covariance =', covar_bin)
             icov_bin = np.linalg.inv(covar_bin)
             (_, cdet) = np.linalg.slogdet(covar_bin)
+            del(covar_bin)
             dcd = - np.dot(diff_bin, np.dot(icov_bin, diff_bin),)/2.
             chi2 += dcd -0.5* cdet
             assert 0 > chi2 > -2**31
