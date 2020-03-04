@@ -212,7 +212,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                                  emulator_json_file=emulator_json_file, use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
-                                 dark_matter_model=likeh.ultra_light_axion_numerical_model)
+                                 dark_matter_model=likeh.ultra_light_axion_numerical_model, dark_matter_parameter_limits=np.array([[-22., -19.],]))
 
     if prior_function == 'Gaussian':
         prior_function = lambda parameter_vector: like.log_gaussian_prior(parameter_vector,
@@ -240,7 +240,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_emu50_data_TDR_300_ULA_fit' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_emu50_data_TDR_300_ULA_fit_weak_tau_prior' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -320,7 +320,7 @@ if __name__ == "__main__":
     prior_means[13] = 1.6
     prior_means[14] = 1.6'''
     #prior_means = np.array([0.93, 2.3 * 1.e-9, 0.27])
-    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 3000., 3000., 3000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
+    prior_standard_deviations = np.array([0.25, 0.25, 0.25, 0.0057, 0.030 * 1.e-9, 0.001, 3000., 3000., 3000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
     prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
     #prior_function_args = None
 
