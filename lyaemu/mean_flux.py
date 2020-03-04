@@ -9,11 +9,17 @@ def obs_mean_tau(redshift, amp=0, slope=0):
     this is a weak prior"""
     return (2.3+amp)*1e-3*(1.0+redshift)**(3.65+slope)
 
-def obs_mean_tau_high_z(redshift, amp=0, slope=0):
+def obs_mean_tau_Boera(redshift, amp=0, slope=0):
     """The mean flux as used in 1809.06980 is 0.0014(1+z)^4.0
     Note we constrain this much better from data itself:
     this is a weak prior"""
     return (1.4+amp)*1e-3*(1.0+redshift)**(4.+slope)
+
+def obs_mean_tau_high_z(redshift, amp=0, slope=0):
+    """The effective optical depth as inferred in 1306.5896 [SDSS-III] (and used in 1703.04683) is
+    (0.34±0.02) [(1+z) / 4]^(3.1±0.2)"""
+    return (3.4+amp)*1.e-1*((1.0+redshift)/4.)**(3.1+slope)
+
 
 class ConstMeanFlux(object):
     """Object which implements different mean flux models. This model fixes the mean flux to a constant value.
@@ -114,7 +120,7 @@ class MeanFluxFactorHighRedshift(MeanFluxFactor):
         if dense_limits is None:
             tau_factor_maximum = np.max(mean_flux_slope_to_factor(redshifts, 0.25, redshift_pivot=redshift_pivot))
             tau_factor_minimum = np.min(mean_flux_slope_to_factor(redshifts, -0.25, redshift_pivot=redshift_pivot))
-            dense_limits = np.array([[0.75, 1.25]]) * np.array([tau_factor_minimum, tau_factor_maximum])
+            dense_limits = np.array([[0.5, 1.5]]) * np.array([tau_factor_minimum, tau_factor_maximum])
         super().__init__(dense_samples=dense_samples, dense_limits=dense_limits,
                          dense_parameter_names=dense_parameter_names, redshift_pivot=redshift_pivot)
 
@@ -135,7 +141,7 @@ class FreeMeanFlux(MeanFluxFactorHighRedshift):
             #dense_limits = np.array([[0.75, 1.25]])
             tau_factor_maximum = np.max(mean_flux_slope_to_factor(redshifts, 0.25, redshift_pivot=redshift_pivot))
             tau_factor_minimum = np.min(mean_flux_slope_to_factor(redshifts, -0.25, redshift_pivot=redshift_pivot))
-            dense_limits = np.array([[0.75, 1.25]]) * np.array([tau_factor_minimum, tau_factor_maximum])
+            dense_limits = np.array([[0.5, 1.5]]) * np.array([tau_factor_minimum, tau_factor_maximum])
         super().__init__(dense_samples=dense_samples, dense_limits=dense_limits,
                          dense_parameter_names=dense_parameter_names, redshifts=redshifts)
 

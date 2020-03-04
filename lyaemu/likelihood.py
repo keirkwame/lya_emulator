@@ -176,7 +176,7 @@ class LikelihoodClass:
         self.mf_slope = False
         self.mf_free = False
         #Param limits on t0
-        t0_factor = np.array([0.75,1.25])
+        t0_factor = np.array([0.5,1.5])
         t0_slope = np.array([-0.25, 0.25])
 
         if (mean_flux == 'c') or (mean_flux == 's'):
