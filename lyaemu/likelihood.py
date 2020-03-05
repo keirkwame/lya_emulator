@@ -137,7 +137,8 @@ def ultra_light_axion_numerical_model(ultra_light_axion_parameters, nCDM_paramet
 class LikelihoodClass:
     """Class to contain likelihood computations."""
     def __init__(self, basedir, mean_flux='s', measured_parameter_names_z_model=None, max_z = 4.2, redshifts=None,
-                 pixel_resolution_km_s='default', emulator_class="standard", t0_training_value = 1., optimise_GP=True,
+                 pixel_resolution_km_s='default', emulator_class="standard", t0_training_value = 1.,
+                 t0_parameter_limits=np.array([0.75, 1.25]), optimise_GP=True,
                  emulator_json_file='emulator_params.json', use_measured_parameters=False,
                  redshift_dependent_parameters=False, data_class='BOSS',
                  measured_parameter_z_model=measured_parameter_power_law_model,
@@ -176,7 +177,7 @@ class LikelihoodClass:
         self.mf_slope = False
         self.mf_free = False
         #Param limits on t0
-        t0_factor = np.array([0.5,1.5])
+        t0_factor = t0_parameter_limits
         t0_slope = np.array([-0.25, 0.25])
 
         if (mean_flux == 'c') or (mean_flux == 's'):
