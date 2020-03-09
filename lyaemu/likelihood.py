@@ -8,6 +8,7 @@ import numpy.linalg as npl
 import numpy.random as npr
 import numpy.testing as npt
 import scipy.optimize as spo
+import scipy.spatial as sps
 import scipy.interpolate
 import emcee
 from . import coarse_grid
@@ -279,29 +280,55 @@ class LikelihoodClass:
         print('k_max_emulated_h_Mpc =', k_max, np.max(self.kf), np.max(self.zout), omega_m_max)
         return k_max
 
+    def _get_parameter_index_number(self, parameter_name):
+        if (parameter_name[-1] == 'A') or (parameter_name[-1] == 'S'):
+            parameter_index_number = (-2 * self.measured_parameter_names_z_model.size) + (
+                    2 * np.where(self.measured_parameter_names_z_model == parameter_name[:-2])[0][0])
+            if parameter_name[-1] == 'S':
+                parameter_index_number += 1
+            if self.use_dark_matter_model:
+                parameter_index_number -= self.dark_matter_parameter_names.shape[0]
+        elif parameter_name in self.dark_matter_parameter_names[:, 0]:
+            parameter_index_number = (-1 * self.dark_matter_parameter_names.shape[0]) + (
+                np.where(self.dark_matter_parameter_names[:, 0] == parameter_name)[0][0])
+        else:
+            parameter_index_number = self.emulator._get_parameter_index_number(parameter_name,
+                                                                               use_measured_parameters=self.use_measured_parameters,
+                                                                               include_mean_flux_slope=self.mf_slope,
+                                                                               include_mean_flux_free=self.mf_free,
+                                                                               remove_nCDM=self.use_dark_matter_model)
+        return parameter_index_number
+
     def log_gaussian_prior(self, parameter_vector, parameter_names, means, standard_deviations):
         """The natural logarithm of an un-normalised (multi-variate) Gaussian prior distribution"""
         mean_vector = np.ones_like(parameter_vector)
         inverse_variance_vector = np.zeros_like(parameter_vector)
         for i, parameter_name in enumerate(parameter_names):
-            if (parameter_name[-1] == 'A') or (parameter_name[-1] == 'S'):
-                parameter_index_number = (-2 * self.measured_parameter_names_z_model.size) + (
-                        2 * np.where(self.measured_parameter_names_z_model == parameter_name[:-2])[0][0])
-                if parameter_name[-1] == 'S':
-                    parameter_index_number += 1
-                if self.use_dark_matter_model:
-                    parameter_index_number -= self.dark_matter_parameter_names.shape[0]
-            elif parameter_name in self.dark_matter_parameter_names[:, 0]:
-                parameter_index_number = (-1 * self.dark_matter_parameter_names.shape[0]) + (
-                        np.where(self.dark_matter_parameter_names[:, 0] == parameter_name)[0][0])
-            else:
-                parameter_index_number = self.emulator._get_parameter_index_number(parameter_name,
-                                        use_measured_parameters=self.use_measured_parameters,
-                                        include_mean_flux_slope=self.mf_slope, include_mean_flux_free=self.mf_free,
-                                        remove_nCDM=self.use_dark_matter_model)
+            parameter_index_number = self._get_parameter_index_number(parameter_name)
             mean_vector[parameter_index_number] = means[i]
             inverse_variance_vector[parameter_index_number] = 1. / (standard_deviations[i] ** 2)
         return -0.5 * np.sum(((parameter_vector - mean_vector) ** 2) * inverse_variance_vector)
+
+    def log_convex_hull_prior(self, parameter_vector, parameter_names, convex_hull_objects=None):
+        """The natural logarithm of an un-normalised prior distribution set to a convex hull"""
+        for a, parameter_name_set in enumerate(parameter_names):
+            parameter_index_numbers = np.zeros(len(parameter_name_set))
+            if convex_hull_objects is None:
+                convex_hull_input = np.zeros((self.emulator.sample_params.shape[0], len(parameter_name_set)))
+            for i, parameter_name in enumerate(parameter_name_set):
+                parameter_index_numbers[i] = self._get_parameter_index_number(parameter_name)
+                if convex_hull_objects is None:
+                    if parameter_name in self.emulator.param_names:
+                        convex_hull_input[:, i] = self.emulator.sample_params[:, self.emulator.param_names[parameter_name]]
+                    elif parameter_name in self.emulator.measured_param_names:
+                        convex_hull_input[:, i] = self.emulator.measured_sample_params[:, self.emulator.measured_param_names[parameter_name]]
+            if convex_hull_objects is None:
+                convex_hull = sps.Delaunay(convex_hull_input)
+            else:
+                convex_hull = convex_hull_objects[a]
+            if convex_hull.find_simplex(parameter_vector[parameter_index_numbers]) < 0:
+                return -np.inf
+        return 0.
 
     def log_uniform_prior(self, parameter_vector):
         """The natural logarithm of an un-normalised uniform prior distribution"""
@@ -456,11 +483,17 @@ class LikelihoodClass:
             covar_bin = self.lyman_data_instance.get_covar(lyman_data_redshifts[zbin])
         return covar_bin
 
-    def log_posterior(self, parameter_vector, prior_function='uniform', include_emulator_error=True):
+    def log_posterior(self, parameter_vector, prior_functions='uniform', include_emulator_error=True):
         """Evaluate the natural logarithm of the posterior distribution"""
-        if prior_function == 'uniform':
-            prior_function = self.log_uniform_prior
-        return self.likelihood(parameter_vector, include_emu=include_emulator_error) + prior_function(parameter_vector)
+        if prior_functions == 'uniform':
+            prior_functions = [self.log_uniform_prior, ]
+        if not isinstance(prior_functions, list):
+            prior_functions = [prior_functions, ]
+
+        posterior = self.likelihood(parameter_vector, include_emu=include_emulator_error)
+        for prior_function in prior_functions:
+            posterior += prior_function(parameter_vector)
+        return posterior
 
     def _get_measured_parameter_indices_to_remove(self):
         """Get the indices for measured parameters so that they can be removed (because a redshift model is being
@@ -502,7 +535,7 @@ class LikelihoodClass:
 
         self.likelihood_parameter_names = pnames
 
-    def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, prior_function='uniform',
+    def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, prior_functions='uniform',
                     while_loop=True, include_emulator_error=True, maxsample=20, n_threads=1):
         """Initialise and run emcee."""
         #Load the data directory
@@ -521,10 +554,10 @@ class LikelihoodClass:
         #Priors are assumed to be in the middle.
         cent = (self.param_limits[:,1]+self.param_limits[:,0])/2.
         p0 = [cent+2*pr/16.*np.random.rand(self.ndim)-pr/16. for _ in range(nwalkers)]
-        assert np.all([np.isfinite(self.log_posterior(pp, prior_function=prior_function, include_emulator_error=include_emulator_error)) for pp in p0])
+        assert np.all([np.isfinite(self.log_posterior(pp, prior_functions=prior_functions, include_emulator_error=include_emulator_error)) for pp in p0])
         emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior,
-                            kwargs={'prior_function': prior_function, 'include_emulator_error': include_emulator_error},
-                            threads=n_threads)
+                                              kwargs={'prior_function': prior_functions, 'include_emulator_error': include_emulator_error},
+                                              threads=n_threads)
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
         #Check things are reasonable
         print('The fraction of proposed steps that were accepted =', emcee_sampler.acceptance_fraction)
