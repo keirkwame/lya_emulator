@@ -224,8 +224,14 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     parameter_names_convex_hull = [['T_0_z_5.0', 'u_0_z_5.0'], ['T_0_z_4.6', 'u_0_z_4.6'], ['T_0_z_4.2', 'u_0_z_4.2']]
     prior_function_convex_hull = lambda parameter_vector: like.log_convex_hull_prior(parameter_vector,
                                                                             parameter_names=parameter_names_convex_hull)
-    
-    prior_functions = [prior_function_convex_hull, prior_function]
+
+    #Maximum jumps prior
+    parameter_names_maximum_jump = np.array(['T_0',])
+    maximum_jumps = np.array([5000.,])
+    prior_function_maximum_jump = lambda parameter_vector: like.log_redshift_prior(parameter_vector,
+                                    parameter_names=parameter_names_maximum_jump, maximum_differences=maximum_jumps)
+
+    prior_functions = [prior_function_convex_hull, prior_function, prior_function_maximum_jump]
 
     parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
     if mean_flux_label == 'free_high_z':
@@ -248,7 +254,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_emu50_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fix_Planck_tau_hard_prior' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_emu50_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fix_Planck_tau_hard_prior_no_jump' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")

@@ -309,8 +309,33 @@ class LikelihoodClass:
             inverse_variance_vector[parameter_index_number] = 1. / (standard_deviations[i] ** 2)
         return -0.5 * np.sum(((parameter_vector - mean_vector) ** 2) * inverse_variance_vector)
 
+    def log_redshift_prior(self, parameter_vector, parameter_names, maximum_differences):
+        """The natural logarithm of an un-normalised uniform prior distribution that prevents differences in parameters
+        in adjacent redshift bins larger than a given tolerance"""
+        #parameter_names_all_z = np.tile(np.repeat(parameter_names, self.zout.shape[0] - 1), (2, 1)).T
+        for a, parameter_name in enumerate(parameter_names):
+            for i in range(self.zout.shape[0] - 1):
+                parameter_name_1 = parameter_name + '_z_%.1f'%self.zout[i]
+                parameter_name_2 = parameter_name + '_z_%.1f'%self.zout[i+1]
+                #parameter_names_all_z[np.arange(i, parameter_names_all_z.shape[0], parameter_names.shape[0]), 0] += parameter_name_suffix_1
+                #parameter_names_all_z[np.arange(i, parameter_names_all_z.shape[0], parameter_names.shape[0]), 1] += parameter_name_suffix_2
+                if self.log_maximum_difference_prior(parameter_vector, [[parameter_name_1, parameter_name_2],],
+                                                     [maximum_differences[a],]) == -np.inf:
+                    return -np.inf
+        return 0.
+
+    def log_maximum_difference_prior(self, parameter_vector, parameter_names, maximum_differences):
+        """The natural logarithm of an un-normalised uniform prior distribution that prevents differences in parameters
+        larger than a given tolerance"""
+        for a, parameter_name_set in enumerate(parameter_names):
+            p = parameter_vector[self._get_parameter_index_number(parameter_name_set[0])]
+            q = parameter_vector[self._get_parameter_index_number(parameter_name_set[1])]
+            if np.absolute(p - q) > maximum_differences[a]:
+                return -np.inf
+        return 0.
+
     def log_convex_hull_prior(self, parameter_vector, parameter_names, convex_hull_objects=None):
-        """The natural logarithm of an un-normalised prior distribution set to a convex hull"""
+        """The natural logarithm of an un-normalised uniform prior distribution set to a convex hull"""
         for a, parameter_name_set in enumerate(parameter_names):
             parameter_index_numbers = np.zeros(len(parameter_name_set), dtype=np.int)
             if convex_hull_objects is None:
