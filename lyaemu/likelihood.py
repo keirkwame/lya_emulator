@@ -312,7 +312,7 @@ class LikelihoodClass:
     def log_convex_hull_prior(self, parameter_vector, parameter_names, convex_hull_objects=None):
         """The natural logarithm of an un-normalised prior distribution set to a convex hull"""
         for a, parameter_name_set in enumerate(parameter_names):
-            parameter_index_numbers = np.zeros(len(parameter_name_set))
+            parameter_index_numbers = np.zeros(len(parameter_name_set), dtype=np.int)
             if convex_hull_objects is None:
                 convex_hull_input = np.zeros((self.emulator.sample_params.shape[0], len(parameter_name_set)))
             for i, parameter_name in enumerate(parameter_name_set):
@@ -556,7 +556,7 @@ class LikelihoodClass:
         p0 = [cent+2*pr/16.*np.random.rand(self.ndim)-pr/16. for _ in range(nwalkers)]
         assert np.all([np.isfinite(self.log_posterior(pp, prior_functions=prior_functions, include_emulator_error=include_emulator_error)) for pp in p0])
         emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior,
-                                              kwargs={'prior_function': prior_functions, 'include_emulator_error': include_emulator_error},
+                                              kwargs={'prior_functions': prior_functions, 'include_emulator_error': include_emulator_error},
                                               threads=n_threads)
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
         #Check things are reasonable

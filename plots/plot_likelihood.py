@@ -208,7 +208,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     like = likeh.UltraLightAxionLikelihoodClass(basedir=emudir, mean_flux=mean_flux_label,
                                  measured_parameter_names_z_model=measured_parameter_names_z_model, max_z=max_z,
                                  redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s,
-                                 t0_training_value = t0_training_value, t0_parameter_limits=np.array([0.5, 1.5]),
+                                 t0_training_value = t0_training_value, t0_parameter_limits=np.array([0.75, 1.25]),
                                  emulator_class=emulator_class, emulator_json_file=emulator_json_file,
                                  use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters, data_class=data_class,
@@ -224,7 +224,8 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     parameter_names_convex_hull = [['T_0_z_5.0', 'u_0_z_5.0'], ['T_0_z_4.6', 'u_0_z_4.6'], ['T_0_z_4.2', 'u_0_z_4.2']]
     prior_function_convex_hull = lambda parameter_vector: like.log_convex_hull_prior(parameter_vector,
                                                                             parameter_names=parameter_names_convex_hull)
-    prior_functions = [prior_function, prior_function_convex_hull]
+    
+    prior_functions = [prior_function_convex_hull, prior_function]
 
     parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
     if mean_flux_label == 'free_high_z':
@@ -247,7 +248,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_emu50_data_TDR_u0_300_ULA_fit_convex_hull' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_emu50_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fix_Planck_tau_hard_prior' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -315,8 +316,8 @@ if __name__ == "__main__":
     #test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters[:-3], np.array([test_simulation_parameters[-2], 0.])))
 
     #Prior distribution
-    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
-    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14])] #, 15, 16])] #7
+    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m']) #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
+    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 5])] #0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14])] #, 15, 16])] #7
     '''prior_means[6] = 5.55
     prior_means[7] = -1.8
     prior_means[8] = 20000.
@@ -327,7 +328,8 @@ if __name__ == "__main__":
     prior_means[13] = 1.6
     prior_means[14] = 1.6'''
     #prior_means = np.array([0.93, 2.3 * 1.e-9, 0.27])
-    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 3000., 3000., 3000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
+    #prior_means = np.array([0.3,])
+    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.00001]) #0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 2000., 2000., 2000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
     prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
     #prior_function_args = None
 
