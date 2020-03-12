@@ -149,7 +149,8 @@ class LikelihoodClass:
                  redshift_dependent_parameters=False, data_class='BOSS',
                  measured_parameter_z_model=measured_parameter_power_law_model,
                  measured_parameter_z_model_parameter_limits=None, dark_matter_model=None,
-                 dark_matter_parameter_names=np.array([[None,],]), dark_matter_parameter_limits=None, use_dark_matter=False):
+                 dark_matter_parameter_names=np.array([[None,],]), dark_matter_parameter_limits=None,
+                 use_dark_matter=False, fix_parameters=None):
         """Initialise the emulator by loading the flux power spectra from the simulations."""
         self.measured_parameter_names_z_model = measured_parameter_names_z_model
         self.measured_parameter_z_model = measured_parameter_z_model
@@ -158,6 +159,8 @@ class LikelihoodClass:
         self.dark_matter_parameter_names = dark_matter_parameter_names
         self.dark_matter_parameter_limits = dark_matter_parameter_limits
         self.use_dark_matter_model = use_dark_matter
+
+        self.fix_parameters = fix_parameters
 
         #Stored covariance matrix
         self._inverse_covariance_full = None
@@ -257,6 +260,15 @@ class LikelihoodClass:
             self.param_limits = np.delete(self.param_limits, param_limits_remove_indices_nCDM, axis=0)
             self.param_limits = np.vstack((self.param_limits, self.dark_matter_parameter_limits))
 
+        if self.fix_parameters is not None:
+            for i, param_name in enumerate(self.fix_parameters.keys()):
+                param_limits_remove_indices_fix = self.emulator._get_parameter_index_number(param_name,
+                                                    use_measured_parameters=self.use_measured_parameters,
+                                                    include_mean_flux_slope=self.mf_slope,
+                                                    include_mean_flux_free=self.mf_free,
+                                                    remove_nCDM=self.use_dark_matter_model) - i
+                self.param_limits = np.delete(self.param_limits, param_limits_remove_indices_fix, axis=0)
+
         self.ndim = np.shape(self.param_limits)[0]
         assert np.shape(self.param_limits)[1] == 2
         print('Beginning to generate emulator at', str(datetime.now()))
@@ -297,6 +309,14 @@ class LikelihoodClass:
                                                                                include_mean_flux_slope=self.mf_slope,
                                                                                include_mean_flux_free=self.mf_free,
                                                                                remove_nCDM=self.use_dark_matter_model)
+
+        if self.fix_parameters is not None:
+            for parameter_name_fix in self.fix_parameters.keys():
+                if self.emulator._get_parameter_index_number(parameter_name_fix,
+                    use_measured_parameters=self.use_measured_parameters, include_mean_flux_slope=self.mf_slope,
+                    include_mean_flux_free=self.mf_free, remove_nCDM=self.use_dark_matter_model) < parameter_index_number:
+                    parameter_index_number -= 1
+
         return parameter_index_number
 
     def log_gaussian_prior(self, parameter_vector, parameter_names, means, standard_deviations):
@@ -361,7 +381,17 @@ class LikelihoodClass:
 
     def get_predicted(self, params, use_updated_training_set=False):
         """Helper function to get the predicted flux power spectrum and error, rebinned to match the desired kbins."""
+        if self.fix_parameters is not None:
+            for parameter_name in self.fix_parameters.keys():
+                params_insert_indices_fix = self.emulator._get_parameter_index_number(parameter_name,
+                                                    use_measured_parameters=self.use_measured_parameters,
+                                                    include_mean_flux_slope=self.mf_slope,
+                                                    include_mean_flux_free=self.mf_free,
+                                                    remove_nCDM=self.use_dark_matter_model)
+                params = np.insert(params, params_insert_indices_fix, self.fix_parameters[parameter_name], axis=0)
+
         nparams = params
+
         if self.mf_slope:
             # tau_0_i[z] @dtau_0 / tau_0_i[z] @[dtau_0 = 0]
             # Divided by lowest redshift case
@@ -557,6 +587,9 @@ class LikelihoodClass:
             pnames_remove_indices_nCDM = np.arange(idx, idx + 3)
             pnames = np.delete(pnames, pnames_remove_indices_nCDM, axis=0)
             pnames = np.concatenate((pnames, self.dark_matter_parameter_names))
+
+        for pname in self.fix_parameters.keys():
+            pnames = np.delete(pnames, np.where(pnames[:, 0] == pname)[0][0], axis=0)
 
         self.likelihood_parameter_names = pnames
 

@@ -135,7 +135,7 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
     samples = np.loadtxt(chainfile)
 
     #A_s hack
-    samples = samples[samples[:, 4] > 2.05e-9, :]
+    #samples = samples[samples[:, 4] > 2.05e-9, :]
 
     if parameter_indices is not None:
         samples = samples[:, parameter_indices]
@@ -199,7 +199,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                         plot_parameter_indices=None, emulator_json_file='emulator_params.json', n_threads_mcmc=1):
     """Generate some likelihood samples"""
     #omega_m hack
-    plot_parameter_indices = np.array([0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+    #plot_parameter_indices = np.array([0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
 
     #Find all subdirectories
     if test_simulation_parameters is None:
@@ -219,7 +219,9 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                                  use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
-                                 dark_matter_model=likeh.ultra_light_axion_numerical_model, dark_matter_parameter_limits=np.array([[-22., -19.],]))
+                                 dark_matter_model=likeh.ultra_light_axion_numerical_model,
+                                 dark_matter_parameter_limits=np.array([[-22., -19.],]),
+                                 fix_parameters={'omega_m': 0.3209})
 
     if prior_function == 'Gaussian':
         prior_function = lambda parameter_vector: like.log_gaussian_prior(parameter_vector,
@@ -239,17 +241,17 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
 
     prior_functions = [prior_function_convex_hull, prior_function, prior_function_maximum_jump]
 
-    parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
+    '''parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
     if mean_flux_label == 'free_high_z':
         parameter_names = np.concatenate(([r'tau0_%.2f'%redshift for redshift in like.zout], parameter_names[1:]))
     else:
-        parameter_names = np.concatenate(([r'd \tau_0',], parameter_names))
+        parameter_names = np.concatenate(([r'd \tau_0',], parameter_names))'''
     for sdir in subdirs:
         single_likelihood_plot(sdir, like, savedir=savedir, prior_function=prior_functions, plot=plot,
                                t0=t0_training_value, true_parameter_values=test_simulation_parameters,
                                data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
-                               mean_flux_label=mean_flux_label, parameter_names=parameter_names,
-                               plot_parameter_indices=plot_parameter_indices, n_threads_mcmc=n_threads_mcmc)
+                               mean_flux_label=mean_flux_label, plot_parameter_indices=plot_parameter_indices,
+                               n_threads_mcmc=n_threads_mcmc)
     return like
 
 def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=True, t0=1., true_parameter_values=None,
@@ -260,7 +262,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_emu50_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fix_Planck_tau_T0_prior_no_jump_Tu0' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_emu50_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fixed_Planck_tau_T0_prior_no_jump_Tu0' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -328,8 +330,8 @@ if __name__ == "__main__":
     #test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters[:-3], np.array([test_simulation_parameters[-2], 0.])))
 
     #Prior distribution
-    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2']) #, 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
-    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 5, 9, 10, 11])] #, 12, 13, 14])] #0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14])] #, 15, 16])] #7
+    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2']) #, 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
+    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 9, 10, 11])] #, 12, 13, 14])] #0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14])] #, 15, 16])] #7
     '''prior_means[6] = 5.55
     prior_means[7] = -1.8
     prior_means[8] = 20000.
@@ -341,9 +343,12 @@ if __name__ == "__main__":
     prior_means[11] = 1.3'''
     #prior_means = np.array([0.93, 2.3 * 1.e-9, 0.27])
     #prior_means = np.array([0.3,])
-    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.00001, 3000., 3000., 3000.]) #, 0.5, 0.5, 0.5]) #0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 2000., 2000., 2000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
+    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 3000., 3000., 3000.]) #, 0.5, 0.5, 0.5]) #0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 2000., 2000., 2000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
     prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
     #prior_function_args = None
+
+    #omega_m fixed
+    test_simulation_parameters = np.delete(test_simulation_parameters, 5, axis=0)
 
     gplike09 = run_likelihood_test(test_simulation_directory, emud, savedir=gpsavedir, prior_function='Gaussian',
                                    prior_function_args=prior_function_args,
