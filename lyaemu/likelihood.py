@@ -578,7 +578,8 @@ class LikelihoodClass:
         pr = (self.param_limits[:,1]-self.param_limits[:,0])
         #Priors are assumed to be in the middle.
         cent = (self.param_limits[:,1]+self.param_limits[:,0])/2.
-        p0 = [cent+2*pr/16.*np.random.rand(self.ndim)-pr/16. for _ in range(nwalkers)]
+        p0_concentration_factor = 16. #64.
+        p0 = [cent+2*pr/p0_concentration_factor*np.random.rand(self.ndim)-pr/p0_concentration_factor for _ in range(nwalkers)]
         assert np.all([np.isfinite(self.log_posterior(pp, prior_functions=prior_functions, include_emulator_error=include_emulator_error)) for pp in p0])
         emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior,
                                               kwargs={'prior_functions': prior_functions, 'include_emulator_error': include_emulator_error},
