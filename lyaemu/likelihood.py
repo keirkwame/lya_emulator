@@ -588,8 +588,9 @@ class LikelihoodClass:
             pnames = np.delete(pnames, pnames_remove_indices_nCDM, axis=0)
             pnames = np.concatenate((pnames, self.dark_matter_parameter_names))
 
-        for pname in self.fix_parameters.keys():
-            pnames = np.delete(pnames, np.where(pnames[:, 0] == pname)[0][0], axis=0)
+        if self.fix_parameters is not None:
+            for pname in self.fix_parameters.keys():
+                pnames = np.delete(pnames, np.where(pnames[:, 0] == pname)[0][0], axis=0)
 
         self.likelihood_parameter_names = pnames
 
