@@ -135,7 +135,7 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
     samples = np.loadtxt(chainfile)
 
     #A_s hack
-    #samples = samples[samples[:, 4] > 2.05e-9, :]
+    samples = samples[samples[:, 4] > 2.05e-9, :]
 
     if parameter_indices is not None:
         samples = samples[:, parameter_indices]
@@ -279,6 +279,10 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         if like.use_dark_matter_model:
             true_parameter_values = np.delete(true_parameter_values, np.arange(6, 9))
             true_parameter_values = np.concatenate((true_parameter_values, np.array([-21.,])))
+
+        #omega_m fixed
+        true_parameter_values = np.delete(true_parameter_values, 5, axis=0)
+
         fp_savefile = os.path.join(savedir, 'flux_power_'+sname + ".pdf")
         make_plot_flux_power_spectra(like, true_parameter_values, datadir, savefile=fp_savefile, t0=t0,
                                      data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
@@ -348,7 +352,7 @@ if __name__ == "__main__":
     #prior_function_args = None
 
     #omega_m fixed
-    test_simulation_parameters = np.delete(test_simulation_parameters, 5, axis=0)
+    #test_simulation_parameters = np.delete(test_simulation_parameters, 5, axis=0)
 
     gplike09 = run_likelihood_test(test_simulation_directory, emud, savedir=gpsavedir, prior_function='Gaussian',
                                    prior_function_args=prior_function_args,
