@@ -498,20 +498,46 @@ class LikelihoodClass:
         """Load the chain from a savefile"""
         self.flatchain = np.loadtxt(savefile)
 
-    def log_likelihood_marginalised_mean_flux(self, params, include_emu=True, integration_bounds='default', integration_options='gauss-legendre', verbose=True, integration_method='Quadrature'): #marginalised_axes=(0, 1)
-        """Evaluate (Gaussian) likelihood marginalised over mean flux parameter axes: (dtau0, tau0)"""
+    def _marginalise_mean_flux(self, params, target_function, integration_bounds='default',
+                               integration_options='gauss-legendre', verbose=True, integration_method='Quadrature'):
+        """Marginalise given function over mean flux"""
         #assert len(marginalised_axes) == 2
-        assert self.mf_slope
-        if integration_bounds == 'default':
-            integration_bounds = [list(self.param_limits[0]), list(self.param_limits[1])]
+        if self.mf_slope:
+            if integration_bounds == 'default':
+                integration_bounds = [list(self.param_limits[0]), list(self.param_limits[1])]
+            target_function_mean_flux = lambda dtau0, tau0: mmh.exp(target_function(np.concatenate(([dtau0, tau0], params))))
 
-        likelihood_function = lambda dtau0, tau0: mmh.exp(self.likelihood(np.concatenate(([dtau0, tau0], params)), include_emu=include_emu))
+        elif self.mf_free:
+            if integration_bounds == 'default':
+                integration_bounds = [list(self.param_limits[i]) for i in range(self.zout.shape[0])]
+            target_function_mean_flux = lambda *mean_flux_params: mmh.exp(target_function(np.concatenate((list(mean_flux_params),
+                                                                                                            params))))
+
         if integration_method == 'Quadrature':
-            integration_output = mmh.quad(likelihood_function, integration_bounds[0], integration_bounds[1], method=integration_options, error=True, verbose=verbose)
+            integration_output = mmh.quad(target_function_mean_flux, *integration_bounds, method=integration_options, error=True, verbose=verbose)
         elif integration_method == 'Monte-Carlo':
-            integration_output = (self._do_Monte_Carlo_marginalisation(likelihood_function, n_samples=integration_options),)
+            integration_output = (self._do_Monte_Carlo_marginalisation(target_function_mean_flux, n_samples=integration_options),)
         print(integration_output)
         return float(mmh.log(integration_output[0]))
+
+    def log_likelihood_marginalised_mean_flux(self, params, include_emu=True, integration_bounds='default',
+                                                integration_options='gauss-legendre', verbose=True,
+                                                integration_method='Quadrature'):
+        """Evaluate log (Gaussian) likelihood marginalised over mean flux"""
+        log_likelihood = lambda p: self.likelihood(p, include_emu=include_emu)
+        return self._marginalise_mean_flux(params, log_likelihood, integration_bounds=integration_bounds,
+                                           integration_options=integration_options, verbose=verbose,
+                                           integration_method=integration_method)
+
+    def log_posterior_marginalised_mean_flux(self, params, prior_functions='uniform', include_emu=True,
+                                             integration_bounds='default', integration_options='gauss-legendre',
+                                             verbose=True, integration_method='Quadrature'):
+        """Evaluate log posterior marginalised over mean flux"""
+        log_posterior = lambda p: self.log_posterior(p, prior_functions=prior_functions,
+                                                     include_emulator_error=include_emu)
+        return self._marginalise_mean_flux(params, log_posterior, integration_bounds=integration_bounds,
+                                           integration_options=integration_options, verbose=verbose,
+                                           integration_method=integration_method)
 
     def _do_Monte_Carlo_marginalisation(self, function, n_samples=6000):
         """Marginalise likelihood by Monte-Carlo integration"""
@@ -691,14 +717,25 @@ class LikelihoodClass:
         return detemu/detnoemu
 
     def _get_emulator_error_averaged_mean_flux(self, params, use_updated_training_set=False):
-        """Get the emulator error having averaged over the mean flux parameter axes: (dtau0, tau0)"""
+        """Get the emulator error having averaged over the mean flux parameter axes"""
         n_samples = 10
         emulator_error_total = 0.
-        for dtau0 in np.linspace(self.param_limits[0, 0], self.param_limits[0, 1], num=n_samples):
-            for tau0 in np.linspace(self.param_limits[1, 0], self.param_limits[1, 1], num=n_samples):
-                _,_,std = self.get_predicted(np.concatenate([[dtau0, tau0], params]),use_updated_training_set=use_updated_training_set)
-                emulator_error_total += std
-        return emulator_error_total / (n_samples ** 2)
+        emulator_error = lambda p: self.get_predicted(p, use_updated_training_set=use_updated_training_set)[2]
+
+        if self.mf_slope:
+            n_mean_flux_dims = 2
+            for dtau0 in np.linspace(self.param_limits[0, 0], self.param_limits[0, 1], num=n_samples):
+                for tau0 in np.linspace(self.param_limits[1, 0], self.param_limits[1, 1], num=n_samples):
+                    emulator_error_total += emulator_error(np.concatenate([[dtau0, tau0], params]))
+        elif self.mf_free:
+            n_mean_flux_dims = self.zout.shape[0]
+            mean_flux_samples = [np.linspace(self.param_limits[i, 0], self.param_limits[i, 1], num=n_samples)
+                                 for i in range(n_mean_flux_dims)]
+            mean_flux_params_grid = np.array(np.meshgrid(*mean_flux_samples))
+            for mean_flux_params in mean_flux_params_grid.reshape((n_mean_flux_dims, -1)).T:
+                emulator_error_total += emulator_error(np.concatenate((mean_flux_params, params)))
+
+        return emulator_error_total / (n_samples ** n_mean_flux_dims)
 
     def _get_GP_UCB_exploitation_term(self, objective_function, exploitation_weight=1.):
         """Evaluate the exploitation term of the GP-UCB acquisition function"""
@@ -728,7 +765,10 @@ class LikelihoodClass:
         exploration = self._get_GP_UCB_exploration_term(std, n_emulated_params, iteration_number=iteration_number, delta=delta, nu=nu)
         return exploitation + exploration
 
-    def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_bounds='default', integration_options='gauss-legendre', use_updated_training_set=False):
+    def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1.,
+                                                           exploitation_weight=1., integration_bounds='default',
+                                                           integration_options='gauss-legendre',
+                                                           use_updated_training_set=False):
         """Evaluate the GP-UCB acquisition function, having marginalised over mean flux parameter axes: (dtau0, tau0)"""
         if exploitation_weight is None:
             print('No exploitation term')
