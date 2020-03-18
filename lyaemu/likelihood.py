@@ -768,23 +768,39 @@ class LikelihoodClass:
     def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1.,
                                                            exploitation_weight=1., integration_bounds='default',
                                                            integration_options='gauss-legendre',
-                                                           use_updated_training_set=False):
-        """Evaluate the GP-UCB acquisition function, having marginalised over mean flux parameter axes: (dtau0, tau0)"""
+                                                           prior_functions='uniform', use_updated_training_set=False):
+        """Evaluate the GP-UCB acquisition function, having marginalised over mean flux parameters"""
         if exploitation_weight is None:
             print('No exploitation term')
             exploitation = 0.
         else:
-            exploitation = self._get_GP_UCB_exploitation_term(self.log_likelihood_marginalised_mean_flux(params, integration_bounds=integration_bounds, integration_options=integration_options), exploitation_weight=exploitation_weight)
-        exploration = self._get_GP_UCB_exploration_term(self._get_emulator_error_averaged_mean_flux(params, use_updated_training_set=use_updated_training_set), params.size, iteration_number=iteration_number, delta=delta, nu=nu)
+            exploitation = self._get_GP_UCB_exploitation_term(self.log_posterior_marginalised_mean_flux(params,
+                                                                prior_functions=prior_functions,
+                                                                integration_bounds=integration_bounds,
+                                                                integration_options=integration_options),
+                                                                exploitation_weight=exploitation_weight)
+        exploration = self._get_GP_UCB_exploration_term(self._get_emulator_error_averaged_mean_flux(params,
+                                                        use_updated_training_set=use_updated_training_set), params.size,
+                                                        iteration_number=iteration_number, delta=delta, nu=nu)
         return exploitation + exploration
 
-    def optimise_acquisition_function(self, starting_params, optimisation_bounds='default', optimisation_method=None, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1., integration_bounds='default'):
+    def optimise_acquisition_function(self, starting_params, optimisation_bounds='default', optimisation_method=None,
+                                      iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.,
+                                      integration_bounds='default', prior_functions='uniform',
+                                      use_updated_training_set=False):
         """Find parameter vector (marginalised over mean flux parameters) at maximum of (GP-UCB) acquisition function"""
         if optimisation_bounds == 'default': #Default to prior bounds
             #optimisation_bounds = [tuple(self.param_limits[2 + i]) for i in range(starting_params.shape[0])]
             optimisation_bounds = [(1.e-7, 1. - 1.e-7) for i in range(starting_params.shape[0])] #Might get away with 1.e-7
-        optimisation_function = lambda parameter_vector: -1. * self.acquisition_function_GP_UCB_marginalised_mean_flux(map_from_unit_cube(parameter_vector, self.param_limits), iteration_number=iteration_number, delta=delta, nu=nu, exploitation_weight=exploitation_weight, integration_bounds=integration_bounds)
-        return spo.minimize(optimisation_function, map_to_unit_cube(starting_params, self.param_limits), method=optimisation_method, bounds=optimisation_bounds)
+        optimisation_function = lambda parameter_vector: -1. * self.acquisition_function_GP_UCB_marginalised_mean_flux(
+                                                                map_from_unit_cube(parameter_vector, self.param_limits),
+                                                                iteration_number=iteration_number, delta=delta, nu=nu,
+                                                                exploitation_weight=exploitation_weight,
+                                                                integration_bounds=integration_bounds,
+                                                                prior_functions=prior_functions,
+                                                                use_updated_training_set=use_updated_training_set)
+        return spo.minimize(optimisation_function, map_to_unit_cube(starting_params, self.param_limits),
+                            method=optimisation_method, bounds=optimisation_bounds)
 
     def check_for_refinement(self, conf = 0.95, thresh = 1.05):
         """Crude check for refinement: check whether the likelihood is dominated by

@@ -149,7 +149,7 @@ class BoeraData(SDSSData):
         """Get the covariance matrix (full -- i.e. not the correlation matrix)"""
         if zbin is None:
             std_diag = np.sqrt(self.covar_diag)
-            covariance_matrix = self.covar * np.outer((std_diag, std_diag))
+            covariance_matrix = self.covar * np.outer(std_diag, std_diag)
             return covariance_matrix
         else:
             redshift_bin_number = np.where((self.redshifts_unique < zbin + 0.1) * (self.redshifts_unique > zbin - 0.1))[0][0]
