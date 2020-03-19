@@ -720,7 +720,8 @@ class LikelihoodClass:
         """Get the emulator error having averaged over the mean flux parameter axes"""
         n_samples = 10
         emulator_error_total = 0.
-        emulator_error = lambda p: self.get_predicted(p, use_updated_training_set=use_updated_training_set)[2]
+        emulator_error = lambda p: np.array(self.get_predicted(p,
+                                                        use_updated_training_set=use_updated_training_set)[2]).flatten()
 
         if self.mf_slope:
             n_mean_flux_dims = 2
