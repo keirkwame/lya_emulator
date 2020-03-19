@@ -559,7 +559,7 @@ class LikelihoodClass:
         npt.assert_allclose(lyman_data_redshifts, self.zout, atol=1.e-16)
         #print('SDSS redshifts are', lyman_data_redshifts)
         if zbin < 0:
-            covar_bin = self.lyman_data_instance.get_covar(lyman_data_redshifts)
+            covar_bin = self.lyman_data_instance.get_covar() #lyman_data_redshifts)
         else:
             covar_bin = self.lyman_data_instance.get_covar(lyman_data_redshifts[zbin])
         return covar_bin
@@ -793,14 +793,17 @@ class LikelihoodClass:
         if optimisation_bounds == 'default': #Default to prior bounds
             #optimisation_bounds = [tuple(self.param_limits[2 + i]) for i in range(starting_params.shape[0])]
             optimisation_bounds = [(1.e-7, 1. - 1.e-7) for i in range(starting_params.shape[0])] #Might get away with 1.e-7
+
+        param_limits = self.param_limits[self.zout.shape[0]:]
+
         optimisation_function = lambda parameter_vector: -1. * self.acquisition_function_GP_UCB_marginalised_mean_flux(
-                                                                map_from_unit_cube(parameter_vector, self.param_limits),
+                                                                map_from_unit_cube(parameter_vector, param_limits),
                                                                 iteration_number=iteration_number, delta=delta, nu=nu,
                                                                 exploitation_weight=exploitation_weight,
                                                                 integration_bounds=integration_bounds,
                                                                 prior_functions=prior_functions,
                                                                 use_updated_training_set=use_updated_training_set)
-        return spo.minimize(optimisation_function, map_to_unit_cube(starting_params, self.param_limits),
+        return spo.minimize(optimisation_function, map_to_unit_cube(starting_params, param_limits),
                             method=optimisation_method, bounds=optimisation_bounds)
 
     def check_for_refinement(self, conf = 0.95, thresh = 1.05):
