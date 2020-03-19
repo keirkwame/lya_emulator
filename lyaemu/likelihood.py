@@ -750,21 +750,27 @@ class LikelihoodClass:
         posterior_estimated_error = np.dot(data_vector_emulator_error, np.dot(self._inverse_covariance_full, data_vector_emulator_error))
         return exploration_weight * posterior_estimated_error
 
-    def acquisition_function_GP_UCB(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.):
-        """Evaluate the GP-UCB at given parameter vector. This is an acquisition function for determining where to run
-        new training simulations"""
+    def acquisition_function_GP_UCB(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.,
+                                    prior_functions='uniform', use_updated_training_set=False):
+        """Evaluate the GP-UCB acquisition function. This is an acquisition function for determining where to run new
+        training simulations"""
         assert iteration_number >= 1.
         assert 0. < delta < 1.
         if self.mf_slope:
-            n_emulated_params = params.shape[0] - 1
+            n_emulated_params = params.shape[0] - 2
+        elif self.mf_free:
+            n_emulated_params = params.shape[0] - self.zout.shape[0]
         else:
-            n_emulated_params = params.shape[0]
-        #exploitation_term = self.likelihood(params) * exploitation_weight #Log-posterior [weighted]
+            n_emulated_params = params.shape[0] - 1
 
-        exploitation = self._get_GP_UCB_exploitation_term(self.likelihood(params), exploitation_weight)
-        _,_,std = self.get_predicted(params)
-        exploration = self._get_GP_UCB_exploration_term(std, n_emulated_params, iteration_number=iteration_number, delta=delta, nu=nu)
-        return exploitation + exploration
+        exploitation = self._get_GP_UCB_exploitation_term(self.log_posterior(params, prior_functions=prior_functions),
+                                                          exploitation_weight)
+        std = np.array(self.get_predicted(params, use_updated_training_set=use_updated_training_set)[2]).flatten()
+        exploration = self._get_GP_UCB_exploration_term(std, n_emulated_params, iteration_number=iteration_number,
+                                                        delta=delta, nu=nu)
+        acquisition = exploitation + exploration
+        print('Exploitation =', exploitation, 'Exploration =', exploration, 'Acquisition =', acquisition)
+        return acquisition
 
     def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1.,
                                                            exploitation_weight=1., integration_bounds='default',
@@ -783,26 +789,37 @@ class LikelihoodClass:
         exploration = self._get_GP_UCB_exploration_term(self._get_emulator_error_averaged_mean_flux(params,
                                                         use_updated_training_set=use_updated_training_set), params.size,
                                                         iteration_number=iteration_number, delta=delta, nu=nu)
-        return exploitation + exploration
+        acquisition = exploitation + exploration
+        print('Exploitation =', exploitation, 'Exploration =', exploration, 'Acquisition =', acquisition)
+        return acquisition
 
-    def optimise_acquisition_function(self, starting_params, optimisation_bounds='default', optimisation_method=None,
-                                      iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.,
-                                      integration_bounds='default', prior_functions='uniform',
-                                      use_updated_training_set=False):
+    def optimise_acquisition_function(self, starting_params, acquisition_function='GP_UCB_marginalised',
+                                      optimisation_bounds='default', optimisation_method=None, iteration_number=1,
+                                      delta=0.5, nu=1., exploitation_weight=1., integration_bounds='default',
+                                      prior_functions='uniform', use_updated_training_set=False):
         """Find parameter vector (marginalised over mean flux parameters) at maximum of (GP-UCB) acquisition function"""
         if optimisation_bounds == 'default': #Default to prior bounds
             #optimisation_bounds = [tuple(self.param_limits[2 + i]) for i in range(starting_params.shape[0])]
             optimisation_bounds = [(1.e-7, 1. - 1.e-7) for i in range(starting_params.shape[0])] #Might get away with 1.e-7
 
-        param_limits = self.param_limits[self.zout.shape[0]:]
-
-        optimisation_function = lambda parameter_vector: -1. * self.acquisition_function_GP_UCB_marginalised_mean_flux(
+        if acquisition_function == 'GP_UCB_marginalised':
+            param_limits = self.param_limits[self.zout.shape[0]:]
+            optimisation_function = lambda parameter_vector: -1. * self.acquisition_function_GP_UCB_marginalised_mean_flux(
                                                                 map_from_unit_cube(parameter_vector, param_limits),
                                                                 iteration_number=iteration_number, delta=delta, nu=nu,
                                                                 exploitation_weight=exploitation_weight,
                                                                 integration_bounds=integration_bounds,
                                                                 prior_functions=prior_functions,
                                                                 use_updated_training_set=use_updated_training_set)
+        elif acquisition_function == 'GP_UCB':
+            param_limits = self.param_limits
+            optimisation_function = lambda parameter_vector: -1. * self.acquisition_function_GP_UCB(map_from_unit_cube(
+                parameter_vector, param_limits), iteration_number=iteration_number, delta=delta, nu=nu,
+                exploitation_weight=exploitation_weight, prior_functions=prior_functions,
+                use_updated_training_set=use_updated_training_set)
+        else:
+            raise ValueError('Acquisition function type not recognised.')
+
         return spo.minimize(optimisation_function, map_to_unit_cube(starting_params, param_limits),
                             method=optimisation_method, bounds=optimisation_bounds)
 
