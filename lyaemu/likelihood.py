@@ -769,7 +769,7 @@ class LikelihoodClass:
         exploration = self._get_GP_UCB_exploration_term(std, n_emulated_params, iteration_number=iteration_number,
                                                         delta=delta, nu=nu)
         acquisition = exploitation + exploration
-        print('Exploitation =', exploitation, 'Exploration =', exploration, 'Acquisition =', acquisition)
+        print('Parameters =', params, 'Exploitation =', exploitation, 'Exploration =', exploration, 'Acquisition =', acquisition)
         return acquisition
 
     def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1.,
@@ -790,7 +790,7 @@ class LikelihoodClass:
                                                         use_updated_training_set=use_updated_training_set), params.size,
                                                         iteration_number=iteration_number, delta=delta, nu=nu)
         acquisition = exploitation + exploration
-        print('Exploitation =', exploitation, 'Exploration =', exploration, 'Acquisition =', acquisition)
+        print('Parameters =', params, 'Exploitation =', exploitation, 'Exploration =', exploration, 'Acquisition =', acquisition)
         return acquisition
 
     def optimise_acquisition_function(self, starting_params, acquisition_function='GP_UCB_marginalised',
