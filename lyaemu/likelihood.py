@@ -740,6 +740,8 @@ class LikelihoodClass:
 
     def _get_GP_UCB_exploitation_term(self, objective_function, exploitation_weight=1.):
         """Evaluate the exploitation term of the GP-UCB acquisition function"""
+        if objective_function == -np.inf:
+            objective_function = -1.e+99
         return objective_function * exploitation_weight
 
     def _get_GP_UCB_exploration_term(self, data_vector_emulator_error, n_emulated_params, iteration_number=1, delta=0.5, nu=1.):
