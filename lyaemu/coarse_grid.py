@@ -8,6 +8,7 @@ import string
 import math
 import json
 import numpy as np
+import scipy.interpolate as spi
 import h5py
 from .SimulationRunner.SimulationRunner import lyasimulation
 from .SimulationRunner.SimulationRunner import clusters
@@ -300,7 +301,7 @@ class Emulator:
             prior_points = self.sample_params[ii]
         return latin_hypercube.get_hypercube_samples(limits, nsamples,prior_points=prior_points, fill_in=fill_in)
 
-    def gen_simulations(self, nsamples, npart=256., box=40, samples=None, fill_in=False):
+    def gen_simulations(self, nsamples, npart=256., box=40, samples=None, fill_in=False, add_optimisation=False):
         """Initialise the emulator by generating simulations for various parameters."""
         n_existing_samples = 0
         if nsamples is not None:
@@ -316,7 +317,11 @@ class Emulator:
             else:
                 self.sample_params = np.vstack([self.sample_params, samples])
         else:
-            self.sample_params = samples
+            if not add_optimisation:
+                self.sample_params = samples
+            else:
+                n_existing_samples = self.sample_params.shape[0]
+                self.sample_params = np.vstack([self.sample_params, samples])
 
         if type(npart) is not np.ndarray:
             npart = np.array([npart,] * samples.shape[0])
@@ -494,6 +499,38 @@ class Emulator:
                                    singleGP=emuobj, k_max_emulated=k_max_emulated_h_Mpc,
                                    redshift_sensitivity=redshift_sensitivity)
         return gp
+
+    def _train_parameter_predictor(self, parameter_names):
+        """Train interpolator/emulator for parameter prediction [y = f(vec{x})]."""
+        training_data = [None] * (parameter_names.shape[0])
+        self._training_parameter_limts = np.zeros((parameter_names.shape[0] - 1, 2))
+
+        for i, parameter_name in enumerate(parameter_names):
+            if parameter_name in self.measured_param_names:
+                parameter_index = self.measured_param_names[parameter_name]
+                training_data_unnorm = self.measured_sample_params[:, parameter_index]
+                parameter_limits = self.measured_param_limits[parameter_index]
+            elif parameter_name in self.param_names:
+                parameter_index = self.param_names[parameter_name]
+                training_data_unnorm = self.sample_params[:, parameter_index]
+                parameter_limits = self.param_limits[parameter_index]
+            else:
+                raise ValueError('Parameter name not recognised.')
+
+            if i < (parameter_names.shape[0] - 1):
+                training_data[i] = latin_hypercube.map_to_unit_cube_list(training_data_unnorm, parameter_limits)
+                self._training_parameter_limts[i, :] = parameter_limits
+            else:
+                training_data[i] = training_data_unnorm
+
+        predictor = spi.Rbf(*training_data)
+        return predictor
+
+    def predict_parameters(self, parameters, training_parameter_names):
+        """Predict parameters given other parameters."""
+        predictor = self._train_parameter_predictor(training_parameter_names)
+        parameters_norm = latin_hypercube.map_to_unit_cube(parameters, self._training_parameter_limts)
+        return predictor(*parameters_norm)
 
 
 class KnotEmulator(Emulator):

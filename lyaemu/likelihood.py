@@ -137,7 +137,7 @@ def ultra_light_axion_numerical_model(ultra_light_axion_parameters, nCDM_paramet
 def ultra_light_axion_numerical_model_linear_mass(ultra_light_axion_parameters, nCDM_parameter_limits, h=0.6686):
     """Model to map ultra-light axion parameters to nCDM parameters using a fit to a numerical Einstein-Boltzmann
     solver. Valid for 0 < ULA mass [eV] < 1.e-22"""
-    return ultra_light_axion_numerical_model()
+    pass
 
 
 class LikelihoodClass:
