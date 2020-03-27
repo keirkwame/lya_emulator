@@ -63,12 +63,12 @@ class MultiBinGP:
         return means, std
 
     def add_to_training_set(self, new_params):
-        """Add to training set and update emulator (without re-training) -- for all redshifts"""
+        """Add to training set and update emulator (without re-training) -- for all redshifts. Should not include mean flux."""
         for i in range(self.nz): #Loop over redshifts
             if self.redshift_sensitivity is None:
                 params_added = cp.deepcopy(new_params)
             else:
-                params_added = new_params[:, self.redshift_sensitivity[i]]
+                params_added = new_params[:, self.redshift_sensitivity[i, 1:]]
             self.gps[i].add_to_training_set(params_added)
 
 class SkLearnGP:
@@ -144,7 +144,7 @@ class SkLearnGP:
             self.gp_updated = cp.deepcopy(self.gp)
         mean_flux_training_samples = np.unique(self.gp.X[:, 0]).reshape(-1, 1)
         mean_flux_samples_expand = np.repeat(mean_flux_training_samples, new_params.shape[0], axis=0)
-        new_params_unit_cube = map_to_unit_cube_list(new_params, self.param_limits[-1 * new_params.shape[0]:])
+        new_params_unit_cube = map_to_unit_cube_list(new_params, self.param_limits[-1 * new_params.shape[1]:])
         new_params_unit_cube_expand = np.tile(new_params_unit_cube, (mean_flux_training_samples.shape[0], 1))
         new_params_unit_cube_mean_flux = np.hstack((mean_flux_samples_expand, new_params_unit_cube_expand))
         #new_params_mean_flux = map_from_unit_cube_list(new_params_unit_cube_mean_flux, self.param_limits)

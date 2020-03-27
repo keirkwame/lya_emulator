@@ -446,7 +446,7 @@ class Emulator:
         if use_measured_parameters:
             if dpvals is not None:
                 index_adjustment = 1
-                measured_parameters = np.repeat(self.measured_sample_params, dpvals.shape[0], axis=0)
+                measured_parameters = np.tile(self.measured_sample_params, (dpvals.shape[0], 1)) #, axis=0) #repeat
             else:
                 index_adjustment = 0
                 measured_parameters = self.measured_sample_params
