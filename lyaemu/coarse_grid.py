@@ -518,7 +518,7 @@ class Emulator:
                 raise ValueError('Parameter name not recognised.')
 
             if i < (parameter_names.shape[0] - 1):
-                training_data[i] = latin_hypercube.map_to_unit_cube_list(training_data_unnorm, parameter_limits)
+                training_data[i] = latin_hypercube.map_to_unit_cube_list(np.split(training_data_unnorm, training_data_unnorm.size), parameter_limits.reshape(1, -1))
                 self._training_parameter_limts[i, :] = parameter_limits
             else:
                 training_data[i] = training_data_unnorm
