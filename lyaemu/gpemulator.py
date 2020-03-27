@@ -65,7 +65,11 @@ class MultiBinGP:
     def add_to_training_set(self, new_params):
         """Add to training set and update emulator (without re-training) -- for all redshifts"""
         for i in range(self.nz): #Loop over redshifts
-            self.gps[i].add_to_training_set(new_params)
+            if self.redshift_sensitivity is None:
+                params_added = cp.deepcopy(new_params)
+            else:
+                params_added = new_params[:, self.redshift_sensitivity[i]]
+            self.gps[i].add_to_training_set(params_added)
 
 class SkLearnGP:
     """An emulator wrapping a GP code.

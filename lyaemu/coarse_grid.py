@@ -301,7 +301,8 @@ class Emulator:
             prior_points = self.sample_params[ii]
         return latin_hypercube.get_hypercube_samples(limits, nsamples,prior_points=prior_points, fill_in=fill_in)
 
-    def gen_simulations(self, nsamples, npart=256., box=40, samples=None, fill_in=False, add_optimisation=False):
+    def gen_simulations(self, nsamples, npart=256., box=40, samples=None, fill_in=False, add_optimisation=False,
+                        dumpfile='emulator_params.json'):
         """Initialise the emulator by generating simulations for various parameters."""
         n_existing_samples = 0
         if nsamples is not None:
@@ -331,7 +332,7 @@ class Emulator:
         #Generate ICs for each set of parameter inputs
         for i, ev in enumerate(samples):
             self._do_ic_generation(ev, npart[i], box[i], extra_flag=n_existing_samples+i+1)
-        self.dump()
+        self.dump(dumpfile=dumpfile)
 
     def _do_ic_generation(self,ev,npart,box, extra_flag=0):
         """Do the actual IC generation."""
