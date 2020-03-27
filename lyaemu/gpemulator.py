@@ -62,14 +62,14 @@ class MultiBinGP:
             std[:,i*self.nk:(i+1)*self.nk] = s
         return means, std
 
-    def add_to_training_set(self, new_params):
+    def add_to_training_set(self, new_params, mean_flux_samples=np.linspace(0., 1., num=10)):
         """Add to training set and update emulator (without re-training) -- for all redshifts. Should not include mean flux."""
         for i in range(self.nz): #Loop over redshifts
             if self.redshift_sensitivity is None:
                 params_added = cp.deepcopy(new_params)
             else:
                 params_added = new_params[:, self.redshift_sensitivity[i, 1:]]
-            self.gps[i].add_to_training_set(params_added)
+            self.gps[i].add_to_training_set(params_added, mean_flux_samples=mean_flux_samples)
 
 class SkLearnGP:
     """An emulator wrapping a GP code.
@@ -138,14 +138,14 @@ class SkLearnGP:
                 print("Bad interpolation at:", np.where(worst > np.max(worst)*0.9), np.max(worst))
                 assert np.max(worst) < self.intol
 
-    def add_to_training_set(self, new_params):
+    def add_to_training_set(self, new_params, mean_flux_samples):
         """Add to training set and update emulator (without re-training)"""
         if self.gp_updated is None: #First time training set is updated
             self.gp_updated = cp.deepcopy(self.gp)
-        mean_flux_training_samples = np.unique(self.gp.X[:, 0]).reshape(-1, 1)
-        mean_flux_samples_expand = np.repeat(mean_flux_training_samples, new_params.shape[0], axis=0)
+        #mean_flux_training_samples = np.unique(self.gp.X[:, 0]).reshape(-1, 1)
+        mean_flux_samples_expand = np.repeat(mean_flux_samples.reshape(-1, 1), new_params.shape[0], axis=0)
         new_params_unit_cube = map_to_unit_cube_list(new_params, self.param_limits[-1 * new_params.shape[1]:])
-        new_params_unit_cube_expand = np.tile(new_params_unit_cube, (mean_flux_training_samples.shape[0], 1))
+        new_params_unit_cube_expand = np.tile(new_params_unit_cube, (mean_flux_samples.shape[0], 1))
         new_params_unit_cube_mean_flux = np.hstack((mean_flux_samples_expand, new_params_unit_cube_expand))
         #new_params_mean_flux = map_from_unit_cube_list(new_params_unit_cube_mean_flux, self.param_limits)
         gp_updated_X_new = np.vstack((self.gp_updated.X, new_params_unit_cube_mean_flux))
