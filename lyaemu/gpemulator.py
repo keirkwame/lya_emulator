@@ -62,7 +62,7 @@ class MultiBinGP:
             std[:,i*self.nk:(i+1)*self.nk] = s
         return means, std
 
-    def add_to_training_set(self, new_params, mean_flux_samples=np.linspace(0., 1., num=10)):
+    def add_to_training_set(self, new_params, mean_flux_samples=np.linspace(0., 1., num=10, endpoint=False)):
         """Add to training set and update emulator (without re-training) -- for all redshifts. Should not include mean flux."""
         for i in range(self.nz): #Loop over redshifts
             if self.redshift_sensitivity is None:
