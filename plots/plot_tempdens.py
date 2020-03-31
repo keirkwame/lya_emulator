@@ -13,19 +13,23 @@ import lyaemu.tempdens as td
 if __name__ == "__main__":
     emulator_base_directory = sys.argv[1] #'/share/data2/keir/Simulations'
     emulator_name = sys.argv[2] #'nCDM_test_emulator'
+    load_file = sys.argv[3]
+    dump_file = sys.argv[4]
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name))
-    emulator_instance.load()
+    emulator_instance.load(dumpfile=load_file)
+    optimisation_index = sys.argv[5] #0
 
     snapshot_numbers = np.array([7, 8, 10]) #- 4
     redshifts = emulator_instance.redshifts
 
-    savefile = os.path.join(emulator_base_directory, emulator_name, 'temperature_density_%s.pdf'%emulator_name) #test_emulator.pdf')
+    savefile = os.path.join(emulator_base_directory, emulator_name, 'temperature_density_%s_%s.pdf'
+                            %(emulator_name, optimisation_index)) #test_emulator.pdf')
     figure, axes = plt.subplots(nrows=2, ncols=1)
 
-    T0 = np.zeros((emulator_instance.get_parameters().shape[0], snapshot_numbers.shape[0]))
+    T0 = np.zeros((emulator_instance.get_parameters()[optimisation_index:].shape[0], snapshot_numbers.shape[0]))
     gamma = np.zeros_like(T0)
 
-    for i, input_parameters in enumerate(emulator_instance.get_parameters()):
+    for i, input_parameters in enumerate(emulator_instance.get_parameters()[optimisation_index:]):
         print(input_parameters)
         simulation_directory = emulator_instance.get_outdir(input_parameters, extra_flag=i+1)
         for j, snapshot_number in enumerate(snapshot_numbers):
@@ -43,7 +47,8 @@ if __name__ == "__main__":
     plt.savefig(savefile)
 
     #Scatter plot T0, gamma
-    savefile = os.path.join(emulator_base_directory, emulator_name, 'temperature_density_scatter_%s.pdf'%emulator_name) #test_emulator.pdf')
+    savefile = os.path.join(emulator_base_directory, emulator_name, 'temperature_density_scatter_%s_%s.pdf'
+                            %(emulator_name, optimisation_index)) #test_emulator.pdf')
     figure, axes = plt.subplots(nrows=redshifts.size, ncols=1)
     for i, redshift in enumerate(redshifts):
         axes[i].scatter(T0[:, i], gamma[:, i], label=r'$z = %.2f$'%redshift)
@@ -56,4 +61,6 @@ if __name__ == "__main__":
     measured_parameter_names = np.array(['T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
     measured_sample_parameters = np.concatenate((T0, gamma), axis=1)
     remove_simulation_parameters = np.array([2, 3])
-    emulator_instance.dump_measured_parameters(measured_parameter_names, measured_sample_parameters, remove_simulation_parameters)
+    emulator_instance.dump_measured_parameters(measured_parameter_names, measured_sample_parameters,
+                                               remove_simulation_parameters, dumpfile=dump_file,
+                                               add_optimisation=optimisation_index)
