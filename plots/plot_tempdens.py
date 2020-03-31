@@ -17,7 +17,7 @@ if __name__ == "__main__":
     dump_file = sys.argv[4]
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name))
     emulator_instance.load(dumpfile=load_file)
-    optimisation_index = sys.argv[5] #0
+    optimisation_index = int(sys.argv[5]) #0
 
     snapshot_numbers = np.array([7, 8, 10]) #- 4
     redshifts = emulator_instance.redshifts
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     for i, input_parameters in enumerate(emulator_instance.get_parameters()[optimisation_index:]):
         print(input_parameters)
-        simulation_directory = emulator_instance.get_outdir(input_parameters, extra_flag=i+1)
+        simulation_directory = emulator_instance.get_outdir(input_parameters, extra_flag=optimisation_index+i+1)
         for j, snapshot_number in enumerate(snapshot_numbers):
             T0[i, j], gamma[i, j] = td.fit_td_rel_plot(snapshot_number, simulation_directory, plot=False)
         axes[0].plot(redshifts, T0[i], label=i) #input_parameters)
