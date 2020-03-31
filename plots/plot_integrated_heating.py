@@ -15,23 +15,28 @@ import lyaemu.integrated_heating as ih
 if __name__ == "__main__":
     emulator_base_directory = sys.argv[1] #'/share/data2/keir/Simulations'
     emulator_name = sys.argv[2] #'nCDM_test_emulator'
+    load_file = sys.argv[3]
+    dump_file = sys.argv[4]
     emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name))
-    emulator_instance.load()
+    emulator_instance.load(dumpfile=load_file)
+    optimisation_index = int(sys.argv[5])  # 0
 
     z_ranges = [[6., 13.], [4.6, 13.], [4.2, 12.]]
     helium_mass_fraction = 0.2453
     z_rei_HeII = 3.
     omega_b = emulator_instance.omegab
 
-    integrated_heating = np.zeros((emulator_instance.get_parameters().shape[0], emulator_instance.redshifts.shape[0]))
-    for i, input_parameters in enumerate(emulator_instance.get_parameters()):
-        simulation_directory = emulator_instance.get_outdir(input_parameters, extra_flag=i+1)[:-7]
+    integrated_heating = np.zeros((emulator_instance.get_parameters()[optimisation_index:].shape[0],
+                                   emulator_instance.redshifts.shape[0]))
+    for i, input_parameters in enumerate(emulator_instance.get_parameters()[optimisation_index:]):
+        simulation_directory = emulator_instance.get_outdir(input_parameters, extra_flag=optimisation_index+i+1)[:-7]
         TREECOOL_path = os.path.join(simulation_directory, 'TREECOOL')
         TREECOOL = np.loadtxt(TREECOOL_path)
         heat_amp = input_parameters[emulator_instance.param_names['heat_amp']]
         omega_m = input_parameters[emulator_instance.param_names['omega_m']]
         hubble = np.sqrt(emulator_instance.omegamh2 / omega_m)
-        T0 = emulator_instance.get_measured_parameters()[i, emulator_instance.measured_param_names['T_0_z_5.0']] * u.K
+        T0 = emulator_instance.get_measured_parameters()[optimisation_index+i,
+                                                            emulator_instance.measured_param_names['T_0_z_5.0']] * u.K
 
         for j, redshift in enumerate(emulator_instance.redshifts):
             TREECOOL_single_z = cp.deepcopy(TREECOOL)
@@ -39,11 +44,15 @@ if __name__ == "__main__":
                                             hubble, omega_m, omega_b, helium_mass_fraction, T0, z_rei_HeII=z_rei_HeII).value
 
     #Scatter plot integrated heating
-    savefile = os.path.join(emulator_base_directory, emulator_name, 'integrated_heating_scatter_%s.pdf' % emulator_name)
+    savefile = os.path.join(emulator_base_directory, emulator_name, 'integrated_heating_scatter_%s_%s.pdf'
+                            % (emulator_name, optimisation_index))
     figure, axes = plt.subplots(nrows=emulator_instance.redshifts.shape[0], ncols=2)
     for i, redshift in enumerate(emulator_instance.redshifts):
-        axes[i, 0].scatter(integrated_heating[:, i], emulator_instance.get_measured_parameters()[:, i], label=r'$z = %.2f$'%redshift)
-        axes[i, 1].scatter(integrated_heating[:, i], emulator_instance.get_measured_parameters()[:, i+3])
+        axes[i, 0].scatter(integrated_heating[:, i],
+                           emulator_instance.get_measured_parameters()[optimisation_index:, i],
+                           label=r'$z = %.2f$'%redshift)
+        axes[i, 1].scatter(integrated_heating[:, i],
+                           emulator_instance.get_measured_parameters()[optimisation_index:, i+3])
         axes[i, 0].legend(frameon=True, fontsize=7.)
         axes[i, 0].set_ylabel(r'$T_0 (z)$ [K]')
         axes[i, 1].set_ylabel(r'$\gamma (z)$')
@@ -63,4 +72,5 @@ if __name__ == "__main__":
     redshift_sensitivity[2, np.array([9, 12, 15])] = True
 
     emulator_instance.dump_measured_parameters(measured_parameter_names, integrated_heating,
-                                               remove_simulation_parameters, redshift_sensitivity=redshift_sensitivity)
+                                               remove_simulation_parameters, redshift_sensitivity=redshift_sensitivity,
+                                               dumpfile=dump_file, add_optimisation=optimisation_index)
