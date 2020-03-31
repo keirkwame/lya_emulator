@@ -220,6 +220,11 @@ class Emulator:
 
         self.dump(dumpfile=dumpfile)
 
+    def dump_optimisation_simulations(self, sample_params, dumpfile='emulator_params.json'):
+        """Dump optimisation simulation parameters to a textfile."""
+        self.sample_params = np.concatenate((self.sample_params, sample_params), axis=0)
+        self.dump(dumpfile=dumpfile)
+
     def dump(self, dumpfile="emulator_params.json"):
         """Dump parameters to a textfile."""
         #Backup existing parameter file
