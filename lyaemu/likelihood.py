@@ -18,6 +18,12 @@ from . import mean_flux as mflux
 from .latin_hypercube import map_to_unit_cube, map_from_unit_cube
 from .quadratic_emulator import QuadraticEmulator
 
+#Define global variables
+alpha_model_parameters = np.array([5.54530089e-03, 3.31718138e-01, 6.16422310e+00, 3.31219369e+01])
+beta_model_parameters = np.array([-0.02576259, -0.82153762, -0.45096863])
+gamma_model_parameters = np.array([-1.29071567e-02, -7.52873377e-01, -1.47076333e+01, -9.60752318e+01])
+h_planck = 0.6686
+
 def _siIIIcorr(kf):
     """For precomputing the shape of the SiIII correlation"""
     #Compute bin boundaries in logspace.
@@ -113,14 +119,25 @@ def ultra_light_axion_gamma_model(log_mass, b, a, m, c):
     """Model for gamma as a function of log ULA mass"""
     return -1. * (10. ** ((b * (log_mass ** 3)) + (a * (log_mass ** 2)) + (m * log_mass) + c))
 
+def ultra_light_axion_numerical_model_inverse(nCDM_parameters, h=0.6686):
+    """Inverse of numerical ultra-light axion model. Valid for -22 < log ULA mass [eV] < -18"""
+    nCDM_corrected = nCDM_parameters
+    nCDM_corrected[0] = np.log10(nCDM_corrected[0] * h_planck / h)
+    nCDM_corrected[2] = np.log10(-1. * nCDM_corrected[2])
+    log_mass = [None] * nCDM_parameters.shape[0]
+
+    for i, model_parameters in enumerate([alpha_model_parameters, beta_model_parameters, gamma_model_parameters]):
+        model_coefficients = cp.deepcopy(model_parameters)
+        model_coefficients[-1] -= nCDM_corrected[i]
+        model_roots = np.roots(model_coefficients)
+        log_mass[i] = model_roots[(model_roots <= -18.) * (model_roots >= -22.)][0].real
+        assert log_mass[i] == log_mass[0]
+
+    return log_mass[0]
+
 def ultra_light_axion_numerical_model(ultra_light_axion_parameters, nCDM_parameter_limits, h=0.6686):
     """Model to map ultra-light axion parameters to nCDM parameters using a fit to a numerical Einstein-Boltzmann
     solver. Valid for -22 < log ULA mass [eV] < -18"""
-    alpha_model_parameters = np.array([5.54530089e-03, 3.31718138e-01, 6.16422310e+00, 3.31219369e+01])
-    beta_model_parameters = np.array([-0.02576259, -0.82153762, -0.45096863])
-    gamma_model_parameters = np.array([-1.29071567e-02, -7.52873377e-01, -1.47076333e+01, -9.60752318e+01])
-    h_planck = 0.6686
-
     log_mass = ultra_light_axion_parameters[0]
     alpha = ultra_light_axion_alpha_model(log_mass, *alpha_model_parameters)
     beta = ultra_light_axion_beta_model(log_mass, *beta_model_parameters)
