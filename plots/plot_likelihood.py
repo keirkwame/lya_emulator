@@ -7,6 +7,7 @@ import glob
 import math as mh
 from datetime import datetime
 import numpy as np
+import multiprocessing as mg
 import lyaemu.distinct_colours_py3 as dc
 import lyaemu.lyman_data as lyman_data
 import lyaemu.likelihood as likeh
@@ -17,6 +18,56 @@ matplotlib.use('PDF')
 import matplotlib.pyplot as plt
 import getdist as gd
 import getdist.plots as gdp
+
+### A helper for letting the forked processes use data without pickling.
+_data_name_cands = (
+    '_data_' + ''.join(random.sample(string.ascii_lowercase, 10))
+    for _ in itertools.count())
+class ForkedData(object):
+    '''
+    Class used to pass data to child processes in multiprocessing without
+    really pickling/unpickling it. Only works on POSIX.
+    Intended use:
+        - The master process makes the data somehow, and does e.g.
+          data = ForkedData(the_value)
+        - The master makes sure to keep a reference to the ForkedData object
+          until the children are all done with it, since the global reference
+          is deleted to avoid memory leaks when the ForkedData object dies.
+        - Master process constructs a multiprocessing.Pool *after*
+          the ForkedData construction, so that the forked processes
+          inherit the new global.
+        - Master calls e.g. pool.map with data as an argument.
+        - Child gets the real value through data.value, and uses it read-only.
+    '''
+    # TODO: does data really need to be used read-only? don't think so...
+    # TODO: more flexible garbage collection options
+    def __init__(self, val):
+        g = globals()
+        self.name = next(n for n in _data_name_cands if n not in g)
+        g[self.name] = val
+        self.master_pid = os.getpid()
+    def __getstate__(self):
+        if os.name != 'posix':
+            raise RuntimeError("ForkedData only works on OSes with fork()")
+        return self.__dict__
+    @property
+    def value(self):
+        return globals()[self.name]
+    def __del__(self):
+        if os.getpid() == self.master_pid:
+            del globals()[self.name]
+class NoDaemonProcess(mg.Process):
+    # make 'daemon' attribute always return False
+    def _get_daemon(self):
+        return False
+    def _set_daemon(self, value):
+        pass
+    daemon = property(_get_daemon, _set_daemon)
+# We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
+# because the latter is only a wrapper function, not a proper class.
+class MyPool(mg.pool.Pool):
+    Process = NoDaemonProcess
+
 
 def get_k_z(likelihood_instance):
     """Get k and z bins"""
