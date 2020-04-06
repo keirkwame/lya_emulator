@@ -640,7 +640,7 @@ class LikelihoodClass:
         self.likelihood_parameter_names = pnames
 
     def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, prior_functions='uniform',
-                    while_loop=True, include_emulator_error=True, maxsample=20, n_threads=1):
+                    while_loop=True, include_emulator_error=True, maxsample=20, n_threads=1, pool=None):
         """Initialise and run emcee."""
         #Load the data directory
         if datadir == 'use_real_data':
@@ -660,9 +660,9 @@ class LikelihoodClass:
         p0_concentration_factor = 32. #64.
         p0 = [cent+2*pr/p0_concentration_factor*np.random.rand(self.ndim)-pr/p0_concentration_factor for _ in range(nwalkers)]
         assert np.all([np.isfinite(self.log_posterior(pp, prior_functions=prior_functions, include_emulator_error=include_emulator_error)) for pp in p0])
-        emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior,
+        emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior, pool=pool,
                                               kwargs={'prior_functions': prior_functions, 'include_emulator_error': include_emulator_error},
-                                              threads=n_threads)
+                                             ) #threads=n_threads)
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
         #Check things are reasonable
         print('The fraction of proposed steps that were accepted =', emcee_sampler.acceptance_fraction)
