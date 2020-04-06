@@ -131,7 +131,9 @@ def ultra_light_axion_numerical_model_inverse(nCDM_parameters, h=0.6686):
         model_coefficients[-1] -= nCDM_corrected[i]
         model_roots = np.roots(model_coefficients)
         log_mass[i] = model_roots[(model_roots <= -18.) * (model_roots >= -22.)][0].real
-        assert log_mass[i] == log_mass[0]
+        print('log mass =', log_mass[i])
+        if i == 1:
+            assert ((log_mass[i] - log_mass[0]) / log_mass[0]) <= 1.e-10
 
     return log_mass[0]
 

@@ -313,7 +313,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_emu50_data_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tu0' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_batch2_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tu0_para' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -321,7 +321,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         true_parameter_values = get_simulation_parameters_s8(sdir, t0=t0)
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
-        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=15000, nsamples=15000,
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
                          prior_functions=prior_function, while_loop=False, include_emulator_error=True,
                          n_threads=n_threads_mcmc)
         print('Done sampling likelihood at', str(datetime.now()))
@@ -410,7 +410,7 @@ if __name__ == "__main__":
                                    pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value=t0_test_value,
                                    emulator_class='nCDM', use_measured_parameters=use_measured_parameters,
                                    redshift_dependent_parameters=redshift_dependent_parameters, data_class='Boera',
-                                   emulator_json_file=parameters_json, n_threads_mcmc=1) #_measured_TDR
+                                   emulator_json_file=parameters_json, n_threads_mcmc=40) #_measured_TDR
     #, plot_parameter_indices=np.array([7, 8, 9])) #0.9)
 
 #     gplike = run_likelihood_test(testdirs, emud, savedir=gpsavedir, plot=True)
