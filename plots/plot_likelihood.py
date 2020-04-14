@@ -4,6 +4,9 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import sys
 import re
 import glob
+import random
+import string
+import itertools
 import math as mh
 from datetime import datetime
 import numpy as np
@@ -313,7 +316,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_batch2_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tu0_para2' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_batch3_data_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tu0' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -321,8 +324,8 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         true_parameter_values = get_simulation_parameters_s8(sdir, t0=t0)
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
-        pool_instance = MyPool()
-        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
+        pool_instance = None #MyPool()
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=3000, nsamples=15000,
                          prior_functions=prior_function, while_loop=False, include_emulator_error=True,
                          pool=pool_instance)
         #n_threads=n_threads_mcmc)

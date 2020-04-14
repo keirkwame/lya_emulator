@@ -12,16 +12,16 @@ import lyaemu.mean_flux as mef
 if __name__ == "__main__":
     emulator_base_directory = ['/share/data2/keir/Simulations',] #'/share/data2/keir/Simulations']
     emulator_names = ['nCDM_emulator_512',] #'nCDM_convergence_896', 'nCDM_convergence_768_WDM', 'nCDM_convergence_512_256']
-    simulation_indices = [np.arange(55),] #np.arange(1), np.arange(1)] #np.arange(2)]
+    simulation_indices = [np.arange(64),] #np.arange(1), np.arange(1)] #np.arange(2)]
     interpolate_to_same_k = False
 
     default_emulator_index = 0
-    default_simulation_index = 0
+    default_simulation_index = 60
     n_simulations = np.sum(
         [np.size(simulation_indices_single_emulator) for simulation_indices_single_emulator in simulation_indices])
 
-    savefile = os.path.join(emulator_base_directory[0], emulator_names[0], 'flux_power_batch1.pdf')
-    figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 55. / 10.))
+    savefile = os.path.join(emulator_base_directory[0], emulator_names[0], 'flux_power_batch3.pdf')
+    figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 64. / 10.))
 
     plot_start_index = 0
     input_parameters_all = []
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     flux_powers = []
     for a, emulator_name in enumerate(emulator_names):
         emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory[a], emulator_name), mf=mef.MeanFluxFactorHighRedshift(dense_samples=10)) #ConstMeanFluxHighRedshift(value=1.))
-        emulator_instance.load(dumpfile='emulator_params_batch1_TDR_u0.json')
+        emulator_instance.load(dumpfile='emulator_params_batch3.json')
 
         input_parameters_all_single_emulator, k_parallel_single_emulator, flux_powers_single_emulator = emulator_instance.get_flux_vectors(
             redshifts=emulator_instance.redshifts, pixel_resolution_km_s=1., fix_mean_flux_samples=False)

@@ -1,5 +1,8 @@
 """Module for computing the likelihood function for the forest emulator."""
 import math
+import random
+import string
+import itertools
 from datetime import datetime
 import mpmath as mmh
 import copy as cp
@@ -657,8 +660,18 @@ class LikelihoodClass:
         pr = (self.param_limits[:,1]-self.param_limits[:,0])
         #Priors are assumed to be in the middle.
         cent = (self.param_limits[:,1]+self.param_limits[:,0])/2.
+
+        #Quicker ULA mass convergence
+        cent[-1] = -19.1
+
         p0_concentration_factor = 32. #64.
         p0 = [cent+2*pr/p0_concentration_factor*np.random.rand(self.ndim)-pr/p0_concentration_factor for _ in range(nwalkers)]
+
+        #Quicker ULA mass convergence
+        for i, pp in enumerate(p0):
+            if pp[-1] > cent[-1]:
+                p0[i][-1] = cent[-1]
+
         assert np.all([np.isfinite(self.log_posterior(pp, prior_functions=prior_functions, include_emulator_error=include_emulator_error)) for pp in p0])
         emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior, pool=pool,
                                               kwargs={'prior_functions': prior_functions, 'include_emulator_error': include_emulator_error},
