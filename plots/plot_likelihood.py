@@ -270,7 +270,9 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                                  t0_training_value = t0_training_value, t0_parameter_limits=np.array([0.75, 1.25]),
                                  emulator_class=emulator_class, emulator_json_file=emulator_json_file,
                                  use_measured_parameters=use_measured_parameters,
-                                 redshift_dependent_parameters=redshift_dependent_parameters, data_class=data_class,
+                                 redshift_dependent_parameters=redshift_dependent_parameters,
+                                 flux_power_savefile='batch4_optimise2_emulator_flux_vectors.hdf5',
+                                 flux_power_parallel=True, flux_power_n_process=75, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
                                  dark_matter_model=likeh.ultra_light_axion_numerical_model,
                                  dark_matter_parameter_limits=np.array([[-22., -19.],]),
@@ -316,7 +318,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_batch4_optimise1_data_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tu0' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_batch4_optimise2_data_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tu0' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")

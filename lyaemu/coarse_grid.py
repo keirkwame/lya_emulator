@@ -406,7 +406,7 @@ class Emulator:
         powerspectra = myspec.get_snapshot_list(base=di)
         return powerspectra
 
-    def get_emulator(self, max_z=4.2, use_measured_parameters=False, redshift_dependent_parameters=False):
+    def get_emulator(self, max_z=4.2, use_measured_parameters=False, redshift_dependent_parameters=False, **kwargs):
         """ Build an emulator for the desired k_F and our simulations.
             kf gives the desired k bins in s/km.
             Mean flux rescaling is handled (if mean_flux=True) as follows:
@@ -415,7 +415,7 @@ class Emulator:
             3.
         """
         gp = self._get_custom_emulator(emuobj=None, max_z=max_z, use_measured_parameters=use_measured_parameters,
-                                       redshift_dependent_parameters=redshift_dependent_parameters)
+                                       redshift_dependent_parameters=redshift_dependent_parameters, **kwargs)
         return gp
 
     def get_flux_vectors(self, max_z=4.2, kfunits="kms", redshifts=None, pixel_resolution_km_s='default',
@@ -526,11 +526,14 @@ class Emulator:
         return kfmpc, kfkms, flux_vectors
 
     def _get_custom_emulator(self, *, emuobj, max_z=4.2, redshifts=None, pixel_resolution_km_s='default',
-                             use_measured_parameters=False, redshift_dependent_parameters=False, k_max_emulated_h_Mpc=None):
+                             use_measured_parameters=False, redshift_dependent_parameters=False,
+                             k_max_emulated_h_Mpc=None, savefile='emulator_flux_vectors.hdf5', parallel=False,
+                             n_process=1):
         """Helper to allow supporting different emulators."""
         aparams, kf, flux_vectors = self.get_flux_vectors(max_z=max_z, kfunits="mpc", redshifts=redshifts,
                                         pixel_resolution_km_s=pixel_resolution_km_s,
-                                        use_measured_parameters=use_measured_parameters)
+                                        use_measured_parameters=use_measured_parameters, savefile=savefile,
+                                        parallel=parallel, n_process=n_process)
         plimits = self.get_param_limits(include_dense=True, use_measured=use_measured_parameters)
         if redshift_dependent_parameters:
             redshift_sensitivity = self.redshift_sensitivity
@@ -690,7 +693,7 @@ class nCDMEmulator(Emulator):
         return ev
 
     def get_emulator(self, max_z=None, redshifts='default', pixel_resolution_km_s=1., use_measured_parameters=False,
-                     redshift_dependent_parameters=False, k_max_emulated_h_Mpc=None):
+                     redshift_dependent_parameters=False, k_max_emulated_h_Mpc=None, **kwargs):
         """ Build an emulator for the desired k_F and our simulations.
             kf gives the desired k bins in s/km.
             Mean flux rescaling is handled (if mean_flux=True) as follows:
@@ -704,7 +707,7 @@ class nCDMEmulator(Emulator):
                                        pixel_resolution_km_s=pixel_resolution_km_s,
                                        use_measured_parameters=use_measured_parameters,
                                        redshift_dependent_parameters=redshift_dependent_parameters,
-                                       k_max_emulated_h_Mpc=k_max_emulated_h_Mpc)
+                                       k_max_emulated_h_Mpc=k_max_emulated_h_Mpc, **kwargs)
         return gp
 
 

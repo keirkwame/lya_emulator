@@ -168,7 +168,8 @@ class LikelihoodClass:
                  pixel_resolution_km_s='default', emulator_class="standard", t0_training_value = 1.,
                  t0_parameter_limits=np.array([0.75, 1.25]), optimise_GP=True,
                  emulator_json_file='emulator_params.json', use_measured_parameters=False,
-                 redshift_dependent_parameters=False, data_class='BOSS',
+                 redshift_dependent_parameters=False, flux_power_savefile='emulator_flux_vectors.hdf5',
+                 flux_power_parallel=False, flux_power_n_process=1, data_class='BOSS',
                  measured_parameter_z_model=measured_parameter_power_law_model,
                  measured_parameter_z_model_parameter_limits=None, dark_matter_model=None,
                  dark_matter_parameter_names=np.array([[None,],]), dark_matter_parameter_limits=None,
@@ -300,10 +301,13 @@ class LikelihoodClass:
                                 pixel_resolution_km_s=self.pixel_resolution_km_s,
                                 use_measured_parameters=use_measured_parameters,
                                 redshift_dependent_parameters=redshift_dependent_parameters,
-                                k_max_emulated_h_Mpc=self._get_k_max_emulated_h_Mpc())
+                                k_max_emulated_h_Mpc=self._get_k_max_emulated_h_Mpc(), savefile=flux_power_savefile,
+                                parallel=flux_power_parallel, n_process=flux_power_n_process)
             else:
                 self.gpemu = self.emulator.get_emulator(max_z=max_z, use_measured_parameters=use_measured_parameters,
-                                                        redshift_dependent_parameters=redshift_dependent_parameters)
+                                                        redshift_dependent_parameters=redshift_dependent_parameters,
+                                                        savefile=flux_power_savefile, parallel=flux_power_parallel,
+                                                        n_process=flux_power_n_process)
         print('Finished generating emulator at', str(datetime.now()))
 
     def _get_k_max_emulated_h_Mpc(self):
