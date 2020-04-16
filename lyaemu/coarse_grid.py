@@ -8,6 +8,7 @@ import string
 import math
 import json
 import numpy as np
+import multiprocessing as mg
 import scipy.interpolate as spi
 import h5py
 from .SimulationRunner.SimulationRunner import lyasimulation
@@ -418,7 +419,8 @@ class Emulator:
         return gp
 
     def get_flux_vectors(self, max_z=4.2, kfunits="kms", redshifts=None, pixel_resolution_km_s='default',
-                         use_measured_parameters=False, fix_mean_flux_samples=False):
+                         use_measured_parameters=False, fix_mean_flux_samples=False,
+                         savefile='emulator_flux_vectors.hdf5', parallel=False, n_process=1):
         """Get the desired flux vectors and their parameters"""
         pvals = self.get_parameters()
         nparams = np.shape(pvals)[1]
@@ -440,18 +442,31 @@ class Emulator:
             assert (newdp[-1] + nuggets[-1] < dpvals[-1]) and (newdp[0] + nuggets[0] >= dpvals[0])
             dpvals = newdp
             aparams = np.array([np.concatenate([dp+nuggets[i],pvals[i]]) for dp in dpvals for i in range(nsims)])
-            mfc = "mf10_batch4_optimise1"
+            mfc = "mf10"
         print('dpvals =', dpvals)
         print('nuggets =', nuggets)
         print('mean_flux =', self.mf.get_mean_flux(myspec.zout, params=dpvals))
         try:
-            kfmpc, kfkms, flux_vectors = self.load_flux_vectors(aparams, mfc=mfc)
+            kfmpc, kfkms, flux_vectors = self.load_flux_vectors(aparams, mfc=mfc, savefile=savefile)
         except (AssertionError, OSError):
             print("Could not load flux vectors, regenerating from disc")
             powers = [self._get_fv(pp, myspec, extra_flag=simulation_index+1) for simulation_index, pp in enumerate(pvals)]
             mef = lambda pp: self.mf.get_mean_flux(myspec.zout, params=pp)[0]
             if dpvals is not None:
-                flux_vectors = np.array([powers[i].get_power_native_binning(mean_fluxes = mef(dp+nuggets[i])) for dp in dpvals for i in range(nsims)])
+                #get_power_native_binning = lambda a: powers[a[1]].get_power_native_binning(
+                #                                                    mean_fluxes=mef(a[0] + nuggets[a[1]]))
+                power_inputs = [(powers[i], mef(dp + nuggets[i])) for dp in dpvals for i in range(nsims)]
+                if not parallel:
+                    #flux_vectors = np.array([powers[i].get_power_native_binning(mean_fluxes = mef(dp+nuggets[i]))
+                    #                         for dp in dpvals for i in range(nsims)])
+                    #flux_vectors = np.array([get_power_native_binning((dp, i)) for dp in dpvals for i in range(nsims)])
+                    flux_vectors = np.array([self._get_power_native_binning(power_input)
+                                             for power_input in power_inputs])
+                else:
+                    pool_instance = mg.Pool(n_process)
+                    #power_indices = [(dp, i) for dp in dpvals for i in range(nsims)]
+                    #flux_vectors = np.array(pool_instance.map(get_power_native_binning, power_indices))
+                    flux_vectors = np.array(pool_instance.map(self._get_power_native_binning, power_inputs))
                 #'natively' binned k values in km/s units as a function of redshift
                 kfkms = [ps.get_kf_kms() for _ in dpvals for ps in powers]
             else:
@@ -461,7 +476,7 @@ class Emulator:
             #Same in all boxes
             kfmpc = powers[0].kf
             assert np.all(np.abs(powers[0].kf/ powers[-1].kf-1) < 1e-6)
-            self.save_flux_vectors(aparams, kfmpc, kfkms, flux_vectors, mfc=mfc)
+            self.save_flux_vectors(aparams, kfmpc, kfkms, flux_vectors, mfc=mfc, savefile=savefile)
 
         if use_measured_parameters:
             if dpvals is not None:
@@ -479,6 +494,11 @@ class Emulator:
         else:
             kf = kfmpc
         return aparams, kf, flux_vectors
+
+    def _get_power_native_binning(self, a):
+        """Wrapper function to flux_power.FluxPower.get_power_native_binning for parallelisation."""
+        power_instance, mean_fluxes = a
+        return power_instance.get_power_native_binning(mean_fluxes=mean_fluxes)
 
     def save_flux_vectors(self, aparams, kfmpc, kfkms, flux_vectors, mfc="mf", savefile="emulator_flux_vectors.hdf5"):
         """Save the flux vectors and parameters to a file, which is the only thing read on reload."""
