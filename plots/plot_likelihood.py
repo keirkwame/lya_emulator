@@ -316,7 +316,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_batch3_data_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tu0' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_batch4_optimise1_data_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tu0' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
