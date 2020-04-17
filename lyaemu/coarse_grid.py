@@ -469,7 +469,7 @@ class Emulator:
                     #flux_vectors = np.array(pool_instance.map(get_power_native_binning, power_indices))
                     pool_output = pool_instance.map(self._get_power_native_binning, power_inputs)
                     flux_vectors = np.array([pool_output[i][0] for i in range(len(pool_output))])
-                    powers = cp.deepcopy(np.array([pool_output[i][1] for i in range(0, len(pool_output), len(dpvals))]))
+                    powers = cp.deepcopy(np.array([pool_output[i][1] for i in range(nsims)]))
                 #'natively' binned k values in km/s units as a function of redshift
                 kfkms = [ps.get_kf_kms() for _ in dpvals for ps in powers]
             else:
