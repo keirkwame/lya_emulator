@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
         input_parameters_all_single_emulator, k_parallel_single_emulator, flux_powers_single_emulator = emulator_instance.get_flux_vectors(
             redshifts=emulator_instance.redshifts, pixel_resolution_km_s=1., fix_mean_flux_samples=False,
-            savefile='batch4_optimise1_para_emulator_flux_vectors.hdf5', parallel=True, n_process=55)
+            savefile='batch4_optimise1_para3_emulator_flux_vectors.hdf5', parallel=True, n_process=35)
         print(flux_powers_single_emulator.shape)
         flux_powers_single_emulator = flux_powers_single_emulator.reshape(k_parallel_single_emulator.shape)
 
