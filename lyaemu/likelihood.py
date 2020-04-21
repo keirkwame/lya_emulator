@@ -18,6 +18,7 @@ from . import coarse_grid
 from . import flux_power
 from . import lyman_data
 from . import mean_flux as mflux
+from multiprocessing import Pool
 from .latin_hypercube import map_to_unit_cube, map_from_unit_cube
 from .quadratic_emulator import QuadraticEmulator
 
@@ -692,26 +693,27 @@ class LikelihoodClass:
                 p0[i][-1] = cent[-1]
 
         assert np.all([np.isfinite(self.log_posterior(pp, include_emulator_error=include_emulator_error)) for pp in p0])
-        emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior, pool=pool,
-                                              kwargs={'include_emulator_error': include_emulator_error}) #threads=n_threads)
-        pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
-        #Check things are reasonable
-        print('The fraction of proposed steps that were accepted =', emcee_sampler.acceptance_fraction)
-        #assert np.all(emcee_sampler.acceptance_fraction > 0.01)
-        emcee_sampler.reset()
-        self.cur_results = emcee_sampler
-        gr = 10.
-        count = 0
-        while np.any(gr > 1.01) and count < maxsample:
-            emcee_sampler.run_mcmc(pos, nsamples)
-            gr = gelman_rubin(emcee_sampler.chain)
-            print("Total samples:",nsamples," Gelman-Rubin: ",gr)
-            np.savetxt(savefile, emcee_sampler.flatchain)
-            count += 1
-            if while_loop is False:
-                break
-        self.flatchain = emcee_sampler.flatchain
-        return emcee_sampler
+        with Pool() as pool_object:
+            emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior, pool=pool_object,
+                                                  kwargs={'include_emulator_error': include_emulator_error}) #threads=n_threads)
+            pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
+            #Check things are reasonable
+            print('The fraction of proposed steps that were accepted =', emcee_sampler.acceptance_fraction)
+            #assert np.all(emcee_sampler.acceptance_fraction > 0.01)
+            emcee_sampler.reset()
+            self.cur_results = emcee_sampler
+            gr = 10.
+            count = 0
+            while np.any(gr > 1.01) and count < maxsample:
+                emcee_sampler.run_mcmc(pos, nsamples)
+                gr = gelman_rubin(emcee_sampler.chain)
+                print("Total samples:",nsamples," Gelman-Rubin: ",gr)
+                np.savetxt(savefile, emcee_sampler.flatchain)
+                count += 1
+                if while_loop is False:
+                    break
+            self.flatchain = emcee_sampler.flatchain
+            return emcee_sampler
 
     def new_parameter_limits(self, confidence=0.99, include_dense=False):
         """Find a square region which includes coverage of the parameters in each direction, for refinement.

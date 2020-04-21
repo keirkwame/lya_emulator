@@ -338,13 +338,13 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         true_parameter_values = get_simulation_parameters_s8(sdir, t0=t0)
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
-        pool_instance = mg.Pool(2) #None #MyPool()
+        #pool_instance = mg.Pool(2) #None #MyPool()
 
         #Rule out inverted TDR's
         #like.param_limits[np.array([8, 9, 10]), 0] = 1.
 
         like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
-                         while_loop=False, include_emulator_error=True, pool=pool_instance)
+                         while_loop=False, include_emulator_error=True, pool=True)
         
         #n_threads=n_threads_mcmc)
         print('Done sampling likelihood at', str(datetime.now()))
