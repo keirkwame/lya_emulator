@@ -590,16 +590,31 @@ class LikelihoodClass:
             covar_bin = self.lyman_data_instance.get_covar(lyman_data_redshifts[zbin])
         return covar_bin
 
-    def log_posterior(self, parameter_vector, prior_functions='uniform', include_emulator_error=True):
+    def set_log_prior(self, prior_functions=['uniform',], prior_function_kwargs=[{},]):
+        """Set prior distribution"""
+        self.log_prior = [None] * len(prior_functions)
+        for i, prior_function in enumerate(prior_functions):
+            if prior_function == 'uniform':
+                self.log_prior[i] = self.log_uniform_prior
+            elif prior_function == 'Gaussian':
+                self.log_prior[i] = self.log_gaussian_prior
+            elif prior_function == 'convex_hull':
+                self.log_prior[i] = self.log_convex_hull_prior
+            elif prior_function == 'maximum_jump':
+                self.log_prior[i] = self.log_redshift_prior
+            else:
+                raise ValueError('Unrecognised prior distribution type.')
+        self.log_prior_kwargs = prior_function_kwargs
+
+    def log_posterior(self, parameter_vector, include_emulator_error=True):
         """Evaluate the natural logarithm of the posterior distribution"""
-        if prior_functions == 'uniform':
+        '''if prior_functions == 'uniform':
             prior_functions = [self.log_uniform_prior, ]
         if not isinstance(prior_functions, list):
-            prior_functions = [prior_functions, ]
-
+            prior_functions = [prior_functions, ]'''
         posterior = self.likelihood(parameter_vector, include_emu=include_emulator_error)
-        for prior_function in prior_functions:
-            posterior += prior_function(parameter_vector)
+        for i, prior_function in enumerate(self.log_prior):
+            posterior += prior_function(parameter_vector, **self.log_prior_kwargs[i])
         return posterior
 
     def _get_measured_parameter_indices_to_remove(self):
@@ -646,8 +661,8 @@ class LikelihoodClass:
 
         self.likelihood_parameter_names = pnames
 
-    def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, prior_functions='uniform',
-                    while_loop=True, include_emulator_error=True, maxsample=20, n_threads=1, pool=None):
+    def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=True,
+                    include_emulator_error=True, maxsample=20, n_threads=1, pool=None):
         """Initialise and run emcee."""
         #Load the data directory
         if datadir == 'use_real_data':
@@ -676,10 +691,9 @@ class LikelihoodClass:
             if pp[-1] > cent[-1]:
                 p0[i][-1] = cent[-1]
 
-        assert np.all([np.isfinite(self.log_posterior(pp, prior_functions=prior_functions, include_emulator_error=include_emulator_error)) for pp in p0])
+        assert np.all([np.isfinite(self.log_posterior(pp, include_emulator_error=include_emulator_error)) for pp in p0])
         emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior, pool=pool,
-                                              kwargs={'prior_functions': prior_functions, 'include_emulator_error': include_emulator_error},
-                                             ) #threads=n_threads)
+                                              kwargs={'include_emulator_error': include_emulator_error}) #threads=n_threads)
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
         #Check things are reasonable
         print('The fraction of proposed steps that were accepted =', emcee_sampler.acceptance_fraction)

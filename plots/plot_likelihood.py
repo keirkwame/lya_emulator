@@ -245,6 +245,12 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
 #     subplot_instance.add_legend(legend_labels, legend_loc='upper right', colored_text=True, figure=True)
     plt.savefig(savefile)
 
+def prior_function(parameter_vector):
+    return like.log_gaussian_prior(parameter_vector,
+                            parameter_names=prior_function_args[0], means=prior_function_args[1],
+                            standard_deviations=prior_function_args[2])
+
+
 def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform', prior_function_args=None,
                         test_simulation_parameters=None, plot=True, mean_flux_label='s', max_z=4.2, redshifts=None,
                         pixel_resolution_km_s='default', t0_training_value=1., emulator_class="standard",
@@ -280,22 +286,28 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
 
     #Prior functions
     if prior_function == 'Gaussian':
-        prior_function = lambda parameter_vector: like.log_gaussian_prior(parameter_vector,
-                            parameter_names=prior_function_args[0], means=prior_function_args[1],
-                            standard_deviations=prior_function_args[2])
+        #prior_function = lambda parameter_vector: like.log_gaussian_prior(parameter_vector,
+        #                    parameter_names=prior_function_args[0], means=prior_function_args[1],
+        #                    standard_deviations=prior_function_args[2])
+        prior_function = {'parameter_names': prior_function_args[0], 'means': prior_function_args[1],
+                            'standard_deviations': prior_function_args[2]}
 
     #Convex hull prior
     parameter_names_convex_hull = [['T_0_z_5.0', 'u_0_z_5.0'], ['T_0_z_4.6', 'u_0_z_4.6'], ['T_0_z_4.2', 'u_0_z_4.2']]
-    prior_function_convex_hull = lambda parameter_vector: like.log_convex_hull_prior(parameter_vector,
-                                                                            parameter_names=parameter_names_convex_hull)
+    #prior_function_convex_hull = lambda parameter_vector: like.log_convex_hull_prior(parameter_vector,
+    #                                                                        parameter_names=parameter_names_convex_hull)
+    prior_function_convex_hull = {'parameter_names': parameter_names_convex_hull}
 
     #Maximum jumps prior
     parameter_names_maximum_jump = np.array(['T_0', 'gamma', 'u_0'])
     maximum_jumps = np.array([5000., 0.3, 10.])
-    prior_function_maximum_jump = lambda parameter_vector: like.log_redshift_prior(parameter_vector,
-                                    parameter_names=parameter_names_maximum_jump, maximum_differences=maximum_jumps)
+    #prior_function_maximum_jump = lambda parameter_vector: like.log_redshift_prior(parameter_vector,
+    #                                parameter_names=parameter_names_maximum_jump, maximum_differences=maximum_jumps)
+    prior_function_maximum_jump = {'parameter_names': parameter_names_maximum_jump,
+                                   'maximum_differences': maximum_jumps}
 
     prior_functions = [prior_function_convex_hull, prior_function, prior_function_maximum_jump]
+    like.set_log_prior(['convex_hull', 'Gaussian', 'maximum_jump'], prior_functions)
 
     '''parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
     if mean_flux_label == 'free_high_z':
@@ -318,7 +330,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_batch5_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tgu0_Tu0CH_para' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_batch5_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tgu0_Tu0CH_0' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -326,7 +338,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         true_parameter_values = get_simulation_parameters_s8(sdir, t0=t0)
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
-        pool_instance = mg.Pool(35) #None #MyPool()
+        pool_instance = None #mg.Pool(35) #None #MyPool()
 
         #Rule out inverted TDR's
         #like.param_limits[np.array([8, 9, 10]), 0] = 1.
