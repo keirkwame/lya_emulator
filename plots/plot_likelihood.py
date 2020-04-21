@@ -330,7 +330,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_batch5_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tgu0_Tu0CH_para2' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_batch5_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tgu0_Tu0CH_para' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -343,10 +343,10 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         #Rule out inverted TDR's
         #like.param_limits[np.array([8, 9, 10]), 0] = 1.
 
-        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
-                         while_loop=False, include_emulator_error=True, pool=True)
-        
-        #n_threads=n_threads_mcmc)
+        #like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
+        #                 while_loop=False, include_emulator_error=True, pool=True)
+        likeh.do_posterior_sampling_parallel(like, chainfile, datadir='use_real_data', nwalkers=150, burnin=300,
+                                             nsamples=300, while_loop=False, include_emulator_error=True)
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
         if like.use_dark_matter_model:

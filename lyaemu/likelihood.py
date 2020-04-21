@@ -162,6 +162,67 @@ def ultra_light_axion_numerical_model_linear_mass(ultra_light_axion_parameters, 
     solver. Valid for 0 < ULA mass [eV] < 1.e-22"""
     pass
 
+def _do_sampling(likelihood_instance, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=True,
+                 include_emulator_error=True, maxsample=20, n_threads=1, pool=None):
+    """Initialise and run emcee."""
+    #Load the data directory
+    if datadir == 'use_real_data':
+        likelihood_instance.data_fluxpower = likelihood_instance.lyman_data_flux_power[::-1].flatten()
+    else:
+        likelihood_instance.data_fluxpower = load_data(datadir, kf=likelihood_instance.kf, max_z=likelihood_instance.max_z, redshifts=likelihood_instance.data_redshifts,
+                                                       pixel_resolution_km_s=likelihood_instance.pixel_resolution_km_s, t0=likelihood_instance.t0_training_value,
+                                                       mean_flux_model=likelihood_instance.mean_flux_model) #1D array with lowest redshift first
+
+    with open(savefile+"_names.txt",'w') as ff:
+        for pp in likelihood_instance.likelihood_parameter_names:
+            ff.write("%s %s\n" % tuple(pp))
+    #Limits: we need to hard-prior to the volume of our emulator.
+    pr = (likelihood_instance.param_limits[:, 1] - likelihood_instance.param_limits[:, 0])
+    #Priors are assumed to be in the middle.
+    cent = (likelihood_instance.param_limits[:, 1] + likelihood_instance.param_limits[:, 0]) / 2.
+
+    #Quicker ULA mass convergence
+    cent[-1] = -19.1
+
+    p0_concentration_factor = 64. #32
+    p0 = [cent + 2 * pr / p0_concentration_factor * np.random.rand(likelihood_instance.ndim) - pr / p0_concentration_factor for _ in range(nwalkers)]
+
+    #Quicker ULA mass convergence
+    for i, pp in enumerate(p0):
+        if pp[-1] > cent[-1]:
+            p0[i][-1] = cent[-1]
+
+    assert np.all([np.isfinite(likelihood_instance.log_posterior(pp, include_emulator_error=include_emulator_error)) for pp in p0])
+    #with Pool() as pool_object:
+    emcee_sampler = emcee.EnsembleSampler(nwalkers, likelihood_instance.ndim, likelihood_instance.log_posterior, pool=pool,
+                                          kwargs={'include_emulator_error': include_emulator_error}) #threads=n_threads)
+    pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
+    #Check things are reasonable
+    print('The fraction of proposed steps that were accepted =', emcee_sampler.acceptance_fraction)
+    #assert np.all(emcee_sampler.acceptance_fraction > 0.01)
+    emcee_sampler.reset()
+    likelihood_instance.cur_results = emcee_sampler
+    gr = 10.
+    count = 0
+    while np.any(gr > 1.01) and count < maxsample:
+        emcee_sampler.run_mcmc(pos, nsamples)
+        gr = gelman_rubin(emcee_sampler.chain)
+        print("Total samples:",nsamples," Gelman-Rubin: ",gr)
+        np.savetxt(savefile, emcee_sampler.flatchain)
+        count += 1
+        if while_loop is False:
+            break
+    likelihood_instance.flatchain = emcee_sampler.flatchain
+    return emcee_sampler
+
+def do_posterior_sampling_parallel(likelihood_instance, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000,
+                                   while_loop=True, include_emulator_error=True, maxsample=20):
+    """Function to sample posterior distribution in parallel"""
+    with Pool() as pool:
+        _do_sampling(likelihood_instance, savefile, datadir, nwalkers=nwalkers, burnin=burnin, nsamples=nsamples,
+                            while_loop=while_loop, include_emulator_error=include_emulator_error, maxsample=maxsample,
+                            n_threads=None, pool=pool)
+
 
 class LikelihoodClass:
     """Class to contain likelihood computations."""
@@ -665,7 +726,10 @@ class LikelihoodClass:
     def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=True,
                     include_emulator_error=True, maxsample=20, n_threads=1, pool=None):
         """Initialise and run emcee."""
-        #Load the data directory
+        return _do_sampling(self, savefile, datadir, nwalkers=nwalkers, burnin=burnin, nsamples=nsamples,
+                            while_loop=while_loop, include_emulator_error=include_emulator_error, maxsample=maxsample,
+                            n_threads=n_threads, pool=pool)
+'''#Load the data directory
         if datadir == 'use_real_data':
             self.data_fluxpower = self.lyman_data_flux_power[::-1].flatten()
         else:
@@ -713,7 +777,7 @@ class LikelihoodClass:
                 if while_loop is False:
                     break
             self.flatchain = emcee_sampler.flatchain
-            return emcee_sampler
+            return emcee_sampler'''
 
     def new_parameter_limits(self, confidence=0.99, include_dense=False):
         """Find a square region which includes coverage of the parameters in each direction, for refinement.
