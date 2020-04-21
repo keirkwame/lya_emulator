@@ -726,10 +726,10 @@ class LikelihoodClass:
     def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=True,
                     include_emulator_error=True, maxsample=20, n_threads=1, pool=None):
         """Initialise and run emcee."""
-        return _do_sampling(self, savefile, datadir, nwalkers=nwalkers, burnin=burnin, nsamples=nsamples,
-                            while_loop=while_loop, include_emulator_error=include_emulator_error, maxsample=maxsample,
-                            n_threads=n_threads, pool=pool)
-    '''#Load the data directory
+        #return _do_sampling(self, savefile, datadir, nwalkers=nwalkers, burnin=burnin, nsamples=nsamples,
+        #                    while_loop=while_loop, include_emulator_error=include_emulator_error, maxsample=maxsample,
+        #                    n_threads=n_threads, pool=pool)
+        #Load the data directory
         if datadir == 'use_real_data':
             self.data_fluxpower = self.lyman_data_flux_power[::-1].flatten()
         else:
@@ -757,27 +757,27 @@ class LikelihoodClass:
                 p0[i][-1] = cent[-1]
 
         assert np.all([np.isfinite(self.log_posterior(pp, include_emulator_error=include_emulator_error)) for pp in p0])
-        with Pool() as pool_object:
-            emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior, pool=pool_object,
-                                                  kwargs={'include_emulator_error': include_emulator_error}) #threads=n_threads)
-            pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
-            #Check things are reasonable
-            print('The fraction of proposed steps that were accepted =', emcee_sampler.acceptance_fraction)
-            #assert np.all(emcee_sampler.acceptance_fraction > 0.01)
-            emcee_sampler.reset()
-            self.cur_results = emcee_sampler
-            gr = 10.
-            count = 0
-            while np.any(gr > 1.01) and count < maxsample:
-                emcee_sampler.run_mcmc(pos, nsamples)
-                gr = gelman_rubin(emcee_sampler.chain)
-                print("Total samples:",nsamples," Gelman-Rubin: ",gr)
-                np.savetxt(savefile, emcee_sampler.flatchain)
-                count += 1
-                if while_loop is False:
-                    break
-            self.flatchain = emcee_sampler.flatchain
-            return emcee_sampler'''
+        #with Pool() as pool_object:
+        emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior, pool=pool,
+                                              kwargs={'include_emulator_error': include_emulator_error}) #threads=n_threads)
+        pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
+        #Check things are reasonable
+        print('The fraction of proposed steps that were accepted =', emcee_sampler.acceptance_fraction)
+        #assert np.all(emcee_sampler.acceptance_fraction > 0.01)
+        emcee_sampler.reset()
+        self.cur_results = emcee_sampler
+        gr = 10.
+        count = 0
+        while np.any(gr > 1.01) and count < maxsample:
+            emcee_sampler.run_mcmc(pos, nsamples)
+            gr = gelman_rubin(emcee_sampler.chain)
+            print("Total samples:",nsamples," Gelman-Rubin: ",gr)
+            np.savetxt(savefile, emcee_sampler.flatchain)
+            count += 1
+            if while_loop is False:
+                break
+        self.flatchain = emcee_sampler.flatchain
+        return emcee_sampler
 
     def new_parameter_limits(self, confidence=0.99, include_dense=False):
         """Find a square region which includes coverage of the parameters in each direction, for refinement.

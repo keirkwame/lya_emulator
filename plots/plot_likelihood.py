@@ -343,10 +343,10 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         #Rule out inverted TDR's
         #like.param_limits[np.array([8, 9, 10]), 0] = 1.
 
-        #like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
-        #                 while_loop=False, include_emulator_error=True, pool=True)
-        likeh.do_posterior_sampling_parallel(like, chainfile, datadir='use_real_data', nwalkers=150, burnin=300,
-                                             nsamples=300, while_loop=False, include_emulator_error=True)
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
+                         while_loop=False, include_emulator_error=True, pool=None)
+        #likeh.do_posterior_sampling_parallel(like, chainfile, datadir='use_real_data', nwalkers=150, burnin=300,
+        #                                     nsamples=300, while_loop=False, include_emulator_error=True)
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
         if like.use_dark_matter_model:
