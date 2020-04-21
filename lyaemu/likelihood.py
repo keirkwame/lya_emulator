@@ -729,7 +729,7 @@ class LikelihoodClass:
         return _do_sampling(self, savefile, datadir, nwalkers=nwalkers, burnin=burnin, nsamples=nsamples,
                             while_loop=while_loop, include_emulator_error=include_emulator_error, maxsample=maxsample,
                             n_threads=n_threads, pool=pool)
-'''#Load the data directory
+    '''#Load the data directory
         if datadir == 'use_real_data':
             self.data_fluxpower = self.lyman_data_flux_power[::-1].flatten()
         else:
