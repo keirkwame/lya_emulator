@@ -442,12 +442,15 @@ class LikelihoodClass:
                 return -np.inf
         return 0.
 
-    def log_convex_hull_prior(self, parameter_vector, parameter_names, convex_hull_objects=None):
+    def log_convex_hull_prior(self, parameter_vector, parameter_names, convex_hull_objects=None,
+                              use_likelihood_parameter_limits=False):
         """The natural logarithm of an un-normalised uniform prior distribution set to a convex hull"""
         for a, parameter_name_set in enumerate(parameter_names):
             parameter_index_numbers = np.zeros(len(parameter_name_set), dtype=np.int)
             if convex_hull_objects is None:
                 convex_hull_input = np.zeros((self.emulator.sample_params.shape[0], len(parameter_name_set)))
+                if use_likelihood_parameter_limits:
+                    prior_array = np.zeros_like(convex_hull_input, dtype=np.bool)
             for i, parameter_name in enumerate(parameter_name_set):
                 parameter_index_numbers[i] = self._get_parameter_index_number(parameter_name)
                 if convex_hull_objects is None:
@@ -455,7 +458,14 @@ class LikelihoodClass:
                         convex_hull_input[:, i] = self.emulator.sample_params[:, self.emulator.param_names[parameter_name]]
                     elif parameter_name in self.emulator.measured_param_names:
                         convex_hull_input[:, i] = self.emulator.measured_sample_params[:, self.emulator.measured_param_names[parameter_name]]
+                    if use_likelihood_parameter_limits:
+                        idx = self._get_parameter_index_number(parameter_name)
+                        prior_array[:, i] = (convex_hull_input[:, i] > self.param_limits[idx, 0])
+                        prior_array[:, i] *= (convex_hull_input[:, i] < self.param_limits[idx, 1])
             if convex_hull_objects is None:
+                if use_likelihood_parameter_limits:
+                    prior_array_compressed = (np.sum(prior_array, axis=1) == len(parameter_name_set))
+                    convex_hull_input = convex_hull_input[prior_array_compressed]
                 convex_hull = sps.Delaunay(convex_hull_input)
             else:
                 convex_hull = convex_hull_objects[a]
