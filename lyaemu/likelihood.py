@@ -627,12 +627,11 @@ class LikelihoodClass:
                                            integration_options=integration_options, verbose=verbose,
                                            integration_method=integration_method)
 
-    def log_posterior_marginalised_mean_flux(self, params, prior_functions='uniform', include_emu=True,
-                                             integration_bounds='default', integration_options='gauss-legendre',
-                                             verbose=True, integration_method='Quadrature'):
+    def log_posterior_marginalised_mean_flux(self, params, include_emu=True, integration_bounds='default',
+                                             integration_options='gauss-legendre', verbose=True,
+                                             integration_method='Quadrature'):
         """Evaluate log posterior marginalised over mean flux"""
-        log_posterior = lambda p: self.log_posterior(p, prior_functions=prior_functions,
-                                                     include_emulator_error=include_emu)
+        log_posterior = lambda p: self.log_posterior(p, include_emulator_error=include_emu)
         return self._marginalise_mean_flux(params, log_posterior, integration_bounds=integration_bounds,
                                            integration_options=integration_options, verbose=verbose,
                                            integration_method=integration_method)
@@ -879,7 +878,7 @@ class LikelihoodClass:
         return exploration_weight * posterior_estimated_error
 
     def acquisition_function_GP_UCB(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.,
-                                    prior_functions='uniform', use_updated_training_set=False):
+                                    use_updated_training_set=False):
         """Evaluate the GP-UCB acquisition function. This is an acquisition function for determining where to run new
         training simulations"""
         assert iteration_number >= 1.
@@ -891,8 +890,7 @@ class LikelihoodClass:
         else:
             n_emulated_params = params.shape[0] - 1
 
-        exploitation = self._get_GP_UCB_exploitation_term(self.log_posterior(params, prior_functions=prior_functions),
-                                                          exploitation_weight)
+        exploitation = self._get_GP_UCB_exploitation_term(self.log_posterior(params), exploitation_weight)
         std = np.array(self.get_predicted(params, use_updated_training_set=use_updated_training_set)[2]).flatten()
         exploration = self._get_GP_UCB_exploration_term(std, n_emulated_params, iteration_number=iteration_number,
                                                         delta=delta, nu=nu)
@@ -903,14 +901,13 @@ class LikelihoodClass:
     def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1.,
                                                            exploitation_weight=1., integration_bounds='default',
                                                            integration_options='gauss-legendre',
-                                                           prior_functions='uniform', use_updated_training_set=False):
+                                                           use_updated_training_set=False):
         """Evaluate the GP-UCB acquisition function, having marginalised over mean flux parameters"""
         if exploitation_weight is None:
             print('No exploitation term')
             exploitation = 0.
         else:
             exploitation = self._get_GP_UCB_exploitation_term(self.log_posterior_marginalised_mean_flux(params,
-                                                                prior_functions=prior_functions,
                                                                 integration_bounds=integration_bounds,
                                                                 integration_options=integration_options),
                                                                 exploitation_weight=exploitation_weight)
@@ -924,7 +921,7 @@ class LikelihoodClass:
     def optimise_acquisition_function(self, starting_params, acquisition_function='GP_UCB_marginalised',
                                       optimisation_bounds='default', optimisation_method=None, iteration_number=1,
                                       delta=0.5, nu=1., exploitation_weight=1., integration_bounds='default',
-                                      prior_functions='uniform', use_updated_training_set=False):
+                                      use_updated_training_set=False):
         """Find parameter vector (marginalised over mean flux parameters) at maximum of (GP-UCB) acquisition function"""
         if optimisation_bounds == 'default': #Default to prior bounds
             #optimisation_bounds = [tuple(self.param_limits[2 + i]) for i in range(starting_params.shape[0])]
@@ -937,14 +934,12 @@ class LikelihoodClass:
                                                                 iteration_number=iteration_number, delta=delta, nu=nu,
                                                                 exploitation_weight=exploitation_weight,
                                                                 integration_bounds=integration_bounds,
-                                                                prior_functions=prior_functions,
                                                                 use_updated_training_set=use_updated_training_set)
         elif acquisition_function == 'GP_UCB':
             param_limits = self.param_limits
             optimisation_function = lambda parameter_vector: -1. * self.acquisition_function_GP_UCB(map_from_unit_cube(
                 parameter_vector, param_limits), iteration_number=iteration_number, delta=delta, nu=nu,
-                exploitation_weight=exploitation_weight, prior_functions=prior_functions,
-                use_updated_training_set=use_updated_training_set)
+                exploitation_weight=exploitation_weight, use_updated_training_set=use_updated_training_set)
         else:
             raise ValueError('Acquisition function type not recognised.')
 

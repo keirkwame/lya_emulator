@@ -244,12 +244,11 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
 #     legend_labels = ['+ Initial Latin hypercube']
 #     subplot_instance.add_legend(legend_labels, legend_loc='upper right', colored_text=True, figure=True)
     plt.savefig(savefile)
-
-def prior_function(parameter_vector):
+'''def prior_function(parameter_vector):
     return like.log_gaussian_prior(parameter_vector,
                             parameter_names=prior_function_args[0], means=prior_function_args[1],
                             standard_deviations=prior_function_args[2])
-
+'''
 
 def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform', prior_function_args=None,
                         test_simulation_parameters=None, plot=True, mean_flux_label='s', max_z=4.2, redshifts=None,
@@ -333,7 +332,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_batch6_2_data_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tgu0CH' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_batch6_2_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tgu0CH' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -350,7 +349,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         like.param_limits[11, 1] = 10.
         like.param_limits[np.array([12, 13]), 1] = 15.
 
-        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=3000, nsamples=15000,
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
                          while_loop=False, include_emulator_error=True, pool=None)
         #likeh.do_posterior_sampling_parallel(like, chainfile, datadir='use_real_data', nwalkers=150, burnin=300,
         #                                     nsamples=300, while_loop=False, include_emulator_error=True)
