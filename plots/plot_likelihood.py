@@ -277,8 +277,8 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                                  emulator_class=emulator_class, emulator_json_file=emulator_json_file,
                                  use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters,
-                                 flux_power_savefile='batch5_emulator_flux_vectors.hdf5',
-                                 flux_power_parallel=True, flux_power_n_process=35, data_class=data_class,
+                                 flux_power_savefile='batch6_2_emulator_flux_vectors.hdf5',
+                                 flux_power_parallel=True, flux_power_n_process=55, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
                                  dark_matter_model=likeh.ultra_light_axion_numerical_model,
                                  dark_matter_parameter_limits=np.array([[-22., -19.],]),
@@ -293,14 +293,17 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                             'standard_deviations': prior_function_args[2]}
 
     #Convex hull prior
-    parameter_names_convex_hull = [['T_0_z_5.0', 'u_0_z_5.0'], ['T_0_z_4.6', 'u_0_z_4.6'], ['T_0_z_4.2', 'u_0_z_4.2']]
+    parameter_names_convex_hull = [['T_0_z_5.0', 'gamma_z_5.0', 'u_0_z_5.0'], ['T_0_z_4.6', 'gamma_z_4.6', 'u_0_z_4.6'], ['T_0_z_4.2', 'gamma_z_4.2', 'u_0_z_4.2']]
     #prior_function_convex_hull = lambda parameter_vector: like.log_convex_hull_prior(parameter_vector,
     #                                                                        parameter_names=parameter_names_convex_hull)
-    prior_function_convex_hull = {'parameter_names': parameter_names_convex_hull}
+    #convex_hulls = [None] * 3
+    #for i, convex_hull in enumerate(convex_hulls):
+
+    prior_function_convex_hull = {'parameter_names': parameter_names_convex_hull, 'use_likelihood_parameter_limits': True}
 
     #Maximum jumps prior
-    parameter_names_maximum_jump = np.array(['T_0', 'gamma', 'u_0'])
-    maximum_jumps = np.array([5000., 0.3, 10.])
+    parameter_names_maximum_jump = np.array(['T_0', 'u_0'])
+    maximum_jumps = np.array([5000., 10.])
     #prior_function_maximum_jump = lambda parameter_vector: like.log_redshift_prior(parameter_vector,
     #                                parameter_names=parameter_names_maximum_jump, maximum_differences=maximum_jumps)
     prior_function_maximum_jump = {'parameter_names': parameter_names_maximum_jump,
@@ -330,7 +333,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
-    filename_suffix = '_batch5_data_TDR_u0_300_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_prior_no_jump_Tgu0_Tu0CH_para' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_batch6_2_data_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tgu0CH' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -340,10 +343,14 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         print('Beginning to sample likelihood at', str(datetime.now()))
         #pool_instance = mg.Pool(2) #None #MyPool()
 
-        #Rule out inverted TDR's
-        #like.param_limits[np.array([8, 9, 10]), 0] = 1.
+        #Change prior
+        like.param_limits[5, 1] = 10000.
+        like.param_limits[np.array([6, 7]), 1] = 13000.
+        like.param_limits[np.array([8, 9, 10]), 0] = 1.
+        like.param_limits[11, 1] = 10.
+        like.param_limits[np.array([12, 13]), 1] = 15.
 
-        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=3000, nsamples=15000,
                          while_loop=False, include_emulator_error=True, pool=None)
         #likeh.do_posterior_sampling_parallel(like, chainfile, datadir='use_real_data', nwalkers=150, burnin=300,
         #                                     nsamples=300, while_loop=False, include_emulator_error=True)
