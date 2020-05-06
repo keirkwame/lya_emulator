@@ -10,30 +10,32 @@ import lyaemu.coarse_grid as cg
 import lyaemu.mean_flux as mef
 
 if __name__ == "__main__":
-    emulator_base_directory = ['/share/data2/keir/Simulations',] #'/share/data2/keir/Simulations']
-    emulator_names = ['nCDM_emulator_512',] #'nCDM_convergence_896', 'nCDM_convergence_768_WDM', 'nCDM_convergence_512_256']
-    simulation_indices = [np.arange(65),] #np.arange(1), np.arange(1)] #np.arange(2)]
-    interpolate_to_same_k = False
+    emulator_base_directory = ['/share/data2/keir/Simulations', '/share/data2/keir/Simulations']
+    emulator_names = ['nCDM_convergence_768_WDM', 'nCDM_convergence_768_WDM'] #, 'nCDM_convergence_512_256']
+    emulator_jsons = ['emulator_params_4.json', 'emulator_params.json']
+    flux_vectors = ['emulator_4_flux_vectors.hdf5', 'emulator_1_flux_vectors.hdf5']
+    simulation_indices = [np.arange(4), np.arange(1)] #, np.arange(1)] #np.arange(2)]
+    interpolate_to_same_k = True
 
     default_emulator_index = 0
-    default_simulation_index = 60
+    default_simulation_index = 0
     n_simulations = np.sum(
         [np.size(simulation_indices_single_emulator) for simulation_indices_single_emulator in simulation_indices])
 
-    savefile = os.path.join(emulator_base_directory[0], emulator_names[0], 'flux_power_batch4_optimise1.pdf')
-    figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 65. / 10.))
+    savefile = os.path.join(emulator_base_directory[0], emulator_names[0], 'flux_power_nCDM_convergence_768_WDM.pdf')
+    figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 5. / 10.))
 
     plot_start_index = 0
     input_parameters_all = []
     k_parallel = []
     flux_powers = []
     for a, emulator_name in enumerate(emulator_names):
-        emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory[a], emulator_name), mf=mef.MeanFluxFactorHighRedshift(dense_samples=10)) #ConstMeanFluxHighRedshift(value=1.))
-        emulator_instance.load(dumpfile='emulator_params_batch4_1_TDR_u0.json')
+        emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory[a], emulator_name), mf=mef.ConstMeanFluxHighRedshift(value=1.))
+        emulator_instance.load(dumpfile=emulator_jsons[a]) #'emulator_params_batch4_1_TDR_u0.json')
 
         input_parameters_all_single_emulator, k_parallel_single_emulator, flux_powers_single_emulator = emulator_instance.get_flux_vectors(
-            redshifts=emulator_instance.redshifts, pixel_resolution_km_s=1., fix_mean_flux_samples=False,
-            savefile='batch4_optimise1_para3_emulator_flux_vectors.hdf5', parallel=True, n_process=35)
+            redshifts=emulator_instance.redshifts, pixel_resolution_km_s=1., fix_mean_flux_samples=True,
+            savefile=flux_vectors[a], parallel=True, n_process=8)
         print(flux_powers_single_emulator.shape)
         flux_powers_single_emulator = flux_powers_single_emulator.reshape(k_parallel_single_emulator.shape)
 

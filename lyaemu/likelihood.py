@@ -577,9 +577,9 @@ class LikelihoodClass:
             assert np.shape(np.outer(std_bin,std_bin)) == np.shape(covar_bin)
             if include_emu:
                 #Assume each k bin is independent
-                #covar_emu = np.diag(std_bin**2)
+                covar_emu = np.diag(std_bin**2)
                 #Assume completely correlated emulator errors within this bin
-                covar_emu = np.outer(std_bin, std_bin)
+                #covar_emu = np.outer(std_bin, std_bin)
                 #print('Emulator covariance =', covar_emu)
                 covar_bin += covar_emu
                 #print('Total covariance =', covar_bin)
@@ -740,7 +740,7 @@ class LikelihoodClass:
         #                    n_threads=n_threads, pool=pool)
         #Load the data directory
         if datadir == 'use_real_data':
-            self.data_fluxpower = self.lyman_data_flux_power[::-1].flatten()
+            self.data_fluxpower = self.lyman_data_flux_power.flatten()
         else:
             self.data_fluxpower = load_data(datadir, kf=self.kf, max_z=self.max_z, redshifts=self.data_redshifts,
                                             pixel_resolution_km_s=self.pixel_resolution_km_s, t0=self.t0_training_value,
