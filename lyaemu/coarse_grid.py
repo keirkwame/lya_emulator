@@ -269,10 +269,12 @@ class Emulator:
         kf = self.kf
         mf = self.mf
         real_basedir = self.basedir
+        leave_out_validation = self.leave_out_validation
         with open(os.path.join(real_basedir, dumpfile), 'r') as jsin:
             indict = json.load(jsin)
         self.__dict__ = indict
         self._fromarray()
+        self.leave_out_validation = leave_out_validation
         if self.leave_out_validation is not None:
             self.sample_params_full = cp.deepcopy(self.sample_params)
             self.sample_params = np.delete(self.sample_params, self.leave_out_validation, axis=0)
