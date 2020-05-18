@@ -33,7 +33,8 @@ def get_latex(key):
 class Emulator:
     """Small wrapper class to store parameter names and limits, generate simulations and get an emulator.
     """
-    def __init__(self, basedir, param_names=None, param_limits=None, kf=None, mf=None, z=None, omegamh2=0.1199):
+    def __init__(self, basedir, param_names=None, param_limits=None, kf=None, mf=None, z=None, omegamh2=0.1199,
+                 leave_out_validation=None):
         if param_names is None:
             self.param_names = {'ns':0, 'As':1, 'heat_slope':2, 'heat_amp':3, 'hub':4}
         else:
@@ -74,6 +75,7 @@ class Emulator:
         self.measured_sample_params = 'None'
         self.remove_simulation_params = np.array([], dtype=np.int)
         self.redshift_sensitivity = 'None'
+        self.leave_out_validation = leave_out_validation
 
     def _get_parameter_index_number(self, parameter_name, use_measured_parameters=False, include_mean_flux=True,
                                     include_mean_flux_slope=False, include_mean_flux_free=False, remove_nCDM=False):
@@ -271,6 +273,12 @@ class Emulator:
             indict = json.load(jsin)
         self.__dict__ = indict
         self._fromarray()
+        if self.leave_out_validation is not None:
+            self.sample_params_full = cp.deepcopy(self.sample_params)
+            self.sample_params = np.delete(self.sample_params, self.leave_out_validation, axis=0)
+            if self.measured_sample_params is not 'None':
+                self.measured_sample_params_full = cp.deepcopy(self.measured_sample_params)
+                self.measured_sample_params = np.delete(self.measured_sample_params, self.leave_out_validation, axis=0)
         self.kf = kf
         self.mf = mf
         self.basedir = real_basedir
@@ -280,9 +288,12 @@ class Emulator:
         """Get the simulation output directory path for a parameter set."""
         return os.path.join(os.path.join(self.basedir, self.build_dirname(pp, strsz=strsz, extra_flag=extra_flag)),"output")
 
-    def get_parameters(self):
+    def get_parameters(self, use_all=None):
         """Get the list of parameter vectors in this emulator."""
-        return self.sample_params
+        if use_all is None:
+            return self.sample_params
+        elif use_all is True:
+            return self.sample_params_full
 
     def get_measured_parameters(self):
         """Get the list of measured parameter vectors in this emulator"""
@@ -423,7 +434,11 @@ class Emulator:
                          use_measured_parameters=False, fix_mean_flux_samples=False,
                          savefile='emulator_flux_vectors.hdf5', parallel=False, n_process=1):
         """Get the desired flux vectors and their parameters"""
-        pvals = self.get_parameters()
+        if self.leave_out_validation is None:
+            use_all = None
+        else:
+            use_all = True
+        pvals = self.get_parameters(use_all=use_all)
         nparams = np.shape(pvals)[1]
         nsims = np.shape(pvals)[0]
         assert nparams == len(self.param_names)
@@ -490,6 +505,15 @@ class Emulator:
                 measured_parameters = self.measured_sample_params
             aparams = np.delete(aparams, self.remove_simulation_params + index_adjustment, axis=1)
             aparams = np.concatenate((aparams, measured_parameters), axis=1)
+
+        if self.leave_out_validation is not None:
+            remove_indices = np.zeros((self.leave_out_validation.shape[0], dpvals.shape[0]))
+            for i, idx in enumerate(self.leave_out_validation):
+                remove_indices[i] = np.arange(idx, aparams.shape[0], self.sample_params_full.shape[0])
+            remove_indices = np.sort(remove_indices, axis=None)
+            aparams = np.delete(aparams, remove_indices, axis=0)
+            kfkms = np.delete(kfkms, remove_indices, axis=0)
+            flux_vectors = np.delete(flux_vectors, remove_indices, axis=0)
 
         assert np.shape(flux_vectors)[0] == np.shape(aparams)[0]
         if kfunits == "kms":
@@ -584,14 +608,15 @@ class Emulator:
 class KnotEmulator(Emulator):
     """Specialise parameter class for an emulator using knots.
     Thermal parameters turned off."""
-    def __init__(self, basedir, nknots=4, kf=None, mf=None):
+    def __init__(self, basedir, nknots=4, kf=None, mf=None, leave_out_validation=None):
         param_names = {'heat_slope':nknots, 'heat_amp':nknots+1, 'hub':nknots+2}
         #Assign names like AA, BB, etc.
         for i in range(nknots):
             param_names[string.ascii_uppercase[i]*2] = i
         self.nknots = nknots
         param_limits = np.append(np.repeat(np.array([[0.6,1.5]]),nknots,axis=0),[[-0.5, 0.5],[0.5,1.5],[0.65,0.75]],axis=0)
-        super().__init__(basedir=basedir, param_names = param_names, param_limits = param_limits, kf=kf, mf=mf)
+        super().__init__(basedir=basedir, param_names = param_names, param_limits = param_limits, kf=kf, mf=mf,
+                         leave_out_validation=leave_out_validation)
         #Linearly spaced knots in k space:
         #these do not quite hit the edges of the forest region, because we want some coverage over them.
         self.knot_pos = np.linspace(0.15, 1.5,nknots)
@@ -617,7 +642,7 @@ class KnotEmulator(Emulator):
 
 class nCDMEmulator(Emulator):
     """Specialise parameter class for an emulator for nCDM models. Defaults to Planck 2018 Omega_m h**2 & Omega_b."""
-    def __init__(self, basedir, kf=None, mf=None, z=None, omegamh2=0.14345, omegab=0.04950):
+    def __init__(self, basedir, kf=None, mf=None, z=None, omegamh2=0.14345, omegab=0.04950, leave_out_validation=None):
         param_names = {'ns': 0, 'As': 1, 'heat_slope': 2, 'heat_amp': 3, 'omega_m': 4, 'alpha': 5, 'beta': 6, 'gamma': 7, 'z_rei': 8, 'T_rei': 9}
         param_limits = np.array([[0.9, 0.995], [1.2e-9, 2.5e-9], [-1.3, 0.7], [0.05, 3.5], [0.26, 0.33],
                                  [0., 0.1], [1., 10.], [-10., 0.], [6., 15.], [1.5e+4, 4.e+4]])
@@ -631,7 +656,8 @@ class nCDMEmulator(Emulator):
             mf = ConstMeanFluxHighRedshift(None)
         self.omegab = omegab
         self._scalar_pivot_scale_ratio = 0.05 / 2. #Ratio between CMB and Lyman-a forest scalar power spectrum pivots
-        super().__init__(basedir=basedir, param_names=param_names, param_limits=param_limits, kf=kf, mf=mf, z=z, omegamh2=omegamh2)
+        super().__init__(basedir=basedir, param_names=param_names, param_limits=param_limits, kf=kf, mf=mf, z=z,
+                         omegamh2=omegamh2, leave_out_validation=leave_out_validation)
 
     def _do_ic_generation(self, ev, npart, box, extra_flag=0):
         """Generate initial conditions"""

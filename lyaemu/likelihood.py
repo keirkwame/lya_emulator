@@ -235,7 +235,7 @@ class LikelihoodClass:
                  measured_parameter_z_model=measured_parameter_power_law_model,
                  measured_parameter_z_model_parameter_limits=None, dark_matter_model=None,
                  dark_matter_parameter_names=np.array([[None,],]), dark_matter_parameter_limits=None,
-                 use_dark_matter=False, fix_parameters=None):
+                 use_dark_matter=False, fix_parameters=None, leave_out_validation=None):
         """Initialise the emulator by loading the flux power spectra from the simulations."""
         self.measured_parameter_names_z_model = measured_parameter_names_z_model
         self.measured_parameter_z_model = measured_parameter_z_model
@@ -304,13 +304,15 @@ class LikelihoodClass:
         self.mean_flux_instance = mf
 
         if emulator_class == "standard":
-            self.emulator = coarse_grid.Emulator(basedir, kf=self.kf, mf=mf)
+            self.emulator = coarse_grid.Emulator(basedir, kf=self.kf, mf=mf, leave_out_validation=leave_out_validation)
         elif emulator_class == "knot":
-            self.emulator = coarse_grid.KnotEmulator(basedir, kf=self.kf, mf=mf)
+            self.emulator = coarse_grid.KnotEmulator(basedir, kf=self.kf, mf=mf,
+                                                     leave_out_validation=leave_out_validation)
         elif emulator_class == "quadratic":
             self.emulator = QuadraticEmulator(basedir, kf=self.kf, mf=mf)
         elif emulator_class == 'nCDM':
-            self.emulator = coarse_grid.nCDMEmulator(basedir, kf=self.kf, mf=mf)
+            self.emulator = coarse_grid.nCDMEmulator(basedir, kf=self.kf, mf=mf,
+                                                     leave_out_validation=leave_out_validation)
         else:
             raise ValueError("Emulator class not recognised")
         self.emulator.load(dumpfile=emulator_json_file)
@@ -445,19 +447,26 @@ class LikelihoodClass:
     def log_convex_hull_prior(self, parameter_vector, parameter_names, convex_hull_objects=None,
                               use_likelihood_parameter_limits=False):
         """The natural logarithm of an un-normalised uniform prior distribution set to a convex hull"""
+        if self.emulator.leave_out_validation is None:
+            sample_params = self.emulator.sample_params
+            measured_sample_params = self.emulator.measured_sample_params
+        else:
+            sample_params = self.emulator.sample_params_full
+            measured_sample_params = self.emulator.measured_sample_params_full
+
         for a, parameter_name_set in enumerate(parameter_names):
             parameter_index_numbers = np.zeros(len(parameter_name_set), dtype=np.int)
             if convex_hull_objects is None:
-                convex_hull_input = np.zeros((self.emulator.sample_params.shape[0], len(parameter_name_set)))
+                convex_hull_input = np.zeros((sample_params.shape[0], len(parameter_name_set)))
                 if use_likelihood_parameter_limits:
                     prior_array = np.zeros_like(convex_hull_input, dtype=np.bool)
             for i, parameter_name in enumerate(parameter_name_set):
                 parameter_index_numbers[i] = self._get_parameter_index_number(parameter_name)
                 if convex_hull_objects is None:
                     if parameter_name in self.emulator.param_names:
-                        convex_hull_input[:, i] = self.emulator.sample_params[:, self.emulator.param_names[parameter_name]]
+                        convex_hull_input[:, i] = sample_params[:, self.emulator.param_names[parameter_name]]
                     elif parameter_name in self.emulator.measured_param_names:
-                        convex_hull_input[:, i] = self.emulator.measured_sample_params[:, self.emulator.measured_param_names[parameter_name]]
+                        convex_hull_input[:, i] = measured_sample_params[:, self.emulator.measured_param_names[parameter_name]]
                     if use_likelihood_parameter_limits:
                         idx = self._get_parameter_index_number(parameter_name)
                         prior_array[:, i] = (convex_hull_input[:, i] > self.param_limits[idx, 0])
