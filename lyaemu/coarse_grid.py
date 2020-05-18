@@ -498,6 +498,15 @@ class Emulator:
             assert np.all(np.abs(powers[0].kf/ powers[-1].kf-1) < 1e-6)
             self.save_flux_vectors(aparams, kfmpc, kfkms, flux_vectors, mfc=mfc, savefile=savefile)
 
+        if self.leave_out_validation is not None:
+            remove_indices = np.zeros((self.leave_out_validation.shape[0], dpvals.shape[0]))
+            for i, idx in enumerate(self.leave_out_validation):
+                remove_indices[i] = np.arange(idx, aparams.shape[0], self.sample_params_full.shape[0])
+            remove_indices = np.sort(remove_indices, axis=None)
+            aparams = np.delete(aparams, remove_indices, axis=0)
+            kfkms = np.delete(kfkms, remove_indices, axis=0)
+            flux_vectors = np.delete(flux_vectors, remove_indices, axis=0)
+
         if use_measured_parameters:
             if dpvals is not None:
                 index_adjustment = 1
@@ -507,15 +516,6 @@ class Emulator:
                 measured_parameters = self.measured_sample_params
             aparams = np.delete(aparams, self.remove_simulation_params + index_adjustment, axis=1)
             aparams = np.concatenate((aparams, measured_parameters), axis=1)
-
-        if self.leave_out_validation is not None:
-            remove_indices = np.zeros((self.leave_out_validation.shape[0], dpvals.shape[0]))
-            for i, idx in enumerate(self.leave_out_validation):
-                remove_indices[i] = np.arange(idx, aparams.shape[0], self.sample_params_full.shape[0])
-            remove_indices = np.sort(remove_indices, axis=None)
-            aparams = np.delete(aparams, remove_indices, axis=0)
-            kfkms = np.delete(kfkms, remove_indices, axis=0)
-            flux_vectors = np.delete(flux_vectors, remove_indices, axis=0)
 
         assert np.shape(flux_vectors)[0] == np.shape(aparams)[0]
         if kfunits == "kms":
