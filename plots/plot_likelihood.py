@@ -327,13 +327,19 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
 
 def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=True, t0=1., true_parameter_values=None,
                            data_class='BOSS', pixel_resolution_km_s='default', mean_flux_label='s',
-                           parameter_names=None, plot_parameter_indices=None, n_threads_mcmc=1):
+                           parameter_names=None, plot_parameter_indices=None, n_threads_mcmc=1,
+                           leave_out_validation=None):
     """Make a likelihood and error plot for a single simulation."""
     sname = os.path.basename(os.path.abspath(sdir))
     if t0 != 1.0:
         sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
 
+    if leave_out_validation is None:
+        validation_suffix = ''
+    else:
+        validation_suffix = '_' + leave_out_validation[0]
     filename_suffix = '_batch16_2_data_diag_emu_TDR_u0_3000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
@@ -381,7 +387,7 @@ if __name__ == "__main__":
     test_name = sys.argv[3] #'nCDM_test_thermal2'
     parameters_json = sys.argv[4] #'emulator_params_measured_TDR.json'
     use_measured_parameters = (sys.argv[5].lower() == 'true')
-    leave_out_validation = None #np.array([int(sys.argv[6]),])
+    leave_out_validation = np.array([int(sys.argv[6]),])
     redshift_dependent_parameters = True #(sys.argv[6].lower() == 'true')
 
     plotdir = 'Plots' #'plots/simulations2'
