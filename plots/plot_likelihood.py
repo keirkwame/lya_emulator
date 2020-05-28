@@ -280,10 +280,9 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                                  flux_power_savefile='emu50_emulator_flux_vectors.hdf5',
                                  flux_power_parallel=True, flux_power_n_process=35, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
-                                 fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation)
-    #,
+                                 fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation) #, 
     #                             dark_matter_model=likeh.ultra_light_axion_numerical_model,
-    #                             dark_matter_parameter_limits=np.array([[-22., -19.],])
+    #                             dark_matter_parameter_limits=np.array([[-22., -19.],]))
 
     #Prior functions
     if prior_function == 'Gaussian':
@@ -310,8 +309,8 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     prior_function_maximum_jump = {'parameter_names': parameter_names_maximum_jump,
                                    'maximum_differences': maximum_jumps}
 
-    prior_functions = [prior_function_convex_hull, prior_function, prior_function_maximum_jump]
-    like.set_log_prior(['convex_hull', 'Gaussian', 'maximum_jump'], prior_functions)
+    prior_functions = [prior_function,] #[prior_function_convex_hull, prior_function, prior_function_maximum_jump]
+    like.set_log_prior(['Gaussian',], prior_functions) #'convex_hull', 'Gaussian', 'maximum_jump'], prior_functions)
 
     '''parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
     if mean_flux_label == 'free_high_z':
@@ -339,7 +338,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_emu50_test_diag_emu_TDR_u0_3000_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_emu50_512_test_CDM_diag_emu_input_IGM_3000' #TDR_u0_3000_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -351,11 +350,12 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         #pool_instance = mg.Pool(2) #None #MyPool()
 
         #Change prior
-        like.param_limits[5, 1] = 12000.
+        '''x=3
+        like.param_limits[5+x, 1] = 12000.
         #like.param_limits[np.array([6, 7]), 1] = 15000.
-        like.param_limits[np.array([8, 9, 10]), 0] = 0.8
-        like.param_limits[11, 1] = 12.
-        like.param_limits[np.array([12, 13]), 1] = 18.
+        #like.param_limits[np.array([8, 9, 10])+x, 0] = 0.8
+        like.param_limits[11+x, 1] = 12.
+        like.param_limits[np.array([12, 13])+x, 1] = 18.'''
 
         like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=3000, nsamples=3000,
                          while_loop=False, include_emulator_error=True, pool=None) #'use_real_data'
@@ -365,7 +365,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if plot is True:
         if like.use_dark_matter_model:
             true_parameter_values = np.delete(true_parameter_values, np.arange(6, 9))
-            true_parameter_values = np.concatenate((true_parameter_values, np.array([-21.,])))
+            true_parameter_values = np.concatenate((true_parameter_values, np.array([-20.,])))
         #omega_m fixed
         #true_parameter_values = np.delete(true_parameter_values, 5, axis=0)
 
@@ -389,14 +389,14 @@ if __name__ == "__main__":
     parameters_json = sys.argv[4] #'emulator_params_measured_TDR.json'
     use_measured_parameters = (sys.argv[5].lower() == 'true')
     leave_out_validation = None #np.array([int(sys.argv[6]),])
-    redshift_dependent_parameters = True #(sys.argv[6].lower() == 'true')
+    redshift_dependent_parameters = False #True #(sys.argv[6].lower() == 'true')
 
     plotdir = 'Plots' #'plots/simulations2'
     gpsavedir=os.path.join(plotdir,"nCDM") #hires_s8")
     #quadsavedir = os.path.join(plotdir, "hires_s8_quad_quad")
     emud = os.path.join(emulator_base_directory, emulator_name) #hires_s8')
     #quademud = os.path.join(sim_rootdir, "hires_s8_quadratic")
-    testdirs = os.path.join(emulator_base_directory, test_name) #hires_s8_test')
+    testdirs = os.path.join('/share/data2/keir/Simulations/', test_name) #hires_s8_test')
 
     lyman_data_instance = lyman_data.BoeraData()
     redshifts = lyman_data_instance.redshifts_unique[::-1]
@@ -411,8 +411,8 @@ if __name__ == "__main__":
     test_simulation_directory = test_emulator_instance.get_outdir(test_emulator_instance.get_parameters()
                                                     [test_simulation_number], extra_flag=test_simulation_number+1)[:-7]
 
-    test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
-    #test_simulation_parameters = test_emulator_instance.get_parameters()[test_simulation_number]
+    #test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
+    test_simulation_parameters = test_emulator_instance.get_parameters()[test_simulation_number]
     #test_simulation_parameters = np.concatenate((np.array([0., t0_test_value]), test_simulation_parameters))
     test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters))
     #T_0; gamma power laws
@@ -421,8 +421,8 @@ if __name__ == "__main__":
     #test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters[:-3], np.array([test_simulation_parameters[-2], 0.])))
 
     #Prior distribution
-    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2']) #, 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
-    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 9, 10, 11])] #, 12, 13, 14])] #0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14])] #, 15, 16])] #7
+    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As']) #, 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2']) #, 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
+    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4])] #, 9, 10, 11])] #, 12, 13, 14])] #0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14])] #, 15, 16])] #7
     #prior_means[5] = 6000.
     #prior_means[np.array([8, 9, 10])] = 1.6
     print('Gaussian prior means =', prior_means)
@@ -438,7 +438,7 @@ if __name__ == "__main__":
     #prior_means[5] = 0.3
     #prior_means = np.array([0.93, 2.3 * 1.e-9, 0.27])
     #prior_means = np.array([0.3,])
-    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 3000., 3000., 3000.]) #, 0.3, 0.3, 0.3]) #, 0.5, 0.5, 0.5]) #0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 2000., 2000., 2000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
+    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9]) #, 3000., 3000., 3000.]) #, 0.3, 0.3, 0.3]) #, 0.5, 0.5, 0.5]) #0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 2000., 2000., 2000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
     prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
     #prior_function_args = None
     #omega_m fixed

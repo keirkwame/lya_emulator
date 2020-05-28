@@ -766,7 +766,7 @@ class LikelihoodClass:
         #Quicker ULA mass convergence
         #cent[-1] = -19.1
 
-        p0_concentration_factor = 64. #32
+        p0_concentration_factor = 32 #64
         p0 = [cent+2*pr/p0_concentration_factor*np.random.rand(self.ndim)-pr/p0_concentration_factor for _ in range(nwalkers)]
 
         #Quicker ULA mass convergence
