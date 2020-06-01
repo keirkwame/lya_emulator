@@ -91,18 +91,20 @@ def make_error_distribution():
     """Calculate the emulator error distribution for leave-one-out cross-validation."""
     emudir = '/share/data2/keir/Simulations/nCDM_emulator_512'
     emu_json = 'emulator_params_batch18_2_TDR_u0.json'
-    flux_power_file = 'mf10_batch18_2_emulator_flux_vectors.hdf5'
-    n_sims = 2
+    flux_power_file = 'batch18_2_emulator_flux_vectors.hdf5'
+    n_sims = 93
     mf_instance = lym.FreeMeanFlux()
 
     emu_instance_full = lyc.nCDMEmulator(emudir, mf=mf_instance)
+    emu_instance_full.load(dumpfile=emu_json)
     training_parameters, k, training_flux_powers = emu_instance_full.get_flux_vectors(kfunits='mpc',
                                                     redshifts=emu_instance_full.redshifts, pixel_resolution_km_s=1.,
                                                     use_measured_parameters=True, savefile=flux_power_file)
 
-    GP_mean = np.zeros_like(training_flux_powers)
-    GP_std = np.zeros_like(GP_mean)
+    GP_mean = [None] * training_flux_powers.shape[0] #np.zeros_like(training_flux_powers)
+    GP_std = [None] * training_flux_powers.shape[0] #np.zeros_like(GP_mean)
     for i in range(n_sims):
+        print('Getting data for simulation number', i)
         emu_instance = lyc.nCDMEmulator(emudir, mf=mf_instance, leave_out_validation=np.array([i,]))
         emu_instance.load(dumpfile=emu_json)
         test_parameters = emu_instance.get_combined_params(use_all=True)[i]
@@ -112,14 +114,15 @@ def make_error_distribution():
                                                 savefile=flux_power_file)
         test_parameters_tau0 = training_parameters[np.arange(i, training_parameters.shape[0], n_sims)]
         for j, test_parameters_tau0_single in enumerate(test_parameters_tau0):
-            npt.assert_array_equal(test_parameters_tau0_single[1:], test_parameters)
+            print('Getting data for mean flux sample number', j)
+            npt.assert_array_equal(test_parameters_tau0_single[1:], test_parameters[0, 1:])
             tau0 = np.ones(emu_instance_full.redshifts.size) * test_parameters_tau0_single[0]
             GP_mean_single, GP_std_single = GP_instance.predict(test_parameters, tau0_factors=tau0)
-            idx = (i * n_sims) + j
+            idx = (j * n_sims) + i
             GP_mean[idx] = GP_mean_single[0]
             GP_std[idx] = GP_std_single[0]
 
-    return k, emu_instance_full.redshifts, training_parameters, training_flux_powers, GP_mean, GP_std
+    return k, emu_instance_full.redshifts, training_parameters, training_flux_powers, np.array(GP_mean), np.array(GP_std), emu_instance_full._get_k_max_emulated_h_Mpc()
 
 def violinplot_error_distribution():
     """Make a violin-plot of the emulator error distribution for leave-one-out cross-validation."""
@@ -135,4 +138,6 @@ if __name__ == "__main__":
     plt.rc('ytick.major', width=1.5)
     plt.rc('ytick.minor', width=1.5)
 
-    plot_transfer_function()
+    #plot_transfer_function()
+    k, z, p, f, m, s, k_max = make_error_distribution()
+

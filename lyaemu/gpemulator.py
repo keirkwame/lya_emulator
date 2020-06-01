@@ -97,9 +97,9 @@ class SkLearnGP:
         nparams = np.shape(self.params)[1]
         params_cube = map_to_unit_cube_list(self.params, self.param_limits)
         #Check that we span the parameter space
-        for i in range(nparams):
-            assert np.max(params_cube[:,i]) > 0.9
-            assert np.min(params_cube[:,i]) < 0.1
+        #for i in range(nparams):
+        #    assert np.max(params_cube[:,i]) > 0.9
+        #    assert np.min(params_cube[:,i]) < 0.1
         #print('Normalised parameter values =', params_cube)
         #Normalise the flux vectors by the median power spectrum.
         #This ensures that the GP prior (a zero-mean input) is close to true.

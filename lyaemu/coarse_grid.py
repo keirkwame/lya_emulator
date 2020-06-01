@@ -554,6 +554,7 @@ class Emulator:
         name = str(load.attrs["classname"])
         load.close()
         assert name.split(".")[-1] == str(self.__class__).split(".")[-1]
+        #print(inparams, aparams)
         assert np.shape(inparams) == np.shape(aparams)
         assert np.all(inparams - aparams < 1e-3)
         return kfmpc, kfkms, flux_vectors
@@ -750,7 +751,7 @@ class nCDMEmulator(Emulator):
                                        pixel_resolution_km_s=pixel_resolution_km_s,
                                        use_measured_parameters=use_measured_parameters,
                                        redshift_dependent_parameters=redshift_dependent_parameters,
-                                       k_max_emulated_h_Mpc=self._k_max_emulated_h_Mpc(), **kwargs)
+                                       k_max_emulated_h_Mpc=self._get_k_max_emulated_h_Mpc(), **kwargs)
         return gp
 
 
