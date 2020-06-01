@@ -365,22 +365,14 @@ class LikelihoodClass:
                                 pixel_resolution_km_s=self.pixel_resolution_km_s,
                                 use_measured_parameters=use_measured_parameters,
                                 redshift_dependent_parameters=redshift_dependent_parameters,
-                                k_max_emulated_h_Mpc=self._get_k_max_emulated_h_Mpc(), savefile=flux_power_savefile,
-                                parallel=flux_power_parallel, n_process=flux_power_n_process)
+                                savefile=flux_power_savefile, parallel=flux_power_parallel,
+                                n_process=flux_power_n_process)
             else:
                 self.gpemu = self.emulator.get_emulator(max_z=max_z, use_measured_parameters=use_measured_parameters,
                                                         redshift_dependent_parameters=redshift_dependent_parameters,
                                                         savefile=flux_power_savefile, parallel=flux_power_parallel,
                                                         n_process=flux_power_n_process)
         print('Finished generating emulator at', str(datetime.now()))
-
-    def _get_k_max_emulated_h_Mpc(self):
-        """Calculate the maximum comoving wavenumber (in h/Mpc) that needs to be emulated"""
-        omega_m_index = self.emulator._get_parameter_index_number('omega_m', include_mean_flux=False)
-        omega_m_max = self.emulator.get_param_limits(include_dense=False)[omega_m_index, 1]
-        k_max = np.max(self.kf) * flux_power.velocity_factor(np.max(self.zout), omega_m_max)
-        print('k_max_emulated_h_Mpc =', k_max, np.max(self.kf), np.max(self.zout), omega_m_max)
-        return k_max
 
     def _get_parameter_index_number(self, parameter_name):
         if (parameter_name[-1] == 'A') or (parameter_name[-1] == 'S'):

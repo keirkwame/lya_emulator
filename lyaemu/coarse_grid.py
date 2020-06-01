@@ -297,14 +297,17 @@ class Emulator:
         elif use_all is True:
             return self.sample_params_full
 
-    def get_measured_parameters(self):
+    def get_measured_parameters(self, use_all=None):
         """Get the list of measured parameter vectors in this emulator"""
-        return self.measured_sample_params
+        if use_all is None:
+            return self.measured_sample_params
+        elif use_all is True:
+            return self.measured_sample_params_full
 
-    def get_combined_params(self):
+    def get_combined_params(self, use_all=None):
         """Get the list of parameter vectors (combined input and measured) in this emulator"""
-        input_parameters = np.delete(self.get_parameters(), self.remove_simulation_params, axis=1)
-        return np.concatenate((input_parameters, self.get_measured_parameters()), axis=1)
+        input_parameters = np.delete(self.get_parameters(use_all=use_all), self.remove_simulation_params, axis=1)
+        return np.concatenate((input_parameters, self.get_measured_parameters(use_all=use_all)), axis=1)
 
     def get_combined_param_names(self):
         """Get the dictionary of parameter names (combined input and measured) in this emulator"""
@@ -606,6 +609,14 @@ class Emulator:
         parameters_norm = latin_hypercube.map_to_unit_cube(parameters, self._training_parameter_limts)
         return predictor(*parameters_norm)
 
+    def _get_k_max_emulated_h_Mpc(self):
+        """Calculate the maximum comoving wavenumber (in h/Mpc) that needs to be emulated"""
+        omega_m_index = self._get_parameter_index_number('omega_m', include_mean_flux=False)
+        omega_m_max = self.get_param_limits(include_dense=False)[omega_m_index, 1]
+        k_max = np.max(self.kf) * flux_power.velocity_factor(np.max(self.redshifts), omega_m_max)
+        print('k_max_emulated_h_Mpc =', k_max, np.max(self.kf), np.max(self.redshifts), omega_m_max)
+        return k_max
+
 
 class KnotEmulator(Emulator):
     """Specialise parameter class for an emulator using knots.
@@ -725,7 +736,7 @@ class nCDMEmulator(Emulator):
         return ev
 
     def get_emulator(self, max_z=None, redshifts='default', pixel_resolution_km_s=1., use_measured_parameters=False,
-                     redshift_dependent_parameters=False, k_max_emulated_h_Mpc=None, **kwargs):
+                     redshift_dependent_parameters=False, **kwargs):
         """ Build an emulator for the desired k_F and our simulations.
             kf gives the desired k bins in s/km.
             Mean flux rescaling is handled (if mean_flux=True) as follows:
@@ -739,7 +750,7 @@ class nCDMEmulator(Emulator):
                                        pixel_resolution_km_s=pixel_resolution_km_s,
                                        use_measured_parameters=use_measured_parameters,
                                        redshift_dependent_parameters=redshift_dependent_parameters,
-                                       k_max_emulated_h_Mpc=k_max_emulated_h_Mpc, **kwargs)
+                                       k_max_emulated_h_Mpc=self._k_max_emulated_h_Mpc(), **kwargs)
         return gp
 
 
