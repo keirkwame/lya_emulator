@@ -1,10 +1,16 @@
+import os
+import json
+import h5py
 import copy as cp
 import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
+import scipy.optimize as spo
 import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sb
+#import pandas as pd
+#import seaborn as sb
+import getdist as gd
+import getdist.plots as gdp
 
 import lyaemu.distinct_colours_py3 as lyc
 #import lyaemu.coarse_grid as lyc
@@ -50,9 +56,28 @@ def ultra_light_axion_numerical_model(ultra_light_axion_parameters, nCDM_paramet
             nCDM_parameters[i] = nCDM_parameter_limits[i, 1]
     return nCDM_parameters
 
-def plot_transfer_function():
+def ultra_light_axion_numerical_model_inverse(nCDM_parameters, h=0.6686):
+    """Inverse of numerical ultra-light axion model. Valid for -22 < log ULA mass [eV] < -18"""
+    nCDM_corrected = nCDM_parameters
+    nCDM_corrected[0] = np.log10(nCDM_corrected[0] * h_planck / h)
+    nCDM_corrected[2] = np.log10(-1. * nCDM_corrected[2])
+    log_mass = [None] * nCDM_parameters.shape[0]
+
+    for i, model_parameters in enumerate([alpha_model_parameters, beta_model_parameters, gamma_model_parameters]):
+        model_coefficients = cp.deepcopy(model_parameters)
+        model_coefficients[-1] -= nCDM_corrected[i]
+        model_roots = np.roots(model_coefficients)
+        log_mass[i] = model_roots[(model_roots <= -18.) * (model_roots >= -22.)][0].real
+        print('log mass =', log_mass[i])
+        if i == 1:
+            assert ((log_mass[i] - log_mass[0]) / log_mass[0]) <= 1.e-10
+
+    return log_mass[0]
+
+def plot_transfer_function(y='transfer'):
     """Plot the nCDM transfer function."""
-    k_log = np.linspace(-1.1, 1.5, num=1000)
+    if y == 'transfer':
+        k_log = np.linspace(-1.1, 1.5, num=1000)
 
     nCDM_ULA = ultra_light_axion_numerical_model(np.array([-22.,]), nCDM_parameter_limits)
     print('nCDM_ULA =', nCDM_ULA)
@@ -69,27 +94,137 @@ def plot_transfer_function():
         if i == 0:
             plot_label = r'CDM $[\alpha = 0]$'
             plot_colour = 'black'
+            if y == 'flux_power':
+                flux_file = h5py.File(
+                    '/Users/keir/Documents/emulator_data/emulator_flux_vectors/mf_fixed10_emulator_flux_vectors_CDM.hdf5')
+                params = np.array(flux_file['params'])[11]
+                print('Parameters =', params)
+                k_log = np.log10(np.array(flux_file['kfkms'])[11, 0])
+                power_CDM = np.array(flux_file['flux_vectors'])[11, :k_log.shape[0]]
+                power_ratio = power_CDM / power_CDM
         elif i == 1:
             plot_label = r'WDM (2 keV)' #+ r'$[\alpha, \beta, \gamma] = [%.2f, %.1f, %.1f]$'%(alpha, betas[i], gammas[i])
             plot_colour = 'gray'
             line_styles[i] = '--'
+            if y == 'flux_power':
+                flux_file = h5py.File(
+                    '/Users/keir/Documents/emulator_data/emulator_flux_vectors/mf10_emulator_flux_vectors_WDM.hdf5')
+                params = np.array(flux_file['params'])[20]
+                print('Parameters =', params)
+                npt.assert_array_equal(k_log, np.log10(np.array(flux_file['kfkms'])[20, 0]))
+                power_ratio = np.array(flux_file['flux_vectors'])[20, :k_log.shape[0]]
+                power_ratio /= power_CDM
         elif i == 2:
             plot_label = r'ULA ($10^{-22}\,\mathrm{eV}$)' #+ plot_labels(i)
             plot_colour = 'gray'
             line_styles[i] = ':'
+            if y == 'flux_power':
+                flux_file = h5py.File(
+                    '/Users/keir/Documents/emulator_data/emulator_flux_vectors/mf10_emulator_flux_vectors_WDM.hdf5')
+                params = np.array(flux_file['params'])[20]
+                print('Parameters =', params)
+                npt.assert_array_equal(k_log, np.log10(np.array(flux_file['kfkms'])[20, 0]))
+                power_ratio = np.array(flux_file['flux_vectors'])[20, :k_log.shape[0]]
+                power_ratio /= power_CDM
         else:
             plot_label = plot_labels(i)
             plot_colour = colours[i - 3]
-        ax.plot(k_log, transfer_function_nCDM(10. ** k_log, alpha, betas[i], gammas[i]), label=plot_label,
-                color=plot_colour, ls=line_styles[i], lw=line_weights[i])
+            if y == 'flux_power':
+                flux_file = h5py.File(
+                    '/Users/keir/Documents/emulator_data/emulator_flux_vectors/mf_emulator_flux_vectors_extremal.hdf5')
+                params = np.array(flux_file['params'])[53+i]
+                print('Parameters =', params)
+                npt.assert_array_equal(k_log, np.log10(np.array(flux_file['kfkms'])[53+i, 0]))
+                power_ratio = np.array(flux_file['flux_vectors'])[53+i, :k_log.shape[0]]
+                power_ratio /= power_CDM
+        if y == 'transfer':
+            ax.plot(k_log, transfer_function_nCDM(10. ** k_log, alpha, betas[i], gammas[i]), label=plot_label,
+                    color=plot_colour, ls=line_styles[i], lw=line_weights[i])
+        elif y == 'flux_power':
+            ax.plot(k_log, power_ratio, label=plot_label, color=plot_colour, ls=line_styles[i], lw=line_weights[i])
 
-    ax.set_xlabel(r'$\mathrm{log} (k [h\,\mathrm{Mpc}^{-1}])$')
-    ax.set_ylabel(r'$T(k)$')
-    ax.set_xlim([-1.2, 1.6])
+    if y == 'transfer':
+        ax.set_xlabel(r'$\mathrm{log} (k [h\,\mathrm{Mpc}^{-1}])$')
+        ax.set_ylabel(r'$T(k)$')
+        ax.set_xlim([-1.2, 1.6])
+        save_file = 'transfer.pdf'
+    elif y == 'flux_power':
+        ax.set_xlabel(r'$\mathrm{log} (k_\mathrm{f} [\mathrm{s}\,\mathrm{km}^{-1}])$')
+        ax.set_ylabel(r'$P_\mathrm{f}^\mathrm{nCDM}(k_\mathrm{f}) / P_\mathrm{f}^\mathrm{CDM}(k_\mathrm{f})$')
+        ax.set_xlim([-2.2, -0.7])
+        save_file = 'flux_power.pdf'
     ax.set_ylim([-0.1, 1.05])
     ax.legend(fontsize=16., frameon=False) #fontsize=16.)
     fig.subplots_adjust(top=0.95, bottom=0.15, right=0.95)
-    plt.savefig('/Users/keir/Documents/emulator_paper_axions/transfer.pdf')
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/' + save_file)
+
+def plot_convergence():
+    """Plot the marginalised posterior summary statistics convergence."""
+    convergence_data = np.load('/Users/keir/Software/lya_emulator/plots/convergence.npz')
+    posterior_means = convergence_data['arr_0']
+    posterior_limits = convergence_data['arr_1']
+    sim_num = np.concatenate((np.array([0, 5, 10, 14, 16, 18]), np.arange(19, 44, 2)))
+    slice_array = np.concatenate((np.arange(0, 15), np.arange(16, 23, 2)))
+    redshifts = [4.95, 4.58, 4.24]
+
+    one_sigma = (posterior_limits[slice_array, :, 2] - posterior_limits[slice_array, :, 1]) / 2.
+    two_sigma = (posterior_limits[slice_array, :, 3] - posterior_limits[slice_array, :, 0]) / 2.
+    mean_diff = (posterior_means[slice_array[1:]] - posterior_means[slice_array[:-1]]) / (two_sigma[:-1] / 2.)
+    one_sigma_diff = (one_sigma[1:] - one_sigma[:-1]) / (two_sigma[:-1] / 2.)
+    two_sigma_diff = (two_sigma[1:] - two_sigma[:-1]) / (two_sigma[:-1] / 2.)
+
+    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6.4*2., 6.4*2.5))
+    plot_labels = [r'$\tau_0 (z = %.1f)$'%redshifts[0], r'$\tau_0 (z = %.1f)$'%redshifts[1],
+                   r'$\tau_0 (z = %.1f)$'%redshifts[2], r'$n_\mathrm{s}$', r'$A_\mathrm{s}$',
+                   r'$T_0 (z = %.1f)$'%redshifts[0], r'$T_0 (z = %.1f)$'%redshifts[1], r'$T_0 (z = %.1f)$'%redshifts[2],
+                   r'$\widetilde{\gamma} (z = %.1f)$'%redshifts[0], r'$\widetilde{\gamma} (z = %.1f)$'%redshifts[1],
+                   r'$\widetilde{\gamma} (z = %.1f)$'%redshifts[2], r'$u_0 (z = %.1f)$'%redshifts[0],
+                   r'$u_0 (z = %.1f)$'%redshifts[1], r'$u_0 (z = %.1f)$'%redshifts[2],
+                   r'$\log(m_\mathrm{a} [\mathrm{eV}])$']
+    colours = lyc.get_distinct(8)
+    colours += colours[:7]
+    line_style = '-'
+
+    for i in range(len(plot_labels)):
+        if i > 7:
+            line_style = '--'
+        axes[0].plot(sim_num[1:], mean_diff[:, i], label=plot_labels[i], color=colours[i], lw=2.5, ls=line_style)
+        axes[1].plot(sim_num[1:], one_sigma_diff[:, i], color=colours[i], lw=2.5, ls=line_style)
+        axes[2].plot(sim_num[1:], two_sigma_diff[:, i], color=colours[i], lw=2.5, ls=line_style)
+
+    axes[0].axhline(y=0.5, color='black', ls=':', lw=2.5)
+    axes[0].axhline(y=-0.5, color='black', ls=':', lw=2.5)
+    axes[1].axhline(y=0.4, color='black', ls=':', lw=2.5)
+    axes[1].axhline(y=-0.4, color='black', ls=':', lw=2.5)
+    axes[2].axhline(y=0.75, color='black', ls=':', lw=2.5)
+    axes[2].axhline(y=-0.75, color='black', ls=':', lw=2.5)
+
+    axes[2].set_xlabel(r'Optimisation simulation number')
+    axes[0].set_ylabel(r'Number of sigma shift [posterior means]')
+    axes[1].set_ylabel(r'Number of sigma shift [1 sigma]')
+    axes[2].set_ylabel(r'Number of sigma shift [2 sigma]')
+    axes[0].set_xticklabels([])
+    axes[1].set_xticklabels([])
+    axes[0].set_ylim([-3.9, 3.9])
+    axes[0].legend(frameon=False, loc='lower right', ncol=3, fontsize=17.)
+    fig.subplots_adjust(top=0.99, bottom=0.05, right=0.95, hspace=0.05)
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/convergence.pdf')
+
+    return posterior_means, posterior_limits
+
+def plot_exploration():
+    """Plot the exploration convergence."""
+    exploration = np.load('/Users/keir/Software/lya_emulator/plots/exploration.npy')
+    sim_num = np.arange(exploration.size) + 1
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6.4, 6.4))
+    colour = lyc.get_distinct(1)
+    ax.plot(sim_num, exploration, color=colour[0], lw=2.5)
+    #ax.axhline(y=0., color='black', ls=':', lw=2.5)
+    ax.set_xlabel(r'Optimisation simulation number')
+    ax.set_ylabel(r'Exploration')
+    fig.subplots_adjust(top=0.95, bottom=0.15, right=0.95)
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/exploration.pdf')
 
 def make_error_distribution():
     """Calculate the emulator error distribution for leave-one-out cross-validation."""
@@ -277,9 +412,333 @@ def violinplot_error_distribution(distribution='validation'):
     plt.savefig('/Users/keir/Documents/emulator_paper_axions/' + save_file)
     return k, z, p, f, m, s, k_data, s_data, k_max, data_frames
 
+def plot_posterior(parameters='all'):
+    """Make a triangle plot of marginalised 1D and 2D posteriors."""
+    if parameters == 'all':
+        n_chains = 4
+        save_file = 'posterior.pdf'
+    elif parameters == 'logma':
+        n_chains = 6
+        save_file = 'posterior_logma.pdf'
+
+    chainfiles = [None] * n_chains
+    chainfile_root = '/Users/keir/Documents/emulator_data/chains_final'
+    chainfiles[
+        0] = 'chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_emu50_512_data_ULA_diag_emu_TDR_u0_15000.txt'
+    chainfiles[
+        1] = 'chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_batch6_data_diag_emu_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18.txt'
+    chainfiles[
+        2] = 'chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_batch14_data_diag_emu_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18.txt'
+    chainfiles[
+        3] = 'chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_batch18_2_data_diag_emu_TDR_u0_30000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18.txt'
+    if parameters == 'logma':
+        chainfiles[4] = 'chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_batch9_data_diag_emu_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18.txt'
+        chainfiles[5] = 'chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_batch17_1_data_diag_emu_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18.txt'
+
+    for i, chainfile in enumerate(chainfiles):
+        chainfiles[i] = os.path.join(chainfile_root, chainfile)
+
+    redshifts = [4.95, 4.58, 4.24]
+    parameter_names = ['t5', 't46', 't42', 'ns', 'As', 'T5', 'T46', 'T42', 'g5', 'g46', 'g42', 'u5', 'u46', 'u42',
+                       'logma']
+    parameter_labels = [r'\tau_0^{5.0}', r'\tau_0^{4.6}',
+                        r'\tau_0^{4.2}', r'n_\mathrm{s}', r'A_\mathrm{s}',
+                        r'T_0^{5.0}', r'T_0^{4.6}', r'T_0^{4.2}',
+                        r'\widetilde{\gamma}^{5.0}', r'\widetilde{\gamma}^{4.6}',
+                        r'\widetilde{\gamma}^{4.2}', r'u_0^{5.0}',
+                        r'u_0^{4.6}', r'u_0^{4.2}',
+                        r'\log\,m_\mathrm{a}'] #^\mathrm{eV}
+
+    legend_labels = [r'Initial emulator', r'After 19 optimisation simulations',
+                     r'After 35 optimisation simulations',
+                     r'After 43 optimisation simulations']
+    colours = lyc.get_distinct(len(chainfiles))
+    line_widths = [2.5,] * len(chainfiles)
+    if parameters == 'logma':
+        legend_labels = legend_labels[:2] + [r'After 25 optimisation simulations',] + [legend_labels[2],] +\
+                        [r'After 40 optimisation simulations',] + [legend_labels[3],]
+
+    samples = [None] * len(chainfiles)
+    for i in range(len(samples)):
+        if i < 3:
+            samples[i] = np.loadtxt(chainfiles[i]) #, max_rows=450000)
+        else:
+            samples[i] = np.loadtxt(chainfiles[i]) #, max_rows=450000)
+        samples[i][:, 4] *= 1.e+9
+        samples[i][:, 5] /= 1.e+4
+        samples[i][:, 6] /= 1.e+4
+        samples[i][:, 7] /= 1.e+4
+        if parameters == 'logma':
+            samples[i] = samples[i][:, -1].reshape(-1, 1)
+    if parameters == 'all':
+        width_inch = 6.4*2.5
+        legend_loc = 'upper right'
+        tick_label_size = 10.
+    elif parameters == 'logma':
+        width_inch = 6.4
+        legend_loc = [0.07, 0.2]
+        tick_label_size = 14.
+        samples = list(np.array(samples)[np.array([0, 1, 4, 2, 5, 3])])
+        parameter_names = [parameter_names[-1],]
+        parameter_labels = [r'\log(m_\mathrm{a} [\mathrm{eV}])',]
+
+    posterior_MCsamples = [None] * len(samples)
+    for i, samples_single in enumerate(samples):
+        posterior_MCsamples[i] = gd.MCSamples(samples=samples_single, names=parameter_names, labels=parameter_labels,
+                                              ranges={'logma': [-22., -19.]})
+
+    subplot_instance = gdp.getSubplotPlotter(width_inch=width_inch, rc_sizes=True, scaling=False)
+    if parameters == 'logma':
+        subplot_instance.settings.legend_fontsize = 12.
+        subplot_instance.settings.figure_legend_frame = False
+    subplot_instance.triangle_plot(posterior_MCsamples, filled=True, contour_colors=colours, contour_lws=line_widths,
+                                   legend_labels=legend_labels, legend_loc=legend_loc)
+    #subplot_instance.add_legend(legend_labels, frameon=False)
+    #subplot_instance.fig.legend(frameon=False)
+    subplot_instance.fig.subplots_adjust(hspace=0., wspace=0.)
+    #subplot_instance.finish_plot(legend_frame=False)
+
+    with open('/Users/keir/Documents/emulator_data/chains_final/emulator_params_batch18_2_TDR_u0.json',
+              'r') as json_file:
+        json_dict = json.load(json_file)
+    emulator_samples = np.concatenate((np.array(json_dict['sample_params'])[:, :2],
+                                       np.array(json_dict['measured_sample_params'])), axis=1)
+    log_mass = np.zeros((emulator_samples.shape[0], 1))
+    for i in range(50, emulator_samples.shape[0]):
+        log_mass[i, 0] = ultra_light_axion_numerical_model_inverse(np.array(json_dict['sample_params'])[i, 5:8])
+    emulator_samples = np.concatenate((emulator_samples, log_mass), axis=1)
+    emulator_samples[:, 1] *= 1.e+9
+    emulator_samples[:, 2] /= 1.e+4
+    emulator_samples[:, 3] /= 1.e+4
+    emulator_samples[:, 4] /= 1.e+4
+
+    for p in range(samples[0].shape[1]):
+        for q in range(p + 1):
+            ax = subplot_instance.subplots[p, q]
+            if parameters == 'logma':
+                ax.xaxis.label.set_size(18.)
+                ax.yaxis.label.set_size(18.)
+            ax.xaxis.set_tick_params(labelsize=tick_label_size)
+            ax.yaxis.set_tick_params(labelsize=tick_label_size)
+
+            if q < p:
+                if (p in np.array([3, 4, 14])) or (q in np.array([3, 4, 14])) or (
+                        (p in np.arange(8, 11)) and (q == (p - 3))) or (
+                        (p in np.arange(11, 14)) and ((q == (p - 3)) or (q == (p - 6)))):
+                    ax.scatter(emulator_samples[:50, q-3], emulator_samples[:50, p-3], color=colours[0], marker='+')
+                    ax.scatter(emulator_samples[50:69, q-3], emulator_samples[50:69, p-3], color=colours[1], marker='+')
+                    ax.scatter(emulator_samples[69:85, q-3], emulator_samples[69:85, p-3], color=colours[2], marker='+')
+                    ax.scatter(emulator_samples[85:, q-3], emulator_samples[85:, p-3], color=colours[3], marker='+')
+
+    #plt.legend(fontsize=18., frameon=False)
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/' + save_file)
+
+def plot_emulator():
+    """Make a plot of the emulator training points."""
+    redshifts = [4.95, 4.58, 4.24]
+    plot_labels = np.array([r'$n_\mathrm{s}$', r'$A_\mathrm{s}$',
+                   r'$T_0^{z = %.1f} [10^4\,\mathrm{K}]$'%redshifts[0],
+                   r'$T_0^{z = %.1f} [10^4\,\mathrm{K}]$'%redshifts[1],
+                   r'$T_0^{z = %.1f} [10^4\,\mathrm{K}]$'%redshifts[2],
+                   r'$\widetilde{\gamma}^{z = %.1f}$'%redshifts[0], r'$\widetilde{\gamma}^{z = %.1f}$'%redshifts[1],
+                   r'$\widetilde{\gamma}^{z = %.1f}$'%redshifts[2],
+                   r'$u_0^{z = %.1f} \left[\frac{m_\mathrm{p}}{\mathrm{eV}}\right]$'%redshifts[0],
+                   r'$u_0^{z = %.1f} \left[\frac{m_\mathrm{p}}{\mathrm{eV}}\right]$'%redshifts[1],
+                   r'$u_0^{z = %.1f} \left[\frac{m_\mathrm{p}}{\mathrm{eV}}\right]$'%redshifts[2],
+                   r'$\log(m_\mathrm{a} [\mathrm{eV}])$'])
+    plot_labels = plot_labels[np.array([0, 1, 11, 2, 5, 8, 3, 6, 9, 4, 7, 10])]
+    plot_labels_x = np.concatenate((plot_labels[:3], np.array([r'$T_0^{z = z_i} [10^4\,\mathrm{K}]$',
+                                                               r'$\widetilde{\gamma}^{z = z_i}$'])))
+
+    with open('/Users/keir/Documents/emulator_data/chains_final/emulator_params_batch18_2_TDR_u0.json',
+              'r') as json_file:
+        json_dict = json.load(json_file)
+    emulator_samples = np.concatenate((np.array(json_dict['sample_params'])[:, :2],
+                                       np.array(json_dict['measured_sample_params'])), axis=1)
+    log_mass = np.zeros((emulator_samples.shape[0], 1))
+    for i in range(50, emulator_samples.shape[0]):
+        log_mass[i, 0] = ultra_light_axion_numerical_model_inverse(np.array(json_dict['sample_params'])[i, 5:8])
+    emulator_samples = np.concatenate((emulator_samples[:, :2], log_mass, emulator_samples[:, 2:]), axis=1)
+    emulator_samples = emulator_samples[:, np.array([0, 1, 2, 3, 6, 9, 4, 7, 10, 5, 8, 11])]
+    #np.concatenate((emulator_samples, log_mass), axis=1)
+    emulator_samples[:, 1] *= 1.e+9
+    emulator_samples[:, 3] /= 1.e+4
+    emulator_samples[:, 6] /= 1.e+4
+    emulator_samples[:, 9] /= 1.e+4
+
+    fig, axes = plt.subplots(nrows=11, ncols=5, figsize=(6.4*2.5*5.73/11., 6.4*2.5)) #5.
+    alpha_min = 0.25
+    alpha_k = lambda k: (k * (1. - alpha_min) / (emulator_samples.shape[0] - 50)) + alpha_min
+    for a in range(axes.shape[0]): #11
+        i = a + 1
+        for j in range(axes.shape[1]): #6
+            if a == (axes.shape[0] - 1):
+                axes[a, j].set_xlabel(plot_labels_x[j])
+            else:
+                axes[a, j].set_xticklabels([])
+            if j == 0:
+                axes[a, j].set_ylabel(plot_labels[i])
+            else:
+                axes[a, j].set_yticklabels([])
+
+            if j >= i:
+                fig.delaxes(axes[a, j])
+                continue
+            elif (i > 5) and (j >= (i - 3)):
+                fig.delaxes(axes[a, j])
+                continue
+            elif (i > 8) and (j >= (i - 6)):
+                fig.delaxes(axes[a, j])
+                continue
+
+            if j < 3:
+                x_idx = j
+            elif (j > 2) and (i > 8):
+                x_idx = j + 6
+            elif (j > 2) and (i > 5):
+                x_idx = j + 3
+            elif (j > 2) and (i > 2):
+                x_idx = j
+
+            axes[a, j].set_xlim([np.min(emulator_samples[:, x_idx]), np.max(emulator_samples[:, x_idx])])
+            axes[a, j].set_ylim([np.min(emulator_samples[:, i]), np.max(emulator_samples[:, i])])
+            if i in np.array([4, 7, 10]):
+                axes[a, j].set_ylim([0.8, np.max(emulator_samples[:, i])])
+            elif i == 5:
+                axes[a, j].set_ylim([np.min(emulator_samples[:, i]), 18.])
+            elif i in np.array([8, 11]):
+                axes[a, j].set_ylim([np.min(emulator_samples[:, i]), 18.])
+            #elif i == 3:
+            #    axes[a, j].set_ylim([np.min(emulator_samples[:, i]), 12000.])
+            if j == 3:
+                axes[a, j].set_xlim([np.min(emulator_samples[:, np.arange(j, j+7, 3)]),
+                                     np.max(emulator_samples[:, np.arange(j, j+7, 3)])])
+            elif j == 4:
+                axes[a, j].set_xlim([0.8, np.max(emulator_samples[:, np.arange(j, j+7, 3)])])
+            if (i == 2) or (j == 2):
+                if j == 2:
+                    axes[a, j].set_xlim([np.min(emulator_samples[50:, x_idx]), np.max(emulator_samples[50:, x_idx])])
+                elif i == 2:
+                    axes[a, j].set_ylim([np.min(emulator_samples[50:, i]), np.max(emulator_samples[50:, i])])
+                pass
+            else:
+                axes[a, j].scatter(emulator_samples[:50, x_idx], emulator_samples[:50, i], color='black', marker='+',
+                                   alpha=alpha_min)
+            for k in range(50, emulator_samples.shape[0]):
+                axes[a, j].scatter(emulator_samples[k, x_idx], emulator_samples[k, i], color='black', marker='+',
+                                   alpha=alpha_k(k-49))
+            axes[a, j].set_aspect(np.diff(axes[a, j].get_xlim()) / np.diff(axes[a, j].get_ylim()))
+
+    axes[10, 0].set_xticks([0.92, 0.98])
+    axes[10, 2].set_xticks([-21., -20.])
+    fig.subplots_adjust(top=0.99, bottom=0.05, right=0.95, hspace=0., wspace=0.)
+    #plt.legend(fontsize=18., frameon=False)
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/emulator.pdf')
+
+    return emulator_samples
+
+def plot_data():
+    """Make a plot of the data flux power spectra."""
+    redshifts = [4.95, 4.58, 4.24]
+    n_z = len(redshifts)
+    n_k = 16
+    theory = np.load('/Users/keir/Software/lya_emulator/plots/best_fit.npy') #3 x 3 x 16
+    data = np.zeros((n_z, n_k, 4))
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6.4, 6.4))
+    plot_labels = [r'$z = %.1f$'%redshifts[0], r'$z = %.1f$'%redshifts[1], r'$z = %.1f$'%redshifts[2]]
+    colours = lyc.get_distinct(n_z)
+    for i, z in enumerate(redshifts):
+        data[i] = np.genfromtxt('/Users/keir/Software/lya_emulator/lyaemu/data/Boera_HIRES_UVES_flux_power/flux_power_z_%.1f.dat'%z,
+                                skip_header=5, skip_footer=1)
+        ax.errorbar(data[i, :, 0], theory[0, i] * theory[1, i] / np.pi, yerr=theory[0, i] * theory[2, i] / np.pi,
+                    elinewidth=2.5, capsize=4., capthick=4., color=colours[i], lw=2.5, label=plot_labels[i])
+        ax.errorbar(data[i, :, 0], theory[0, i] * data[i, :, 2] / np.pi, yerr=theory[0, i] * data[i, :, 3] / np.pi,
+                    elinewidth=2.5, capsize=4., capthick=4., color=colours[i], lw=2.5, ls='--')
+
+    ax.errorbar([], [], yerr=[], color='gray', lw=2.5, label=r'Best fit', elinewidth=2.5, capsize=4., capthick=4.)
+    ax.errorbar([], [], yerr=[], color='gray', lw=2.5, label=r'Data', ls='--', elinewidth=2.5, capsize=4., capthick=4.)
+    ax.set_yscale('log')
+    ax.set_xlabel(r'$\mathrm{log} (k_\mathrm{f} [\mathrm{s}\,\mathrm{km}^{-1}])$')
+    ax.set_ylabel(r'$k_\mathrm{f} P_\mathrm{f}(k_\mathrm{f})/\pi$')
+    #ax.set_xlim([-1.2, 1.6])
+    #ax.set_ylim([-0.1, 1.05])
+    ax.legend(frameon=False) #fontsize=16.)
+
+    fig.subplots_adjust(top=0.95, bottom=0.15, right=0.96, left=0.14)
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/data.pdf')
+
+def plot_transfer_ULA():
+    """Make a plot of the ULA transfer function and the nCDM fit."""
+    fname = '/Users/keir/Software/axionCAMB/axion_%s_matterpower_z_99.dat'
+    mass_22 = [0.5, 1., 4., 10., 40., 100., 400., 1000., 2000.]
+
+    linear_power = [None] * (len(mass_22) + 1)
+    linear_power[0] = np.loadtxt(fname%'CDM')
+    nCDM_parameters = np.zeros((len(mass_22), 3))
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6.4, 6.4))
+    plot_label = r'$%.1f$'
+    colours = lyc.get_distinct(len(mass_22))
+    for i, mass in enumerate(mass_22):
+        linear_power[i+1] = np.loadtxt(fname%str(int(mass)))
+        transfer_function_ULA = np.sqrt(linear_power[i+1][:, 1] / linear_power[0][:, 1])
+        nCDM_parameters[i], nCDM_covariance = spo.curve_fit(transfer_function_nCDM, linear_power[i+1][:, 0],
+                                                            transfer_function_ULA, p0=np.array([0.05, 5., -5.]))
+        print(nCDM_parameters[i], nCDM_covariance)
+
+        ax.plot(np.log10(linear_power[i+1][:, 0]), transfer_function_nCDM(linear_power[i+1][:, 0], *nCDM_parameters[i]),
+                label=plot_label%np.log10(mass * 1.e-22), color=colours[i], lw=2.5)
+        ax.plot(np.log10(linear_power[i+1][:, 0]), transfer_function_ULA, color=colours[i], ls='--', lw=2.5)
+
+    ax.plot([], [], label=r'$[\alpha, \beta, \gamma]$ - fit', color='gray', lw=2.5)
+    ax.plot([], [], label=r'axionCAMB', color='gray', ls='--', lw=2.5)
+    ax.set_xlabel(r'$\mathrm{log} (k [h\,\mathrm{Mpc}^{-1}])$')
+    ax.set_ylabel(r'$T(k)$')
+    ax.set_xlim([-0.3, 2.8])
+    ax.set_ylim([-0.1, 1.05])
+    ax.legend(frameon=False, title=r'$\log(m_\mathrm{a} [\mathrm{eV}])$', fontsize=15., title_fontsize=15.)
+
+    fig.subplots_adjust(top=0.95, bottom=0.15, right=0.95)
+    #plt.savefig('/Users/keir/Documents/emulator_paper_axions/transfer_ULA.pdf')
+
+    fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(6.4, 6.4*1.5))
+    colours = lyc.get_distinct(2)
+    mass_plot = np.linspace(-22.5, -18.5, num=1000)
+    for i, axis in enumerate(ax):
+        if i == 0:
+            y_scatter = np.log10(nCDM_parameters[:, 0])
+            y_plot = np.log10(ultra_light_axion_alpha_model(mass_plot, *alpha_model_parameters))
+            scatter_label = r'$[\alpha, \beta, \gamma]$'
+            plot_label = r'Polynomial model fit'
+        elif i == 1:
+            y_scatter = cp.deepcopy(nCDM_parameters[:, 1])
+            y_plot = ultra_light_axion_beta_model(mass_plot, *beta_model_parameters)
+            scatter_label = None
+            plot_label = None
+        elif i == 2:
+            y_scatter = np.log10(-1. * nCDM_parameters[:, 2])
+            y_plot = np.log10(-1. * ultra_light_axion_gamma_model(mass_plot, *gamma_model_parameters))
+            scatter_label = None
+            plot_label = None
+        axis.scatter(np.log10(np.array(mass_22) * 1.e-22), y_scatter, label=scatter_label, color=colours[1], marker='+',
+                     s=200., lw=2.5)
+        axis.plot(mass_plot, y_plot, label=plot_label, color=colours[0], lw=2.5)
+
+    ax[0].set_xticklabels([])
+    ax[1].set_xticklabels([])
+    ax[2].set_xlabel(r'$\log(m_\mathrm{a} [\mathrm{eV}])$')
+    ax[0].set_ylabel(r'$\log(\alpha [h^{-1}\,\mathrm{Mpc}])$')
+    ax[1].set_ylabel(r'$\beta$')
+    ax[2].set_ylabel(r'$\log(\mbox{-} \gamma)$')
+    ax[0].legend(frameon=False)
+
+    fig.subplots_adjust(top=0.96, bottom=0.1, right=0.95, hspace=0.05, left=0.15)
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/transfer_ULA_polynomial.pdf')
+
 if __name__ == "__main__":
     plt.rc('text', usetex=True)
-    plt.rc('font', family='serif', size=18.)
+    plt.rc('font', family='serif', size=18.) #18 normally - 16 for posteriors
 
     plt.rc('axes', linewidth=1.5)
     plt.rc('xtick.major', width=1.5)
@@ -287,6 +746,12 @@ if __name__ == "__main__":
     plt.rc('ytick.major', width=1.5)
     plt.rc('ytick.minor', width=1.5)
 
-    #plot_transfer_function()
+    #plot_transfer_function(y='flux_power')
     #k, z, p, f, m, s, k_max = make_error_distribution()
-    k, z, p, f, m, s, k_data, s_data, k_max, data_frames = violinplot_error_distribution(distribution='data')
+    #k, z, p, f, m, s, k_data, s_data, k_max, data_frames = violinplot_error_distribution(distribution='data')
+    #plot_exploration()
+    #posterior_means, posterior_limits = plot_convergence()
+    #plot_posterior(parameters='logma')
+    #plot_data()
+    #plot_transfer_ULA()
+    emulator_samples = plot_emulator()
