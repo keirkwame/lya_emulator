@@ -436,7 +436,7 @@ class Emulator:
         return gp
 
     def get_flux_vectors(self, max_z=4.2, kfunits="kms", redshifts=None, pixel_resolution_km_s='default',
-                         use_measured_parameters=False, fix_mean_flux_samples=False,
+                         use_measured_parameters=False, fix_mean_flux_samples=False, no_mean_flux_rescaling=False,
                          savefile='emulator_flux_vectors.hdf5', parallel=False, n_process=1):
         """Get the desired flux vectors and their parameters"""
         if self.leave_out_validation is None:
@@ -464,6 +464,8 @@ class Emulator:
             dpvals = newdp
             aparams = np.array([np.concatenate([dp+nuggets[i],pvals[i]]) for dp in dpvals for i in range(nsims)])
             mfc = "mf10"
+        if no_mean_flux_rescaling:
+            mfc = 'mfraw'
         print('dpvals =', dpvals)
         print('nuggets =', nuggets)
         print('mean_flux =', self.mf.get_mean_flux(myspec.zout, params=dpvals))
@@ -493,7 +495,11 @@ class Emulator:
                 #'natively' binned k values in km/s units as a function of redshift
                 kfkms = [ps.get_kf_kms() for _ in dpvals for ps in powers]
             else:
-                flux_vectors = np.array([powers[i].get_power_native_binning(mean_fluxes = mef(dpvals)) for i in range(nsims)])
+                if not no_mean_flux_rescaling:
+                    mean_fluxes = mef(dpvals)
+                else:
+                    mean_fluxes = None
+                flux_vectors = np.array([powers[i].get_power_native_binning(mean_fluxes = mean_fluxes) for i in range(nsims)])
                 #'natively' binned k values in km/s units as a function of redshift
                 kfkms = [ps.get_kf_kms() for ps in powers]
             #Same in all boxes
