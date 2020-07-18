@@ -13,7 +13,7 @@ if __name__ == "__main__":
     emulator_base_directory = ['/share/data2/keir/Simulations', '/share/rcifdata/keir/Simulations']
     emulator_names = ['nCDM_convergence_512_256', 'nCDM_convergence_768_WDM']
     emulator_jsons = ['emulator_params.json', 'emulator_params_4.json']
-    flux_vectors = ['emulator_flux_vectors.hdf5', 'emulator_4_flux_vectors.hdf5']
+    flux_vectors = ['emulator_flux_vectors_0_5.hdf5', 'emulator_4_flux_vectors_0_5.hdf5']
     simulation_indices = [np.arange(2), np.arange(4)] #, np.arange(1)] #np.arange(2)]
     interpolate_to_same_k = False
 
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     n_simulations = np.sum(
         [np.size(simulation_indices_single_emulator) for simulation_indices_single_emulator in simulation_indices])
 
-    savefile = os.path.join(emulator_base_directory[0], emulator_names[0], 'flux_power_nCDM_convergence_mfraw.pdf')
+    savefile = os.path.join(emulator_base_directory[0], emulator_names[0], 'flux_power_nCDM_convergence_0_5.pdf')
     figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 6. / 10.))
 
     plot_start_index = 0
@@ -30,12 +30,13 @@ if __name__ == "__main__":
     k_parallel = []
     flux_powers = []
     for a, emulator_name in enumerate(emulator_names):
-        emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory[a], emulator_name), mf=mef.ConstMeanFluxHighRedshift(value=1.))
+        emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory[a], emulator_name),
+                                            mf=mef.ConstMeanFluxHighRedshift(value=0.5))
         emulator_instance.load(dumpfile=emulator_jsons[a]) #'emulator_params_batch4_1_TDR_u0.json')
 
         input_parameters_all_single_emulator, k_parallel_single_emulator, flux_powers_single_emulator = emulator_instance.get_flux_vectors(
             redshifts=emulator_instance.redshifts, pixel_resolution_km_s=1., fix_mean_flux_samples=True,
-            no_mean_flux_rescaling=True, savefile=flux_vectors[a], parallel=True, n_process=8)
+            no_mean_flux_rescaling=False, savefile=flux_vectors[a], parallel=True, n_process=8)
         print(flux_powers_single_emulator.shape)
         flux_powers_single_emulator = flux_powers_single_emulator.reshape(k_parallel_single_emulator.shape)
 
