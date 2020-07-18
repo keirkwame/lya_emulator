@@ -76,11 +76,14 @@ def ultra_light_axion_numerical_model_inverse(nCDM_parameters, h=0.6686):
 
 def plot_numerical_convergence():
     """Plot the numerical convergence of nCDM simulations."""
-    fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(6.4*2., 6.4*1.5))
+    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6.4*1., 6.4*1.5))
     colours = lyc.get_distinct(3)
+    redshifts = [4.95, 4.58, 4.24]
     flux_fnames = [None] * 5
     flux_fnames[0] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mf_fixed10_emulator_flux_vectors_512_256.hdf5'
     flux_fnames[1] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mf10_emulator_flux_vectors_768_WDM.hdf5'
+    #flux_fnames[0] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_512_256.hdf5'
+    #flux_fnames[1] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_4_flux_vectors_768_WDM.hdf5'
     flux_fnames[2] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/cc_emulator_flux_vectors_10.hdf5'
     flux_fnames[3] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/cc_emulator_flux_vectors_15.hdf5'
     flux_fnames[4] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/cc_emulator_flux_vectors_17_5.hdf5'
@@ -91,15 +94,15 @@ def plot_numerical_convergence():
             labels = [r'768', r'512', r'256']
 
             flux_file = h5py.File(flux_fnames[0])
-            k_log = np.log10(np.array(flux_file['kfkms'])[18]) #3, n_k
-            print('Parameters =', np.array(flux_file['params'])[18])
-            power_arrays[1] = np.array(flux_file['flux_vectors'])[18] #3 x n_k #512
-            print('Parameters =', np.array(flux_file['params'])[19])
-            power_arrays[2] = np.array(flux_file['flux_vectors'])[19] #256
+            k_log = np.log10(np.array(flux_file['kfkms'])[0]) #3, n_k #18
+            print('Parameters =', np.array(flux_file['params'])[0])
+            power_arrays[1] = np.array(flux_file['flux_vectors'])[0] #3 x n_k #512
+            print('Parameters =', np.array(flux_file['params'])[1]) #19
+            power_arrays[2] = np.array(flux_file['flux_vectors'])[1] #256
 
             flux_file = h5py.File(flux_fnames[1])
-            print('Parameters =', np.array(flux_file['params'])[39])
-            power_arrays[0] = np.array(flux_file['flux_vectors'])[39] #3 x n_k #768
+            print('Parameters =', np.array(flux_file['params'])[3]) #39
+            power_arrays[0] = np.array(flux_file['flux_vectors'])[3] #3 x n_k #768
         if i == 1:
             labels = [r'17.5', r'15', r'10']
 
@@ -129,25 +132,34 @@ def plot_numerical_convergence():
             labels = [r'768', r'512', r'256']
 
             flux_file = h5py.File(flux_fnames[1])
-            k_log = np.log10(np.array(flux_file['kfkms'])[36]) #3, n_k
-            print('Parameters =', np.array(flux_file['params'])[36])
-            power_arrays[2] = np.array(flux_file['flux_vectors'])[36] #3 x n_k #256
-            print('Parameters =', np.array(flux_file['params'])[37])
-            power_arrays[1] = np.array(flux_file['flux_vectors'])[37] #512
-            print('Parameters =', np.array(flux_file['params'])[38])
-            power_arrays[0] = np.array(flux_file['flux_vectors'])[38] #768
+            k_log = np.log10(np.array(flux_file['kfkms'])[0]) #3, n_k #36-38
+            print('Parameters =', np.array(flux_file['params'])[0])
+            power_arrays[2] = np.array(flux_file['flux_vectors'])[0] #3 x n_k #256
+            print('Parameters =', np.array(flux_file['params'])[1])
+            power_arrays[1] = np.array(flux_file['flux_vectors'])[1] #512
+            print('Parameters =', np.array(flux_file['params'])[2])
+            power_arrays[0] = np.array(flux_file['flux_vectors'])[2] #768
         for j in range(3):
-            for k in range(len(power_arrays)):
+            for k in [1,]: #range(len(power_arrays)):
                 print(i, j, k)
-                power_ratio = (power_arrays[k] / power_arrays[0])[(j * k_log.shape[1]): ((j + 1) * k_log.shape[1])]
-                axes[-1 * (j + 1), i].plot(k_log[j], power_ratio, color=colours[k], label=labels[k])
-            axes[j, i].set_xlim([-2.2, -0.7])
-            axes[j, 0].set_ylabel(r'Flux power spectrum ratio')
-        axes[2, i].set_xlabel(r'$\mathrm{log} (k_\mathrm{f} [\mathrm{s}\,\mathrm{km}^{-1}])$')
-        axes[0, i].legend(fontsize=16., frameon=False)
+                data = np.genfromtxt(
+                    '/Users/keir/Software/lya_emulator/lyaemu/data/Boera_HIRES_UVES_flux_power/flux_power_z_%.1f.dat' % redshifts[j],
+                    skip_header=5, skip_footer=1)
 
-    fig.subplots_adjust(top=0.95, bottom=0.1, right=0.95, hspace=0.05, left=0.05)
-    plt.savefig('/Users/keir/Documents/emulator_paper_axions/numerical_convergence.pdf')
+                power_ratio = (power_arrays[k] / power_arrays[0])[(j * k_log.shape[1]): ((j + 1) * k_log.shape[1])]
+                if i == 1:
+                    power_ratio = np.ones_like(power_ratio)
+                axes[-1 * (j + 1)].plot(k_log[j], power_ratio, color=colours[i], label=labels[0])
+                axes[-1 * (j + 1)].fill_between(data[:, 0], y1=(1. + (1. * data[:, 3] / data[:, 1])),
+                                                y2=(1. + (-1. * (data[:, 3] / data[:, 1]))))
+            axes[j].set_xlim([-2.2, -0.7])
+            axes[j].set_ylim([0.75, 1.25])
+            axes[j].set_ylabel(r'Flux power spectrum ratio')
+        axes[2].set_xlabel(r'$\mathrm{log} (k_\mathrm{f} [\mathrm{s}\,\mathrm{km}^{-1}])$')
+        axes[0].legend(fontsize=16., frameon=False)
+
+    fig.subplots_adjust(top=0.95, bottom=0.1, right=0.95, hspace=0.05, left=0.1)
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/numerical_convergence5.pdf')
 
 def plot_transfer_function(y='transfer'):
     """Plot the nCDM transfer function."""
