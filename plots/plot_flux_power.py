@@ -17,8 +17,8 @@ if __name__ == "__main__":
     simulation_indices = [np.arange(2), np.arange(4)] #, np.arange(1)] #np.arange(2)]
     interpolate_to_same_k = False
 
-    default_emulator_index = 1
-    default_simulation_index = 3
+    default_emulator_index = 0
+    default_simulation_index = 1
     n_simulations = np.sum(
         [np.size(simulation_indices_single_emulator) for simulation_indices_single_emulator in simulation_indices])
 
