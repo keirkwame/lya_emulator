@@ -436,6 +436,7 @@ class Emulator:
         return gp
 
     def get_flux_vectors(self, max_z=4.2, kfunits="kms", redshifts=None, pixel_resolution_km_s='default',
+                         spectral_resolution_km_s='default', spectral_resolution_km_s_corrected='default',
                          use_measured_parameters=False, fix_mean_flux_samples=False, no_mean_flux_rescaling=False,
                          savefile='emulator_flux_vectors.hdf5', parallel=False, n_process=1):
         """Get the desired flux vectors and their parameters"""
@@ -448,6 +449,8 @@ class Emulator:
         nsims = np.shape(pvals)[0]
         assert nparams == len(self.param_names)
         myspec = flux_power.MySpectra(max_z=max_z, max_k=self.maxk, redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s)
+        if spectral_resolution_km_s is not 'default':
+            myspec.spec_res = spectral_resolution_km_s
         aparams = pvals
         #Note this gets tau_0 as a linear scale factor from the observed power law
         dpvals = self.mf.get_params()
@@ -499,7 +502,8 @@ class Emulator:
                     mean_fluxes = mef(dpvals)
                 else:
                     mean_fluxes = None
-                flux_vectors = np.array([powers[i].get_power_native_binning(mean_fluxes = mean_fluxes) for i in range(nsims)])
+                flux_vectors = np.array([powers[i].get_power_native_binning(mean_fluxes = mean_fluxes,
+                                        spec_res_corrected=spectral_resolution_km_s_corrected) for i in range(nsims)])
                 #'natively' binned k values in km/s units as a function of redshift
                 kfkms = [ps.get_kf_kms() for ps in powers]
             #Same in all boxes
