@@ -80,13 +80,15 @@ def plot_numerical_convergence():
     colours = lyc.get_distinct(3)
     redshifts = [4.95, 4.58, 4.24]
     flux_fnames = [None] * 5
-    flux_fnames[0] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mf_fixed10_emulator_flux_vectors_512_256.hdf5'
-    flux_fnames[1] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mf10_emulator_flux_vectors_768_WDM.hdf5'
+    #flux_fnames[0] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mf_fixed10_emulator_flux_vectors_512_256.hdf5'
+    #flux_fnames[1] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mf10_emulator_flux_vectors_768_WDM.hdf5'
     #flux_fnames[0] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_512_256.hdf5'
     #flux_fnames[1] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_4_flux_vectors_768_WDM.hdf5'
-    flux_fnames[2] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/cc_emulator_flux_vectors_10.hdf5'
-    flux_fnames[3] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/cc_emulator_flux_vectors_15.hdf5'
-    flux_fnames[4] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/cc_emulator_flux_vectors_17_5.hdf5'
+    flux_fnames[0] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/cc_emulator_flux_vectors_0_01_512_256.hdf5'
+    flux_fnames[1] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/cc_emulator_4_flux_vectors_0_01_768_WDM.hdf5'
+    flux_fnames[2] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_512_256.hdf5'
+    flux_fnames[3] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_15_flux_vectors.hdf5'
+    flux_fnames[4] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors.hdf5'
 
     for i in range(3):
         power_arrays = [None] * 3
@@ -104,7 +106,7 @@ def plot_numerical_convergence():
             print('Parameters =', np.array(flux_file['params'])[3]) #39
             power_arrays[0] = np.array(flux_file['flux_vectors'])[3] #3 x n_k #768
         if i == 1:
-            labels = [r'17.5', r'15', r'10']
+            labels = [r'17.5', r'15', r'10'] #[r'10', r'15', r'17.5']
 
             flux_file = h5py.File(flux_fnames[2])
             k_log = np.log10(np.array(flux_file['kfkms'])[0]) #3, n_k
@@ -117,7 +119,7 @@ def plot_numerical_convergence():
             power_raw = np.array(flux_file['flux_vectors'])[0].reshape(3, -1) #15
             for a in range(3):
                 power_arrays[1][a, :] = 10. ** np.interp(k_log[a], np.log10(np.array(flux_file['kfkms'])[0])[a],
-                                                         power_raw[a])
+                                                         np.log10(power_raw[a]))
             power_arrays[1] = np.ravel(power_arrays[1])
 
             flux_file = h5py.File(flux_fnames[4])
@@ -126,8 +128,10 @@ def plot_numerical_convergence():
             power_raw = np.array(flux_file['flux_vectors'])[0].reshape(3, -1) #17.5
             for a in range(3):
                 power_arrays[0][a, :] = 10. ** np.interp(k_log[a], np.log10(np.array(flux_file['kfkms'])[0])[a],
-                                                         power_raw[a])
+                                                         np.log10(power_raw[a]))
+                print(k_log[a], np.log10(np.array(flux_file['kfkms'])[0])[a], power_raw[a])
             power_arrays[0] = np.ravel(power_arrays[0])
+            #return power_arrays, k_log
         elif i == 2:
             labels = [r'768', r'512', r'256']
 
@@ -140,18 +144,19 @@ def plot_numerical_convergence():
             print('Parameters =', np.array(flux_file['params'])[2])
             power_arrays[0] = np.array(flux_file['flux_vectors'])[2] #768
         for j in range(3):
-            for k in [1,]: #range(len(power_arrays)):
+            for k in [1, 2]: #range(len(power_arrays)):
                 print(i, j, k)
                 data = np.genfromtxt(
                     '/Users/keir/Software/lya_emulator/lyaemu/data/Boera_HIRES_UVES_flux_power/flux_power_z_%.1f.dat' % redshifts[j],
                     skip_header=5, skip_footer=1)
 
                 power_ratio = (power_arrays[k] / power_arrays[0])[(j * k_log.shape[1]): ((j + 1) * k_log.shape[1])]
-                if i == 1:
-                    power_ratio = np.ones_like(power_ratio)
-                axes[-1 * (j + 1)].plot(k_log[j], power_ratio, color=colours[i], label=labels[0])
-                axes[-1 * (j + 1)].fill_between(data[:, 0], y1=(1. + (1. * data[:, 3] / data[:, 1])),
-                                                y2=(1. + (-1. * (data[:, 3] / data[:, 1]))))
+                if i == 0:
+                    power_ratio = np.ones_like(power_ratio) * 0.
+                axes[-1 * (j + 1)].plot(k_log[j], power_ratio, color=colours[k], label=labels[k])
+                axes[-1 * (j + 1)].fill_between(data[:, 0], y1=(1. + (1. * data[:, 3] / data[:, 2])),
+                                                y2=(1. + (-1. * (data[:, 3] / data[:, 2]))))
+            axes[j].axhline(y=1., color='black', ls=':')
             axes[j].set_xlim([-2.2, -0.7])
             axes[j].set_ylim([0.75, 1.25])
             axes[j].set_ylabel(r'Flux power spectrum ratio')
@@ -159,7 +164,8 @@ def plot_numerical_convergence():
         axes[0].legend(fontsize=16., frameon=False)
 
     fig.subplots_adjust(top=0.95, bottom=0.1, right=0.95, hspace=0.05, left=0.1)
-    plt.savefig('/Users/keir/Documents/emulator_paper_axions/numerical_convergence5.pdf')
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/numerical_convergence0_01_box_size_mfraw.pdf')
+    return 0, 0
 
 def plot_transfer_function(y='transfer'):
     """Plot the nCDM transfer function."""
@@ -973,8 +979,8 @@ def plot_comparison():
     plt.savefig('/Users/keir/Documents/emulator_paper_axions/comparison2.pdf')
 
 if __name__ == "__main__":
-    plt.rc('text', usetex=True)
-    plt.rc('font', family='serif', size=18.) #18 normally - 16 for posteriors - 17 for comparison
+    #plt.rc('text', usetex=True)
+    #plt.rc('font', family='serif', size=18.) #18 normally - 16 for posteriors - 17 for comparison
 
     plt.rc('axes', linewidth=1.5)
     plt.rc('xtick.major', width=1.5)
@@ -992,4 +998,4 @@ if __name__ == "__main__":
     #plot_transfer_ULA()
     #emulator_samples = plot_emulator()
     #plot_comparison()
-    plot_numerical_convergence()
+    power_arrays, k_log = plot_numerical_convergence()
