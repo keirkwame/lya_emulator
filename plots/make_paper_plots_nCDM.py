@@ -79,7 +79,7 @@ def plot_numerical_convergence():
     fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6.4*1., 6.4*1.5))
     colours = lyc.get_distinct(3)
     redshifts = [4.95, 4.58, 4.24]
-    flux_fnames = [None] * 5
+    flux_fnames = [None] * 8
     #flux_fnames[0] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mf_fixed10_emulator_flux_vectors_512_256.hdf5'
     #flux_fnames[1] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mf10_emulator_flux_vectors_768_WDM.hdf5'
     #flux_fnames[0] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_512_256.hdf5'
@@ -89,22 +89,28 @@ def plot_numerical_convergence():
     flux_fnames[2] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_512_256.hdf5'
     flux_fnames[3] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_15_flux_vectors.hdf5'
     flux_fnames[4] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors.hdf5'
+    flux_fnames[5] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_spec_res_6.hdf5'
+    flux_fnames[6] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_spec_res_7_2.hdf5'
+    flux_fnames[7] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_spec_res_4_8.hdf5'
 
     for i in range(3):
         power_arrays = [None] * 3
         if i == 0:
-            labels = [r'768', r'512', r'256']
+            #labels = [r'768', r'512', r'256']
+            labels = [r'Exact', r'$+ 10\%$', r'$- 10\%$']
 
-            flux_file = h5py.File(flux_fnames[0])
+            flux_file = h5py.File(flux_fnames[6])
             k_log = np.log10(np.array(flux_file['kfkms'])[0]) #3, n_k #18
             print('Parameters =', np.array(flux_file['params'])[0])
-            power_arrays[1] = np.array(flux_file['flux_vectors'])[0] #3 x n_k #512
-            print('Parameters =', np.array(flux_file['params'])[1]) #19
-            power_arrays[2] = np.array(flux_file['flux_vectors'])[1] #256
+            power_arrays[1] = np.array(flux_file['flux_vectors'])[0] #3 x n_k #512 #6.6
 
-            flux_file = h5py.File(flux_fnames[1])
-            print('Parameters =', np.array(flux_file['params'])[3]) #39
-            power_arrays[0] = np.array(flux_file['flux_vectors'])[3] #3 x n_k #768
+            flux_file = h5py.File(flux_fnames[7])
+            print('Parameters =', np.array(flux_file['params'])[0]) #19
+            power_arrays[2] = np.array(flux_file['flux_vectors'])[0] #256 #5.4
+
+            flux_file = h5py.File(flux_fnames[5])
+            print('Parameters =', np.array(flux_file['params'])[0]) #39
+            power_arrays[0] = np.array(flux_file['flux_vectors'])[0] #3 x n_k #768 #6
         if i == 1:
             labels = [r'17.5', r'15', r'10'] #[r'10', r'15', r'17.5']
 
@@ -151,12 +157,14 @@ def plot_numerical_convergence():
                     skip_header=5, skip_footer=1)
 
                 power_ratio = (power_arrays[k] / power_arrays[0])[(j * k_log.shape[1]): ((j + 1) * k_log.shape[1])]
-                if i == 0:
-                    power_ratio = np.ones_like(power_ratio) * 0.
+                #if i == 0:
+                #    power_ratio = np.ones_like(power_ratio) * 0.
                 axes[-1 * (j + 1)].plot(k_log[j], power_ratio, color=colours[k], label=labels[k])
                 axes[-1 * (j + 1)].fill_between(data[:, 0], y1=(1. + (1. * data[:, 3] / data[:, 2])),
                                                 y2=(1. + (-1. * (data[:, 3] / data[:, 2]))))
             axes[j].axhline(y=1., color='black', ls=':')
+            axes[j].axhline(y=0.9, color='black', ls=':')
+            axes[j].axhline(y=1.1, color='black', ls=':')
             axes[j].set_xlim([-2.2, -0.7])
             axes[j].set_ylim([0.75, 1.25])
             axes[j].set_ylabel(r'Flux power spectrum ratio')
@@ -164,7 +172,7 @@ def plot_numerical_convergence():
         axes[0].legend(fontsize=16., frameon=False)
 
     fig.subplots_adjust(top=0.95, bottom=0.1, right=0.95, hspace=0.05, left=0.1)
-    plt.savefig('/Users/keir/Documents/emulator_paper_axions/numerical_convergence0_01_box_size_mfraw.pdf')
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/numerical_convergence0_01_box_size_mfraw_spec_res20pc.pdf')
     return 0, 0
 
 def plot_transfer_function(y='transfer'):
