@@ -438,7 +438,7 @@ class Emulator:
     def get_flux_vectors(self, max_z=4.2, kfunits="kms", redshifts=None, pixel_resolution_km_s='default',
                          spectral_resolution_km_s='default', spectral_resolution_km_s_corrected='default',
                          use_measured_parameters=False, fix_mean_flux_samples=False, no_mean_flux_rescaling=False,
-                         savefile='emulator_flux_vectors.hdf5', parallel=False, n_process=1):
+                         add_z_evolution=False, savefile='emulator_flux_vectors.hdf5', parallel=False, n_process=1):
         """Get the desired flux vectors and their parameters"""
         if self.leave_out_validation is None:
             use_all = None
@@ -503,7 +503,8 @@ class Emulator:
                 else:
                     mean_fluxes = None
                 flux_vectors = np.array([powers[i].get_power_native_binning(mean_fluxes = mean_fluxes,
-                                        spec_res_corrected=spectral_resolution_km_s_corrected) for i in range(nsims)])
+                                        spec_res_corrected=spectral_resolution_km_s_corrected,
+                                        add_z_evolution=add_z_evolution) for i in range(nsims)])
                 #'natively' binned k values in km/s units as a function of redshift
                 kfkms = [ps.get_kf_kms() for ps in powers]
             #Same in all boxes

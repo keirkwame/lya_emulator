@@ -64,7 +64,8 @@ class FluxPower(object):
         self.drop_table()
         return flux_arr
 
-    def get_power_native_binning(self, mean_fluxes, correct_window_function=True, spec_res_corrected='default'):
+    def get_power_native_binning(self, mean_fluxes, correct_window_function=True, spec_res_corrected='default',
+                                 add_z_evolution=False):
         """ Generate the flux power, with known optical depth, from a list of snapshots.
             maxk should be in comoving Mpc/h.
             kf is stored in comoving Mpc/h units.
@@ -77,7 +78,8 @@ class FluxPower(object):
                 mf = mean_fluxes[i]
             kf_sim, flux_power_sim = ss.get_flux_power_1D("H",1,1215, mean_flux_desired=mf,
                                                           window=correct_window_function,
-                                                          spec_res_corrected=spec_res_corrected)
+                                                          spec_res_corrected=spec_res_corrected,
+                                                          add_z_evolution=add_z_evolution)
             #Store k_F in comoving Mpc/h units, so that it is independent of redshift.
             vscale = ss.velfac * 3.085678e24/ss.units.UnitLength_in_cm
             kf_sim *= vscale
