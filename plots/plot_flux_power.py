@@ -13,7 +13,7 @@ if __name__ == "__main__":
     emulator_base_directory = ['/share/data2/keir/Simulations',] #'/share/rcifdata/keir/Simulations', '/share/rcifdata/keir/Simulations']
     emulator_names = ['nCDM_convergence_512_256',] #'nCDM_convergence_768_WDM', 'nCDM_convergence_896']
     emulator_jsons = ['emulator_params.json',] #'emulator_params_15.json', 'emulator_params.json']
-    flux_vectors = ['emulator_flux_vectors_spec_res_6.hdf5',] #'emulator_15_flux_vectors.hdf5', 'emulator_flux_vectors.hdf5']
+    flux_vectors = ['emulator_flux_vectors_spec_res_7_2.hdf5',] #'emulator_15_flux_vectors.hdf5', 'emulator_flux_vectors.hdf5']
     simulation_indices = [np.arange(2),] #np.arange(1), np.arange(1)] #, np.arange(1)] #np.arange(2)]
     interpolate_to_same_k = False
 
@@ -23,7 +23,7 @@ if __name__ == "__main__":
         [np.size(simulation_indices_single_emulator) for simulation_indices_single_emulator in simulation_indices])
 
     savefile = os.path.join(emulator_base_directory[0], emulator_names[0],
-                            'flux_power_nCDM_convergence_mfraw_spec_res_6.pdf')
+                            'flux_power_nCDM_convergence_mfraw_spec_res_5_4.pdf')
     figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 2. / 10.))
 
     plot_start_index = 0
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
         input_parameters_all_single_emulator, k_parallel_single_emulator, flux_powers_single_emulator = emulator_instance.get_flux_vectors(
             redshifts=emulator_instance.redshifts, pixel_resolution_km_s=1., spectral_resolution_km_s=6.,
-            spectral_resolution_km_s_corrected=6., fix_mean_flux_samples=True, no_mean_flux_rescaling=True,
+            spectral_resolution_km_s_corrected=7.2, fix_mean_flux_samples=True, no_mean_flux_rescaling=True,
             savefile=flux_vectors[a], parallel=True, n_process=8)
         print(flux_powers_single_emulator.shape)
         flux_powers_single_emulator = flux_powers_single_emulator.reshape(k_parallel_single_emulator.shape)
