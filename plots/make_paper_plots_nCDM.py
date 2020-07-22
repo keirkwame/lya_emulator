@@ -79,7 +79,7 @@ def plot_numerical_convergence():
     fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6.4*1., 6.4*1.5))
     colours = lyc.get_distinct(3)
     redshifts = [4.95, 4.58, 4.24]
-    flux_fnames = [None] * 8
+    flux_fnames = [None] * 10
     #flux_fnames[0] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mf_fixed10_emulator_flux_vectors_512_256.hdf5'
     #flux_fnames[1] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mf10_emulator_flux_vectors_768_WDM.hdf5'
     #flux_fnames[0] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_512_256.hdf5'
@@ -92,8 +92,10 @@ def plot_numerical_convergence():
     flux_fnames[5] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_spec_res_6.hdf5'
     flux_fnames[6] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_spec_res_7_2.hdf5'
     flux_fnames[7] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_spec_res_4_8.hdf5'
+    flux_fnames[8] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/cc_emulator_flux_vectors_10.hdf5'
+    flux_fnames[9] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_z_evol.hdf5'
 
-    for i in range(3):
+    for i in range(4):
         power_arrays = [None] * 3
         if i == 0:
             #labels = [r'768', r'512', r'256']
@@ -111,7 +113,7 @@ def plot_numerical_convergence():
             flux_file = h5py.File(flux_fnames[5])
             print('Parameters =', np.array(flux_file['params'])[0]) #39
             power_arrays[0] = np.array(flux_file['flux_vectors'])[0] #3 x n_k #768 #6
-        if i == 1:
+        elif i == 1:
             labels = [r'17.5', r'15', r'10'] #[r'10', r'15', r'17.5']
 
             flux_file = h5py.File(flux_fnames[2])
@@ -149,6 +151,19 @@ def plot_numerical_convergence():
             power_arrays[1] = np.array(flux_file['flux_vectors'])[1] #512
             print('Parameters =', np.array(flux_file['params'])[2])
             power_arrays[0] = np.array(flux_file['flux_vectors'])[2] #768
+        elif i == 3:
+            labels = [r'Constant', r'Evolution', r'Evolution']
+
+            flux_file = h5py.File(flux_fnames[8])
+            k_log = np.log10(np.array(flux_file['kfkms'])[0]) #3, n_k
+            print('Parameters =', np.array(flux_file['params'])[0])
+            power_arrays[0] = np.array(flux_file['flux_vectors'])[0] #3 x n_k #Constant
+
+            flux_file = h5py.File(flux_fnames[9])
+            print('Parameters =', np.array(flux_file['params'])[0])
+            power_arrays[1] = np.array(flux_file['flux_vectors'])[0] #Evolution
+            print('Parameters =', np.array(flux_file['params'])[0])
+            power_arrays[2] = np.array(flux_file['flux_vectors'])[0] #Evolution
         for j in range(3):
             for k in [1, 2]: #range(len(power_arrays)):
                 print(i, j, k)
@@ -172,7 +187,7 @@ def plot_numerical_convergence():
         axes[0].legend(fontsize=16., frameon=False)
 
     fig.subplots_adjust(top=0.95, bottom=0.1, right=0.95, hspace=0.05, left=0.1)
-    plt.savefig('/Users/keir/Documents/emulator_paper_axions/numerical_convergence0_01_box_size_mfraw_spec_res20pc.pdf')
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/numerical_convergence0_01_box_size_mfraw_spec_res20pc_rolling.pdf')
     return 0, 0
 
 def plot_transfer_function(y='transfer'):
@@ -987,8 +1002,8 @@ def plot_comparison():
     plt.savefig('/Users/keir/Documents/emulator_paper_axions/comparison2.pdf')
 
 if __name__ == "__main__":
-    #plt.rc('text', usetex=True)
-    #plt.rc('font', family='serif', size=18.) #18 normally - 16 for posteriors - 17 for comparison
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif', size=18.) #18 normally - 16 for posteriors - 17 for comparison
 
     plt.rc('axes', linewidth=1.5)
     plt.rc('xtick.major', width=1.5)

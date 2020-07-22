@@ -76,6 +76,7 @@ class FluxPower(object):
         for (i,ss) in enumerate(self.spectrae):
             if mean_fluxes is not None:
                 mf = mean_fluxes[i]
+            print('Mean flux desired =', mf)
             kf_sim, flux_power_sim = ss.get_flux_power_1D("H",1,1215, mean_flux_desired=mf,
                                                           window=correct_window_function,
                                                           spec_res_corrected=spec_res_corrected,
