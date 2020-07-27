@@ -7,8 +7,8 @@ import numpy.random as npr
 import numpy.testing as npt
 import scipy.optimize as spo
 import matplotlib.pyplot as plt
-#import pandas as pd
-#import seaborn as sb
+import pandas as pd
+import seaborn as sb
 import getdist as gd
 import getdist.plots as gdp
 
@@ -75,11 +75,13 @@ def ultra_light_axion_numerical_model_inverse(nCDM_parameters, h=0.6686):
     return log_mass[0]
 
 def plot_numerical_convergence():
-    """Plot the numerical convergence of nCDM simulations."""
-    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6.4*1., 6.4*1.5))
-    colours = lyc.get_distinct(3)
+    """Plot the numerical convergence of nCDM simulations; the effect of imperfect spectrograph modelling; and the
+    effect of redshift evolution within sections of forest."""
+    fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(6.4*1., 6.4*2.))
+    colours = lyc.get_distinct(4)
+    colours = ['black',] + colours
     redshifts = [4.95, 4.58, 4.24]
-    flux_fnames = [None] * 10
+    flux_fnames = [None] * 12
     #flux_fnames[0] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mf_fixed10_emulator_flux_vectors_512_256.hdf5'
     #flux_fnames[1] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mf10_emulator_flux_vectors_768_WDM.hdf5'
     #flux_fnames[0] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_512_256.hdf5'
@@ -91,30 +93,42 @@ def plot_numerical_convergence():
     flux_fnames[4] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors.hdf5'
     flux_fnames[5] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_spec_res_6.hdf5'
     flux_fnames[6] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_spec_res_7_2.hdf5'
-    flux_fnames[7] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_spec_res_4_8.hdf5'
-    flux_fnames[8] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/cc_emulator_flux_vectors_10.hdf5'
-    flux_fnames[9] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_z_evol.hdf5'
+    flux_fnames[7] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_spec_res_6_6.hdf5'
+    flux_fnames[8] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_spec_res_5_4.hdf5'
+    flux_fnames[9] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_spec_res_4_8.hdf5'
+    flux_fnames[10] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/cc_emulator_flux_vectors_mfevol.hdf5'
+    flux_fnames[11] = '/Users/keir/Documents/emulator_data/emulator_flux_vectors/convergence/mfraw_emulator_flux_vectors_z_evol.hdf5'
 
     for i in range(4):
         power_arrays = [None] * 3
-        if i == 0:
+        if i == 2:
+            power_arrays = [None] * 5
             #labels = [r'768', r'512', r'256']
-            labels = [r'Exact', r'$+ 10\%$', r'$- 10\%$']
+            labels = [r'Exact spec. res.', r'$+ 20\%$ error', r'$+ 10\%$', r'$- 10\%$', r'$- 20\%$']
 
             flux_file = h5py.File(flux_fnames[6])
             k_log = np.log10(np.array(flux_file['kfkms'])[0]) #3, n_k #18
             print('Parameters =', np.array(flux_file['params'])[0])
-            power_arrays[1] = np.array(flux_file['flux_vectors'])[0] #3 x n_k #512 #6.6
+            power_arrays[1] = np.array(flux_file['flux_vectors'])[0] #3 x n_k #7.2
 
             flux_file = h5py.File(flux_fnames[7])
             print('Parameters =', np.array(flux_file['params'])[0]) #19
-            power_arrays[2] = np.array(flux_file['flux_vectors'])[0] #256 #5.4
+            power_arrays[2] = np.array(flux_file['flux_vectors'])[0] #6.6
+
+            flux_file = h5py.File(flux_fnames[8])
+            print('Parameters =', np.array(flux_file['params'])[0]) #19
+            power_arrays[3] = np.array(flux_file['flux_vectors'])[0] #5.4
+
+            flux_file = h5py.File(flux_fnames[9])
+            print('Parameters =', np.array(flux_file['params'])[0]) #19
+            power_arrays[4] = np.array(flux_file['flux_vectors'])[0] #4.8
 
             flux_file = h5py.File(flux_fnames[5])
             print('Parameters =', np.array(flux_file['params'])[0]) #39
-            power_arrays[0] = np.array(flux_file['flux_vectors'])[0] #3 x n_k #768 #6
+            power_arrays[0] = np.array(flux_file['flux_vectors'])[0] #3 x n_k #6
         elif i == 1:
-            labels = [r'17.5', r'15', r'10'] #[r'10', r'15', r'17.5']
+            labels = [r'$(17.5\,h^{-1}\,\mathrm{Mpc})^3$ box volume', r'$(15\,h^{-1}\,\mathrm{Mpc})^3$',
+                      r'$(10\,h^{-1}\,\mathrm{Mpc})^3$'] #[r'10', r'15', r'17.5']
 
             flux_file = h5py.File(flux_fnames[2])
             k_log = np.log10(np.array(flux_file['kfkms'])[0]) #3, n_k
@@ -137,11 +151,11 @@ def plot_numerical_convergence():
             for a in range(3):
                 power_arrays[0][a, :] = 10. ** np.interp(k_log[a], np.log10(np.array(flux_file['kfkms'])[0])[a],
                                                          np.log10(power_raw[a]))
-                print(k_log[a], np.log10(np.array(flux_file['kfkms'])[0])[a], power_raw[a])
+                #print(k_log[a], np.log10(np.array(flux_file['kfkms'])[0])[a], power_raw[a])
             power_arrays[0] = np.ravel(power_arrays[0])
             #return power_arrays, k_log
-        elif i == 2:
-            labels = [r'768', r'512', r'256']
+        elif i == 0:
+            labels = [r'$2 \times 768^3$ particles', r'$2 \times 512^3$', r'$2 \times 256^3$']
 
             flux_file = h5py.File(flux_fnames[1])
             k_log = np.log10(np.array(flux_file['kfkms'])[0]) #3, n_k #36-38
@@ -152,20 +166,21 @@ def plot_numerical_convergence():
             print('Parameters =', np.array(flux_file['params'])[2])
             power_arrays[0] = np.array(flux_file['flux_vectors'])[2] #768
         elif i == 3:
-            labels = [r'Constant', r'Evolution', r'Evolution']
+            power_arrays = [None] * 2
+            labels = [r'Uniform mean flux', r'Mean flux evolution [uncorrected]']
 
-            flux_file = h5py.File(flux_fnames[8])
+            flux_file = h5py.File(flux_fnames[10])
             k_log = np.log10(np.array(flux_file['kfkms'])[0]) #3, n_k
             print('Parameters =', np.array(flux_file['params'])[0])
             power_arrays[0] = np.array(flux_file['flux_vectors'])[0] #3 x n_k #Constant
 
-            flux_file = h5py.File(flux_fnames[9])
+            flux_file = h5py.File(flux_fnames[11])
             print('Parameters =', np.array(flux_file['params'])[0])
             power_arrays[1] = np.array(flux_file['flux_vectors'])[0] #Evolution
-            print('Parameters =', np.array(flux_file['params'])[0])
-            power_arrays[2] = np.array(flux_file['flux_vectors'])[0] #Evolution
-        for j in range(3):
-            for k in [1, 2]: #range(len(power_arrays)):
+            #print('Parameters =', np.array(flux_file['params'])[0])
+            #power_arrays[2] = np.array(flux_file['flux_vectors'])[0] #Evolution
+        for j in range(1):
+            for k in range(0, len(power_arrays)):
                 print(i, j, k)
                 data = np.genfromtxt(
                     '/Users/keir/Software/lya_emulator/lyaemu/data/Boera_HIRES_UVES_flux_power/flux_power_z_%.1f.dat' % redshifts[j],
@@ -174,20 +189,28 @@ def plot_numerical_convergence():
                 power_ratio = (power_arrays[k] / power_arrays[0])[(j * k_log.shape[1]): ((j + 1) * k_log.shape[1])]
                 #if i == 0:
                 #    power_ratio = np.ones_like(power_ratio) * 0.
-                axes[-1 * (j + 1)].plot(k_log[j], power_ratio, color=colours[k], label=labels[k])
-                axes[-1 * (j + 1)].fill_between(data[:, 0], y1=(1. + (1. * data[:, 3] / data[:, 2])),
-                                                y2=(1. + (-1. * (data[:, 3] / data[:, 2]))))
-            axes[j].axhline(y=1., color='black', ls=':')
-            axes[j].axhline(y=0.9, color='black', ls=':')
-            axes[j].axhline(y=1.1, color='black', ls=':')
-            axes[j].set_xlim([-2.2, -0.7])
-            axes[j].set_ylim([0.75, 1.25])
-            axes[j].set_ylabel(r'Flux power spectrum ratio')
-        axes[2].set_xlabel(r'$\mathrm{log} (k_\mathrm{f} [\mathrm{s}\,\mathrm{km}^{-1}])$')
-        axes[0].legend(fontsize=16., frameon=False)
+                axes[i].plot(k_log[j], power_ratio, color=colours[k], label=labels[k], lw=2.5)
+                #axes[i].fill_between(data[:, 0], y1=(1. + (1. * data[:, 3] / data[:, 2])),
+                #                                y2=(1. + (-1. * (data[:, 3] / data[:, 2]))))
+            #axes[i].axhline(y=1., color='black', ls='-', lw=2.5)
+            #axes[i].axhline(y=0.9, color='black', ls=':', lw=2.5)
+            #axes[i].axhline(y=1.1, color='black', ls=':', lw=2.5)
+            axes[i].set_xlim([-2.2, -0.7])
+            axes[i].set_ylim([0.75, 1.25])
+            axes[i].set_ylabel(r'$P_\mathrm{f}^i (k_\mathrm{f}) / P_\mathrm{f}^\mathrm{fiducial} (k_\mathrm{f})$')
+            if i < 3:
+                axes[i].set_xticklabels([])
+        axes[-1].set_xlabel(r'$\mathrm{log} (k_\mathrm{f} [\mathrm{s}\,\mathrm{km}^{-1}])$')
+        if i == 2:
+            ncol = 2
+        else:
+            ncol = 1
+        axes[i].legend(fontsize=15., frameon=True, facecolor='white', fancybox=False, shadow=False, framealpha=1.,
+                       edgecolor='white', ncol=ncol)
+        #frameon=True, facecolor='white', fancybox=False, shadow=False, framealpha=1., edgecolor='white'
 
-    fig.subplots_adjust(top=0.95, bottom=0.1, right=0.95, hspace=0.05, left=0.1)
-    plt.savefig('/Users/keir/Documents/emulator_paper_axions/numerical_convergence0_01_box_size_mfraw_spec_res20pc_rolling.pdf')
+    fig.subplots_adjust(top=0.99, bottom=0.08, right=0.95, hspace=0.05, left=0.15)
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/systematics.pdf')
     return 0, 0
 
 def plot_transfer_function(y='transfer'):
@@ -315,7 +338,7 @@ def plot_convergence():
     axes[2].axhline(y=0.75, color='black', ls=':', lw=2.5)
     axes[2].axhline(y=-0.75, color='black', ls=':', lw=2.5)
 
-    axes[2].set_xlabel(r'Optimisation simulation number')
+    axes[2].set_xlabel(r'Optimization simulation number')
     axes[0].set_ylabel(r'Number of sigma shift [posterior means]')
     axes[1].set_ylabel(r'Number of sigma shift [1 sigma]')
     axes[2].set_ylabel(r'Number of sigma shift [2 sigma]')
@@ -324,7 +347,7 @@ def plot_convergence():
     axes[0].set_ylim([-3.9, 3.9])
     axes[0].legend(frameon=False, loc='lower right', ncol=3, fontsize=17.)
     fig.subplots_adjust(top=0.99, bottom=0.05, right=0.95, hspace=0.05)
-    plt.savefig('/Users/keir/Documents/emulator_paper_axions/convergence.pdf')
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/convergenceUS.pdf')
 
     return posterior_means, posterior_limits
 
@@ -337,10 +360,10 @@ def plot_exploration():
     colour = lyc.get_distinct(1)
     ax.plot(sim_num, exploration, color=colour[0], lw=2.5)
     #ax.axhline(y=0., color='black', ls=':', lw=2.5)
-    ax.set_xlabel(r'Optimisation simulation number')
+    ax.set_xlabel(r'Optimization simulation number')
     ax.set_ylabel(r'Exploration')
     fig.subplots_adjust(top=0.95, bottom=0.15, right=0.95)
-    plt.savefig('/Users/keir/Documents/emulator_paper_axions/exploration.pdf')
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/explorationUS.pdf')
 
 def make_error_distribution():
     """Calculate the emulator error distribution for leave-one-out cross-validation."""
@@ -435,7 +458,7 @@ def violinplot_error_distribution(distribution='validation'):
         ylabel = r'$(\mathrm{Mean - Truth})\,/\,\sigma$'
         text_height = 0.85
         legend_loc = 'upper left'
-        save_file = 'validation.pdf'
+        save_file = 'validationUS2.pdf'
     elif distribution == 'data':
         errors = np.log10(s[:(n_sims * n_mf)] / s_data_expand) #np.log10(
         errors_real = np.log10(np.absolute(m - f_cut)[:(n_sims * n_mf)] / s_data_expand)
@@ -445,7 +468,7 @@ def violinplot_error_distribution(distribution='validation'):
         ylabel = r'$\mathrm{log}\,(\sigma_\mathrm{Theory}\,/\,\sigma_\mathrm{Data})$'
         text_height = 0.1
         legend_loc = 'lower center'
-        save_file = 'data_error.pdf'
+        save_file = 'data_error2.pdf'
     LH_cut = np.sort([np.arange(i, i+(n_LH + n_BO), 1) for i in range(0, n_sims*n_mf, n_sims)], axis=None)
     BO_cut = np.sort([np.arange(i+n_LH, i+n_sims, 1) for i in range(0, n_sims*n_mf, n_sims)], axis=None)
     errors_LH = errors[LH_cut]
@@ -462,26 +485,34 @@ def violinplot_error_distribution(distribution='validation'):
     k_bin_list = [k_bin_BO, k_bin_LH]
 
     #BO
-    fig, axes = plt.subplots(nrows=6, ncols=1, figsize=(6.4*2., 6.4*2.5)) #6.4*1.))
+    if distribution == 'data':
+        fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6.4 * 2., 6.4 * 1.25))  # 6.4*1.))
+    else:
+        fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6.4*2., 6.4*1.25)) #6.4*1.))
     data_frames = [None] * redshifts.size * len(errors_list)
     for i, z in enumerate(redshifts):
         #z cut
         z_cut = np.arange(i*n_k_cut, (i+1)*n_k_cut, 1)
-        for j in range(len(errors_list)):
+        for j in [1,]: #'data' #range(len(errors_list)):
             idx = (j * redshifts.size) + i
             if distribution == 'validation':
-                k_bin_df = np.tile(np.ravel(k_bin_list[j][:, z_cut]), 21)
-                errors_df = np.concatenate((np.ravel(errors_list[j][:, z_cut]), npr.normal(size=errors_list[j][:, z_cut].size * 20)))
-                if j == 0:
-                    samples_label = r'Validation test [optimisation simulations]'
-                else:
-                    samples_label = r'Validation test [all simulations]'
+                k_bin_df = np.concatenate((np.ravel(k_bin_list[j-1][:, z_cut]), np.ravel(k_bin_list[j][:, z_cut])))
+                #np.tile(np.ravel(k_bin_list[j][:, z_cut]), 2) #1)
+                errors_df = np.concatenate((np.ravel(errors_list[j-1][:, z_cut]), np.ravel(errors_list[j][:, z_cut])))
+                #npr.normal(size=errors_list[j][:, z_cut].size * 20)
+                #if j == 0:
+                samples_label0 = r'Validation test [optimization simulations]'
+                #else:
+                samples_label1 = r'Validation test [all simulations]'
                 samples_label_real = 'Unit Gaussian model'
                 if j == 0:
                     violin_colours = {samples_label: colours[0], samples_label_real: colours[2]}
                 else:
-                    violin_colours = {samples_label: colours[1], samples_label_real: colours[2]}
-                split_cut_df = ([samples_label,] * errors_list[j][:, z_cut].size) + ([samples_label_real,] * errors_list[j][:, z_cut].size * 20)
+                    violin_colours = {samples_label0: colours[1], samples_label1: colours[2]}
+                split_cut_df = ([samples_label0,] * errors_list[j-1][:, z_cut].size) +\
+                               ([samples_label1,] * errors_list[j][:, z_cut].size)
+                #([samples_label_real,] * errors_list[j][:, z_cut].size * 20)
+                axes_idx = idx - 3
             elif distribution == 'data':
                 k_bin_df = np.tile(np.ravel(k_bin_list[j][:, z_cut]), 2)
                 errors_df = np.concatenate(
@@ -495,36 +526,45 @@ def violinplot_error_distribution(distribution='validation'):
                     samples_label_real = r'$|\mathrm{Mean - Truth}|$ / Data [all simulations]'
                     violin_colours = {samples_label: colours[2], samples_label_real: colours[3]}
                 split_cut_df = ([samples_label,] * errors_list[j][:, z_cut].size) + ([samples_label_real,] * errors_list[j][:, z_cut].size)
+                axes_idx = idx - 3
             print(i, j, k_bin_df.shape, errors_df.shape, len(split_cut_df))
+
+            if distribution == 'validation':
+                axes[axes_idx].axhspan(ymin=-3., ymax=3., alpha=0.075, color=colours[0])
+                axes[axes_idx].axhspan(ymin=-1., ymax=1., alpha=0.15, color=colours[0])
 
             data_frames[idx] = pd.DataFrame({'kbin': k_bin_df, 'ErrorSigmas': errors_df, 'Distribution': split_cut_df})
             sb.violinplot(data_frames[idx].kbin, data_frames[idx].ErrorSigmas, data_frames[idx].Distribution,
-                          ax=axes[idx], scale='width', bw=kernel_bw, inner=None, split=True, palette=violin_colours, cut=0.,
+                          ax=axes[axes_idx], scale='width', bw=kernel_bw, inner=None, split=True, palette=violin_colours, cut=0.,
                           linewidth=2.5, saturation=1.)
             # #cut=0
 
-            axes[idx].set(ylim=ylim)
-            axes[idx].axhline(y=0., color='black', ls=':', lw=2.5)
-            axes[idx].axvline(x=0., color='black', ls='-', lw=2.5)
-            axes[idx].axvline(x=1., color='black', ls='-', lw=2.5)
-            axes[idx].axvline(x=2., color='black', ls='-', lw=2.5)
-            axes[idx].text(0.9, text_height, r'$z = %.1f$'%redshifts[i], transform=axes[idx].transAxes) #, fontsize=16.)
-            axes[idx].get_legend().remove()
-            axes[idx].set(ylabel=ylabel)
+            axes[axes_idx].set(ylim=ylim)
+            axes[axes_idx].axhline(y=0., color='black', ls=':', lw=2.5)
+            axes[axes_idx].axvline(x=0., color='black', ls='-', lw=2.5)
+            axes[axes_idx].axvline(x=1., color='black', ls='-', lw=2.5)
+            axes[axes_idx].axvline(x=2., color='black', ls='-', lw=2.5)
+            axes[axes_idx].text(0.9, text_height, r'$z = %.1f$'%redshifts[i], transform=axes[axes_idx].transAxes) #, fontsize=16.)
+            axes[axes_idx].get_legend().remove()
+            axes[axes_idx].set(ylabel=ylabel)
             #if idx < 5:
             #axes[idx].xaxis.set_ticklabels([])
             if (idx == 0) or (idx == 3):
-                axes[idx].legend(loc=legend_loc, frameon=True, facecolor='white', fancybox=False, shadow=False,
+                axes[axes_idx].legend(loc=legend_loc, frameon=True, facecolor='white', fancybox=False, shadow=False,
                                  framealpha=1., edgecolor='white', fontsize=15.)
             if idx < 5:
-                axes[idx].xaxis.set_visible(False)
+                axes[axes_idx].xaxis.set_visible(False)
             else:
-                axes[idx].set(xlabel=r'$k [h\,\mathrm{Mpc}^{-1}]$ bin')
+                axes[axes_idx].set(xlabel=r'$k [h\,\mathrm{Mpc}^{-1}]$ bin')
             if distribution == 'data':
-                axes[idx].axhline(y=1., color='black', ls=':', lw=2.5)
-                axes[idx].axhline(y=-1., color='black', ls=':', lw=2.5)
+                axes[axes_idx].axhline(y=1., color='black', ls=':', lw=2.5)
+                axes[axes_idx].axhline(y=-1., color='black', ls=':', lw=2.5)
 
-    fig.subplots_adjust(top=0.99, bottom=0.05, right=0.95, hspace=0.1)
+    if distribution == 'data':
+        bottom_adjust = 0.1
+    else:
+        bottom_adjust = 0.1
+    fig.subplots_adjust(top=0.99, bottom=bottom_adjust, right=0.95, hspace=0.1)
     plt.savefig('/Users/keir/Documents/emulator_paper_axions/' + save_file)
     return k, z, p, f, m, s, k_data, s_data, k_max, data_frames
 
@@ -532,13 +572,13 @@ def plot_posterior(parameters='all'):
     """Make a triangle plot of marginalised 1D and 2D posteriors."""
     if parameters == 'all':
         n_chains = 4
-        save_file = 'posterior.pdf'
+        save_file = 'posterior42_sims.pdf'
     elif parameters == 'logma':
         n_chains = 6
-        save_file = 'posterior_logma.pdf'
+        save_file = 'posterior_logma2.pdf'
     elif parameters == 'PRL':
         n_chains = 1
-        save_file = 'posterior_PRL.pdf'
+        save_file = 'posterior_PRL2.pdf'
 
     chainfiles = [None] * n_chains
     chainfile_root = '/Users/keir/Documents/emulator_data/chains_final'
@@ -565,44 +605,48 @@ def plot_posterior(parameters='all'):
     parameter_names = ['t5', 't46', 't42', 'ns', 'As', 'T5', 'T46', 'T42', 'g5', 'g46', 'g42', 'u5', 'u46', 'u42',
                        'logma']
     parameter_labels = [r'\tau_0^{5.0}', r'\tau_0^{4.6}',
-                        r'\tau_0^{4.2}', r'n_\mathrm{s}', r'A_\mathrm{s}',
-                        r'T_0^{5.0}', r'T_0^{4.6}', r'T_0^{4.2}',
+                        r'\tau_0 (z = 4.2)', r'n_\mathrm{s}', r'A_\mathrm{s}',
+                        r'T_0^{5.0}', r'T_0^{4.6}', r'T_0 (z = 4.2)',
                         r'\widetilde{\gamma}^{5.0}', r'\widetilde{\gamma}^{4.6}',
-                        r'\widetilde{\gamma}^{4.2}', r'u_0^{5.0}',
-                        r'u_0^{4.6}', r'u_0^{4.2}',
+                        r'\widetilde{\gamma} (z = 4.2)', r'u_0^{5.0}',
+                        r'u_0^{4.6}', r'u_0 (z = 4.2)',
                         r'\log\,m_\mathrm{a}'] #^\mathrm{eV}
     if parameters == 'PRL':
         parameter_labels[-1] = r'\log(m_\mathrm{a} [\mathrm{eV}])'
 
-    legend_labels = [r'Initial emulator', r'After 19 optimisation simulations',
-                     r'After 35 optimisation simulations',
-                     r'After 43 optimisation simulations']
+    legend_labels = [r'Initial emulator', r'After 19 optimization simulations',
+                     r'After 35 optimization simulations',
+                     r'After 43 optimization simulations']
     if parameters == 'PRL':
         colours = [lyc.get_distinct(6)[-1],]
     else:
         colours = lyc.get_distinct(len(chainfiles))
     line_widths = [2.5,] * len(chainfiles)
     if parameters == 'logma':
-        legend_labels = legend_labels[:2] + [r'After 25 optimisation simulations',] + [legend_labels[2],] +\
-                        [r'After 40 optimisation simulations',] + [legend_labels[3],]
+        legend_labels = legend_labels[:2] + [r'After 25 optimization simulations',] + [legend_labels[2],] +\
+                        [r'After 40 optimization simulations',] + [legend_labels[3],]
 
     samples = [None] * len(chainfiles)
     for i in range(len(samples)):
         if i < 3:
             samples[i] = np.loadtxt(chainfiles[i]) #, max_rows=4500)
         else:
-            samples[i] = np.loadtxt(chainfiles[i]) #, max_rows=450000)
+            samples[i] = np.loadtxt(chainfiles[i]) #, max_rows=4500)
         samples[i][:, 4] *= 1.e+9
         if (parameters == 'all') or (parameters == 'logma'):
             samples[i][:, 5] /= 1.e+4
             samples[i][:, 6] /= 1.e+4
             samples[i][:, 7] /= 1.e+4
+            samples[i] = samples[i][:, np.array([2, 3, 4, 7, 10, 13, 14])]
         if parameters == 'logma':
             samples[i] = samples[i][:, -1].reshape(-1, 1)
     if parameters == 'all':
         width_inch = 6.4*2.5
         legend_loc = 'upper right'
-        tick_label_size = 10.
+        tick_label_size = 16.
+        parameter_names = parameter_names[2:5] + [parameter_names[7],] + [parameter_names[10],] + parameter_names[13:]
+        parameter_labels = parameter_labels[2:5] + [parameter_labels[7],] + [parameter_labels[10],]\
+                           + parameter_labels[13:]
     elif parameters == 'logma':
         width_inch = 6.4
         legend_loc = [0.07, 0.2]
@@ -622,6 +666,9 @@ def plot_posterior(parameters='all'):
     subplot_instance = gdp.getSubplotPlotter(width_inch=width_inch, rc_sizes=True, scaling=False)
     if parameters == 'logma':
         subplot_instance.settings.legend_fontsize = 12.
+        subplot_instance.settings.figure_legend_frame = False
+    elif parameters == 'all':
+        subplot_instance.settings.legend_fontsize = 22.
         subplot_instance.settings.figure_legend_frame = False
     if (parameters == 'all') or (parameters == 'logma'):
         subplot_instance.triangle_plot(posterior_MCsamples, filled=True, contour_colors=colours, contour_lws=line_widths,
@@ -654,7 +701,7 @@ def plot_posterior(parameters='all'):
               'r') as json_file:
         json_dict = json.load(json_file)
     emulator_samples = np.concatenate((np.array(json_dict['sample_params'])[:, :2],
-                                       np.array(json_dict['measured_sample_params'])), axis=1)
+                                       np.array(json_dict['measured_sample_params'])[:, np.array([2, 5, 8])]), axis=1)
     log_mass = np.zeros((emulator_samples.shape[0], 1))
     for i in range(50, emulator_samples.shape[0]):
         log_mass[i, 0] = ultra_light_axion_numerical_model_inverse(np.array(json_dict['sample_params'])[i, 5:8])
@@ -662,8 +709,8 @@ def plot_posterior(parameters='all'):
     emulator_samples[:, 1] *= 1.e+9
     if (parameters == 'all') or (parameters == 'logma'):
         emulator_samples[:, 2] /= 1.e+4
-        emulator_samples[:, 3] /= 1.e+4
-        emulator_samples[:, 4] /= 1.e+4
+        #emulator_samples[:, 3] /= 1.e+4
+        #emulator_samples[:, 4] /= 1.e+4
 
     if parameters == 'PRL':
         parameter_labels = [r'$T_0^{z = 4.2} [\mathrm{K}]$', r'$\widetilde{\gamma}^{z = 4.2}$',
@@ -689,17 +736,21 @@ def plot_posterior(parameters='all'):
                 if parameters == 'logma':
                     ax.xaxis.label.set_size(18.)
                     ax.yaxis.label.set_size(18.)
+                elif parameters == 'all':
+                    ax.xaxis.label.set_size(22.)
+                    ax.yaxis.label.set_size(22.)
                 ax.xaxis.set_tick_params(labelsize=tick_label_size)
                 ax.yaxis.set_tick_params(labelsize=tick_label_size)
 
-                if q < p:
-                    if (p in np.array([3, 4, 14])) or (q in np.array([3, 4, 14])) or (
-                            (p in np.arange(8, 11)) and (q == (p - 3))) or (
-                            (p in np.arange(11, 14)) and ((q == (p - 3)) or (q == (p - 6)))):
-                        ax.scatter(emulator_samples[:50, q-3], emulator_samples[:50, p-3], color=colours[0], marker='+')
-                        ax.scatter(emulator_samples[50:69, q-3], emulator_samples[50:69, p-3], color=colours[1], marker='+')
-                        ax.scatter(emulator_samples[69:85, q-3], emulator_samples[69:85, p-3], color=colours[2], marker='+')
-                        ax.scatter(emulator_samples[85:, q-3], emulator_samples[85:, p-3], color=colours[3], marker='+')
+                if (q < p) and (q > 0):
+                    #if (p in np.array([3, 4, 14])) or (q in np.array([3, 4, 14])) or (
+                    #        (p in np.arange(8, 11)) and (q == (p - 3))) or (
+                    #        (p in np.arange(11, 14)) and ((q == (p - 3)) or (q == (p - 6)))):
+                    msize = 200
+                    ax.scatter(emulator_samples[:50, q-1], emulator_samples[:50, p-1], color=colours[0], marker='+', s=msize)
+                    ax.scatter(emulator_samples[50:69, q-1], emulator_samples[50:69, p-1], color=colours[1], marker='+', s=msize)
+                    ax.scatter(emulator_samples[69:85, q-1], emulator_samples[69:85, p-1], color=colours[2], marker='+', s=msize)
+                    ax.scatter(emulator_samples[85:, q-1], emulator_samples[85:, p-1], color=colours[3], marker='+', s=msize)
 
     #plt.legend(fontsize=18., frameon=False)
     plt.savefig('/Users/keir/Documents/emulator_paper_axions/' + save_file)
@@ -713,31 +764,32 @@ def plot_emulator():
                    r'$T_0^{z = %.1f} [10^4\,\mathrm{K}]$'%redshifts[2],
                    r'$\widetilde{\gamma}^{z = %.1f}$'%redshifts[0], r'$\widetilde{\gamma}^{z = %.1f}$'%redshifts[1],
                    r'$\widetilde{\gamma}^{z = %.1f}$'%redshifts[2],
-                   r'$u_0^{z = %.1f} \left[\frac{m_\mathrm{p}}{\mathrm{eV}}\right]$'%redshifts[0],
-                   r'$u_0^{z = %.1f} \left[\frac{m_\mathrm{p}}{\mathrm{eV}}\right]$'%redshifts[1],
-                   r'$u_0^{z = %.1f} \left[\frac{m_\mathrm{p}}{\mathrm{eV}}\right]$'%redshifts[2],
-                   r'$\log(m_\mathrm{a} [\mathrm{eV}])$'])
-    plot_labels = plot_labels[np.array([0, 1, 11, 2, 5, 8, 3, 6, 9, 4, 7, 10])]
-    plot_labels_x = np.concatenate((plot_labels[:3], np.array([r'$T_0^{z = z_i} [10^4\,\mathrm{K}]$',
+                   r'$u_0^{z = %.1f} \left[\frac{\mathrm{eV}}{m_\mathrm{p}}\right]$'%redshifts[0],
+                   r'$u_0^{z = %.1f} \left[\frac{\mathrm{eV}}{m_\mathrm{p}}\right]$'%redshifts[1],
+                   r'$u_0^{z = %.1f} \left[\frac{\mathrm{eV}}{m_\mathrm{p}}\right]$'%redshifts[2],
+                   r'$\alpha$', r'$\beta$', r'$\gamma$']) #r'$\log(m_\mathrm{a} [\mathrm{eV}])$'])
+    plot_labels = plot_labels[np.array([0, 1, 11, 12, 13, 2, 5, 8, 3, 6, 9, 4, 7, 10])]
+    plot_labels_x = np.concatenate((plot_labels[:5], np.array([r'$T_0^{z = z_i} [10^4\,\mathrm{K}]$',
                                                                r'$\widetilde{\gamma}^{z = z_i}$'])))
 
     with open('/Users/keir/Documents/emulator_data/chains_final/emulator_params_batch18_2_TDR_u0.json',
               'r') as json_file:
         json_dict = json.load(json_file)
     emulator_samples = np.concatenate((np.array(json_dict['sample_params'])[:, :2],
+                                       np.array(json_dict['sample_params'])[:, 5:8],
                                        np.array(json_dict['measured_sample_params'])), axis=1)
-    log_mass = np.zeros((emulator_samples.shape[0], 1))
-    for i in range(50, emulator_samples.shape[0]):
-        log_mass[i, 0] = ultra_light_axion_numerical_model_inverse(np.array(json_dict['sample_params'])[i, 5:8])
-    emulator_samples = np.concatenate((emulator_samples[:, :2], log_mass, emulator_samples[:, 2:]), axis=1)
-    emulator_samples = emulator_samples[:, np.array([0, 1, 2, 3, 6, 9, 4, 7, 10, 5, 8, 11])]
+    #log_mass = np.zeros((emulator_samples.shape[0], 1))
+    #for i in range(50, emulator_samples.shape[0]):
+    #    log_mass[i, 0] = ultra_light_axion_numerical_model_inverse(np.array(json_dict['sample_params'])[i, 5:8])
+    #emulator_samples = np.concatenate((emulator_samples[:, :2], log_mass, emulator_samples[:, 2:]), axis=1)
+    emulator_samples = emulator_samples[:, np.array([0, 1, 2, 3, 4, 3+2, 6+2, 9+2, 4+2, 7+2, 10+2, 5+2, 8+2, 11+2])]
     #np.concatenate((emulator_samples, log_mass), axis=1)
     emulator_samples[:, 1] *= 1.e+9
-    emulator_samples[:, 3] /= 1.e+4
-    emulator_samples[:, 6] /= 1.e+4
-    emulator_samples[:, 9] /= 1.e+4
+    emulator_samples[:, 3+2] /= 1.e+4
+    emulator_samples[:, 6+2] /= 1.e+4
+    emulator_samples[:, 9+2] /= 1.e+4
 
-    fig, axes = plt.subplots(nrows=11, ncols=5, figsize=(6.4*2.5*5.73/11., 6.4*2.5)) #5.
+    fig, axes = plt.subplots(nrows=11+2, ncols=5+2, figsize=(6.4*2.5*(5.73/11.)*(7./5.), 6.4*2.5)) #5.
     alpha_min = 0.25
     alpha_k = lambda k: (k * (1. - alpha_min) / (emulator_samples.shape[0] - 50)) + alpha_min
     for a in range(axes.shape[0]): #11
@@ -755,45 +807,45 @@ def plot_emulator():
             if j >= i:
                 fig.delaxes(axes[a, j])
                 continue
-            elif (i > 5) and (j >= (i - 3)):
+            elif (i > 5+2) and (j >= (i - 3)):
                 fig.delaxes(axes[a, j])
                 continue
-            elif (i > 8) and (j >= (i - 6)):
+            elif (i > 8+2) and (j >= (i - 6)):
                 fig.delaxes(axes[a, j])
                 continue
 
-            if j < 3:
+            if j < 3+2:
                 x_idx = j
-            elif (j > 2) and (i > 8):
+            elif (j > 2+2) and (i > 8+2):
                 x_idx = j + 6
-            elif (j > 2) and (i > 5):
+            elif (j > 2+2) and (i > 5+2):
                 x_idx = j + 3
-            elif (j > 2) and (i > 2):
+            elif (j > 2+2) and (i > 2+2):
                 x_idx = j
 
             axes[a, j].set_xlim([np.min(emulator_samples[:, x_idx]), np.max(emulator_samples[:, x_idx])])
             axes[a, j].set_ylim([np.min(emulator_samples[:, i]), np.max(emulator_samples[:, i])])
-            if i in np.array([4, 7, 10]):
+            if i in np.array([4, 7, 10])+2:
                 axes[a, j].set_ylim([0.8, np.max(emulator_samples[:, i])])
-            elif i == 5:
+            elif i == 5+2:
                 axes[a, j].set_ylim([np.min(emulator_samples[:, i]), 18.])
-            elif i in np.array([8, 11]):
+            elif i in np.array([8, 11])+2:
                 axes[a, j].set_ylim([np.min(emulator_samples[:, i]), 18.])
             #elif i == 3:
             #    axes[a, j].set_ylim([np.min(emulator_samples[:, i]), 12000.])
-            if j == 3:
+            if j == 3+2:
                 axes[a, j].set_xlim([np.min(emulator_samples[:, np.arange(j, j+7, 3)]),
                                      np.max(emulator_samples[:, np.arange(j, j+7, 3)])])
-            elif j == 4:
+            elif j == 4+2:
                 axes[a, j].set_xlim([0.8, np.max(emulator_samples[:, np.arange(j, j+7, 3)])])
-            if (i == 2) or (j == 2):
-                if j == 2:
-                    axes[a, j].set_xlim([np.min(emulator_samples[50:, x_idx]), np.max(emulator_samples[50:, x_idx])])
-                elif i == 2:
-                    axes[a, j].set_ylim([np.min(emulator_samples[50:, i]), np.max(emulator_samples[50:, i])])
-                pass
-            else:
-                axes[a, j].scatter(emulator_samples[:50, x_idx], emulator_samples[:50, i], color='black', marker='+',
+            #if (i == 2) or (j == 2):
+            #    if j == 2:
+            #        axes[a, j].set_xlim([np.min(emulator_samples[50:, x_idx]), np.max(emulator_samples[50:, x_idx])])
+            #    elif i == 2:
+            #        axes[a, j].set_ylim([np.min(emulator_samples[50:, i]), np.max(emulator_samples[50:, i])])
+            #    pass
+            #else:
+            axes[a, j].scatter(emulator_samples[:50, x_idx], emulator_samples[:50, i], color='black', marker='+',
                                    alpha=alpha_min)
             for k in range(50, emulator_samples.shape[0]):
                 axes[a, j].scatter(emulator_samples[k, x_idx], emulator_samples[k, i], color='black', marker='+',
@@ -801,10 +853,10 @@ def plot_emulator():
             axes[a, j].set_aspect(np.diff(axes[a, j].get_xlim()) / np.diff(axes[a, j].get_ylim()))
 
     axes[10, 0].set_xticks([0.92, 0.98])
-    axes[10, 2].set_xticks([-21., -20.])
+    #axes[10, 2].set_xticks([-21., -20.])
     fig.subplots_adjust(top=0.99, bottom=0.05, right=0.95, hspace=0., wspace=0.)
     #plt.legend(fontsize=18., frameon=False)
-    plt.savefig('/Users/keir/Documents/emulator_paper_axions/emulator.pdf')
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/emulator_full2.pdf')
 
     return emulator_samples
 
@@ -945,7 +997,7 @@ def plot_comparison():
     ax.arrow(-22.5, 0.79, 0.5, 0., color=colours[0], width=0.015, length_includes_head=True, head_length=0.09)
     #ax.text(-22.25, 0.78, r'\begin{center}\textbf{CMB/rei}\end{center}', horizontalalignment='center',
     #        verticalalignment='center', rotation=90.)
-    ax.text(-22., 0.74, r'\begin{center}\textbf{CMB/\\reionisation}\end{center}', horizontalalignment='center',
+    ax.text(-22., 0.74, r'\begin{center}\textbf{CMB/\\reionization}\end{center}', horizontalalignment='center',
             verticalalignment='top', color=colours[0], size=14.)
     #ax.text(0.5 * (-22.5 - 19.64), 0.19, r'\begin{center}$\mathbf{m_\mathrm{\textbf{a}} > 2 \times 10^{-20}\,\mathrm{\textbf{eV}}}$\end{center}',
     #        horizontalalignment='center', verticalalignment='center', color=colours[4], size=16.)
@@ -977,15 +1029,15 @@ def plot_comparison():
 
     #ax.axvspan(ymin=0.32, ymax=0.57, xmin=-22., xmax=np.log10(4.e-21), facecolor=colours[2], edgecolor=None, fill=True,
     #           alpha=a)
-    ax.arrow(-22.5, 0.31, np.log10(3.75e-21) + 22.5, 0., color='orange', width=0.015, length_includes_head=True,
+    ax.arrow(-22.5, 0.31, np.log10(2.e-21) + 22.5, 0., color='orange', width=0.015, length_includes_head=True,
              head_length=0.09)
     #ax.text(0.5*(-22.+np.log10(4.e-21)), 0.44, r'\begin{center}\textbf{Ly-}$\mathbf{\alpha}$\textbf{ forest\\(previous\\work)}\end{center}',
     #        horizontalalignment='center', verticalalignment='center')
-    ax.text(np.log10(3.75e-21), 0.25, r'\begin{center}\textbf{Ly-}$\mathbf{\alpha}$\textbf{f (previous work)}\end{center}', horizontalalignment='center',
+    ax.text(np.log10(2.e-21), 0.25, r'\begin{center}\textbf{Ly-}$\mathbf{\alpha}$\textbf{f (previous work)}\end{center}', horizontalalignment='center',
             verticalalignment='center', color='orange', size=14.)
     #ax.text(0.5 * (-22.5 - 19.64), 0.19, r'\begin{center}$\mathbf{m_\mathrm{\textbf{a}} > 2 \times 10^{-20}\,\mathrm{\textbf{eV}}}$\end{center}',
     #        horizontalalignment='center', verticalalignment='center', color=colours[4], size=16.)
-    ax.text(np.log10(3.75e-21), 0.37, r'\begin{center}\textbf{-20.4}\end{center}', horizontalalignment='center',
+    ax.text(np.log10(2.e-21), 0.37, r'\begin{center}\textbf{-20.7}\end{center}', horizontalalignment='center',
             verticalalignment='center', color='orange', size=17.)
 
     #ax.axvspan(ymin=0., ymax=0.235, xmin=-22., xmax=-19.64, facecolor=colours[3], edgecolor=None, fill=True, alpha=a)
@@ -999,7 +1051,7 @@ def plot_comparison():
             verticalalignment='center', color=colours[2], size=17.)
 
     fig.subplots_adjust(top=0.8, bottom=0.03, right=0.95, left=0.05)
-    plt.savefig('/Users/keir/Documents/emulator_paper_axions/comparison2.pdf')
+    plt.savefig('/Users/keir/Documents/emulator_paper_axions/comparisonUS.pdf')
 
 if __name__ == "__main__":
     plt.rc('text', usetex=True)
@@ -1013,12 +1065,12 @@ if __name__ == "__main__":
 
     #plot_transfer_function(y='flux_power')
     #k, z, p, f, m, s, k_max = make_error_distribution()
-    #k, z, p, f, m, s, k_data, s_data, k_max, data_frames = violinplot_error_distribution(distribution='data')
+    k, z, p, f, m, s, k_data, s_data, k_max, data_frames = violinplot_error_distribution(distribution='validation')
     #plot_exploration()
     #posterior_means, posterior_limits = plot_convergence()
-    #plot_posterior(parameters='PRL')
+    #plot_posterior(parameters='all')
     #plot_data()
     #plot_transfer_ULA()
     #emulator_samples = plot_emulator()
     #plot_comparison()
-    power_arrays, k_log = plot_numerical_convergence()
+    #power_arrays, k_log = plot_numerical_convergence()
