@@ -270,7 +270,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     #Measured parameter redshift model
     measured_parameter_names_z_model = None #np.array(['T_0', 'gamma']) #'T_0', 'u_0'
     measured_parameter_z_model_parameter_limits = np.array([[5000., 12000.], [-0.5, 0.5], [0.75, 1.75], [-0.5, 0.5]]) #A, S #[5000., 12000.], [-1., 1.]
-    like = likeh.LikelihoodClass(basedir=emudir, mean_flux=mean_flux_label,
+    like = likeh.UltraLightAxionLikelihoodClass(basedir=emudir, mean_flux=mean_flux_label,
                                  measured_parameter_names_z_model=measured_parameter_names_z_model, max_z=max_z,
                                  redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s,
                                  t0_training_value = t0_training_value, t0_parameter_limits=np.array([0.75, 1.25]),
@@ -338,7 +338,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_referee_test' #'_emu50_512_test_ULA_diag_emu_input_IGM_3000' #TDR_u0_3000_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_referee_test_3000' #'_emu50_512_test_ULA_diag_emu_input_IGM_3000' #TDR_u0_3000_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -357,7 +357,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         like.param_limits[11+x, 1] = 12.
         like.param_limits[np.array([12, 13])+x, 1] = 18.
 
-        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=3000, nsamples=3000,
                          while_loop=False, include_emulator_error=True, pool=None) #'use_real_data'
         #likeh.do_posterior_sampling_parallel(like, chainfile, datadir='use_real_data', nwalkers=150, burnin=300,
         #                                     nsamples=300, while_loop=False, include_emulator_error=True)
@@ -451,7 +451,7 @@ if __name__ == "__main__":
                                    pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value=t0_test_value,
                                    emulator_class='nCDM', use_measured_parameters=use_measured_parameters,
                                    redshift_dependent_parameters=redshift_dependent_parameters, data_class='Boera',
-                                   emulator_json_file=parameters_json, n_threads_mcmc=60,
+                                   emulator_json_file=parameters_json, n_threads_mcmc=23,
                                    leave_out_validation=leave_out_validation) #_measured_TDR
     #, plot_parameter_indices=np.array([7, 8, 9])) #0.9)
 
