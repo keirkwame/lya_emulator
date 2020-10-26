@@ -547,7 +547,7 @@ class LikelihoodClass:
         _, std= flux_power.rebin_power_to_kms(kfkms=self.kf, kfmpc=self.gpemu.kf, flux_powers = std_nat[0], zbins=self.zout, omega_m = omega_m)
         return okf, predicted, std
 
-    def likelihood(self, params, include_emu=True, data_power=None, use_updated_training_set=False):
+    def likelihood(self, params, k_data_max=None, include_emu=True, data_power=None, use_updated_training_set=False):
         """A simple likelihood function for the Lyman-alpha forest.
         Assumes data is quadratic with a covariance matrix.
         The covariance for the emulator points is assumed to be
@@ -584,6 +584,11 @@ class LikelihoodClass:
                 #print('Emulator covariance =', covar_emu)
                 covar_bin += covar_emu
                 #print('Total covariance =', covar_bin)
+            if k_data_max is not None:
+                slice_array = self.kf[self.kf >= okf[bb][0]] <= k_data_max
+                diff_bin = diff_bin[slice_array]
+                covar_bin = covar_bin[slice_array, slice_array]
+            print('chi2 dims =', diff_bin.shape, covar_bin.shape)
             icov_bin = np.linalg.inv(covar_bin)
             (_, cdet) = np.linalg.slogdet(covar_bin)
             del(covar_bin)
@@ -678,13 +683,13 @@ class LikelihoodClass:
                 raise ValueError('Unrecognised prior distribution type.')
         self.log_prior_kwargs = prior_function_kwargs
 
-    def log_posterior(self, parameter_vector, include_emulator_error=True):
+    def log_posterior(self, parameter_vector, k_data_max=None, include_emulator_error=True):
         """Evaluate the natural logarithm of the posterior distribution"""
         '''if prior_functions == 'uniform':
             prior_functions = [self.log_uniform_prior, ]
         if not isinstance(prior_functions, list):
             prior_functions = [prior_functions, ]'''
-        posterior = self.likelihood(parameter_vector, include_emu=include_emulator_error)
+        posterior = self.likelihood(parameter_vector, k_data_max=k_data_max, include_emu=include_emulator_error)
         for i, prior_function in enumerate(self.log_prior):
             posterior += prior_function(parameter_vector, **self.log_prior_kwargs[i])
         return posterior
@@ -733,7 +738,7 @@ class LikelihoodClass:
 
         self.likelihood_parameter_names = pnames
 
-    def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=True,
+    def do_sampling(self, savefile, datadir, nwalkers=150, burnin=3000, nsamples=3000, while_loop=True, k_data_max=None,
                     include_emulator_error=True, maxsample=20, n_threads=1, pool=None):
         """Initialise and run emcee."""
         #return _do_sampling(self, savefile, datadir, nwalkers=nwalkers, burnin=burnin, nsamples=nsamples,
@@ -766,10 +771,12 @@ class LikelihoodClass:
             if pp[-1] > cent[-1]:
                 p0[i][-1] = cent[-1]
 
-        assert np.all([np.isfinite(self.log_posterior(pp, include_emulator_error=include_emulator_error)) for pp in p0])
+        assert np.all([np.isfinite(self.log_posterior(pp, k_data_max=k_data_max,
+                                                      include_emulator_error=include_emulator_error)) for pp in p0])
         #with Pool() as pool_object:
         emcee_sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.log_posterior, pool=pool,
-                                              kwargs={'include_emulator_error': include_emulator_error}) #threads=n_threads)
+                                              kwargs={'k_data_max': k_data_max,
+                                                      'include_emulator_error': include_emulator_error}) #threads=n_threads)
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
         #Check things are reasonable
         print('The fraction of proposed steps that were accepted =', emcee_sampler.acceptance_fraction)
