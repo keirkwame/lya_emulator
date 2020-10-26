@@ -277,12 +277,12 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                                  emulator_class=emulator_class, emulator_json_file=emulator_json_file,
                                  use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters,
-                                 flux_power_savefile='emu50_emulator_flux_vectors.hdf5',
+                                 flux_power_savefile='mf10_batch18_2_emulator_flux_vectors.hdf5',
                                  flux_power_parallel=True, flux_power_n_process=35, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
-                                 fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation) #, 
-    #                             dark_matter_model=likeh.ultra_light_axion_numerical_model,
-    #                             dark_matter_parameter_limits=np.array([[-22., -19.],]))
+                                 fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation,
+                                 dark_matter_model=likeh.ultra_light_axion_numerical_model,
+                                 dark_matter_parameter_limits=np.array([[-22., -19.],]))
 
     #Prior functions
     if prior_function == 'Gaussian':
@@ -309,8 +309,8 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     prior_function_maximum_jump = {'parameter_names': parameter_names_maximum_jump,
                                    'maximum_differences': maximum_jumps}
 
-    prior_functions = [prior_function,] #[prior_function_convex_hull, prior_function, prior_function_maximum_jump]
-    like.set_log_prior(['Gaussian',], prior_functions) #'convex_hull', 'Gaussian', 'maximum_jump'], prior_functions)
+    prior_functions = [prior_function_convex_hull, prior_function, prior_function_maximum_jump]
+    like.set_log_prior(['convex_hull', 'Gaussian', 'maximum_jump'], prior_functions)
 
     '''parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
     if mean_flux_label == 'free_high_z':
@@ -338,7 +338,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_emu50_512_test_ULA_diag_emu_input_IGM_3000' #TDR_u0_3000_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_referee_test' #'_emu50_512_test_ULA_diag_emu_input_IGM_3000' #TDR_u0_3000_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -350,14 +350,14 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         #pool_instance = mg.Pool(2) #None #MyPool()
 
         #Change prior
-        '''x=3
+        x=0
         like.param_limits[5+x, 1] = 12000.
         #like.param_limits[np.array([6, 7]), 1] = 15000.
         #like.param_limits[np.array([8, 9, 10])+x, 0] = 0.8
         like.param_limits[11+x, 1] = 12.
-        like.param_limits[np.array([12, 13])+x, 1] = 18.'''
+        like.param_limits[np.array([12, 13])+x, 1] = 18.
 
-        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=3000, nsamples=3000,
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
                          while_loop=False, include_emulator_error=True, pool=None) #'use_real_data'
         #likeh.do_posterior_sampling_parallel(like, chainfile, datadir='use_real_data', nwalkers=150, burnin=300,
         #                                     nsamples=300, while_loop=False, include_emulator_error=True)
@@ -405,14 +405,14 @@ if __name__ == "__main__":
 
     # Get test simulation parameters
     t0_test_value = 1.
-    test_simulation_number = 71
+    test_simulation_number = 0
     test_emulator_instance = cg.nCDMEmulator(testdirs)
-    test_emulator_instance.load(dumpfile='emulator_params_batch18_2_TDR_u0.json')
+    test_emulator_instance.load(dumpfile='emulator_params_TDR_u0_original.json')
     test_simulation_directory = test_emulator_instance.get_outdir(test_emulator_instance.get_parameters()
                                                     [test_simulation_number], extra_flag=test_simulation_number+1)[:-7]
 
-    #test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
-    test_simulation_parameters = test_emulator_instance.get_parameters()[test_simulation_number]
+    test_simulation_parameters = test_emulator_instance.get_combined_params()[test_simulation_number]
+    #test_simulation_parameters = test_emulator_instance.get_parameters()[test_simulation_number]
     #test_simulation_parameters = np.concatenate((np.array([0., t0_test_value]), test_simulation_parameters))
     test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters))
     #T_0; gamma power laws
@@ -421,8 +421,8 @@ if __name__ == "__main__":
     #test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters[:-3], np.array([test_simulation_parameters[-2], 0.])))
 
     #Prior distribution
-    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As']) #, 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2']) #, 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
-    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4])] #, 9, 10, 11])] #, 12, 13, 14])] #0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14])] #, 15, 16])] #7
+    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2']) #, 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
+    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 9, 10, 11])] #, 12, 13, 14])] #0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14])] #, 15, 16])] #7
     #prior_means[5] = 6000.
     #prior_means[np.array([8, 9, 10])] = 1.6
     print('Gaussian prior means =', prior_means)
@@ -438,7 +438,7 @@ if __name__ == "__main__":
     #prior_means[5] = 0.3
     #prior_means = np.array([0.93, 2.3 * 1.e-9, 0.27])
     #prior_means = np.array([0.3,])
-    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9]) #, 3000., 3000., 3000.]) #, 0.3, 0.3, 0.3]) #, 0.5, 0.5, 0.5]) #0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 2000., 2000., 2000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
+    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 3000., 3000., 3000.]) #, 0.3, 0.3, 0.3]) #, 0.5, 0.5, 0.5]) #0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 2000., 2000., 2000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
     prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
     #prior_function_args = None
     #omega_m fixed
@@ -451,7 +451,7 @@ if __name__ == "__main__":
                                    pixel_resolution_km_s=pixel_resolution_km_s, t0_training_value=t0_test_value,
                                    emulator_class='nCDM', use_measured_parameters=use_measured_parameters,
                                    redshift_dependent_parameters=redshift_dependent_parameters, data_class='Boera',
-                                   emulator_json_file=parameters_json, n_threads_mcmc=40,
+                                   emulator_json_file=parameters_json, n_threads_mcmc=60,
                                    leave_out_validation=leave_out_validation) #_measured_TDR
     #, plot_parameter_indices=np.array([7, 8, 9])) #0.9)
 
