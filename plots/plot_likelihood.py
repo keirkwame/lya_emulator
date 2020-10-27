@@ -353,7 +353,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         x=0
         like.param_limits[5+x, 1] = 12000.
         #like.param_limits[np.array([6, 7]), 1] = 15000.
-        #like.param_limits[np.array([8, 9, 10])+x, 0] = 0.8
+        like.param_limits[np.array([8, 9, 10])+x, 0] = 0.8
         like.param_limits[11+x, 1] = 12.
         like.param_limits[np.array([12, 13])+x, 1] = 18.
 
@@ -389,7 +389,7 @@ if __name__ == "__main__":
     parameters_json = sys.argv[4] #'emulator_params_measured_TDR.json'
     use_measured_parameters = (sys.argv[5].lower() == 'true')
     leave_out_validation = None #np.array([int(sys.argv[6]),])
-    redshift_dependent_parameters = False #True #(sys.argv[6].lower() == 'true')
+    redshift_dependent_parameters = True #True #(sys.argv[6].lower() == 'true')
 
     plotdir = 'Plots' #'plots/simulations2'
     gpsavedir=os.path.join(plotdir,"nCDM") #hires_s8")
