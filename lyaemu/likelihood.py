@@ -587,7 +587,7 @@ class LikelihoodClass:
             if k_data_max is not None:
                 slice_array = self.kf[self.kf >= okf[bb][0]] <= k_data_max
                 diff_bin = diff_bin[slice_array]
-                covar_bin = covar_bin[slice_array, slice_array]
+                covar_bin = covar_bin[slice_array, :][:, slice_array]
             print('chi2 dims =', diff_bin.shape, covar_bin.shape)
             icov_bin = np.linalg.inv(covar_bin)
             (_, cdet) = np.linalg.slogdet(covar_bin)
