@@ -338,7 +338,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_referee_test_mock90' #'_emu50_512_test_ULA_diag_emu_input_IGM_3000' #TDR_u0_3000_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_referee_test_mock87_3000' #'_emu50_512_test_ULA_diag_emu_input_IGM_3000' #TDR_u0_3000_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -357,8 +357,8 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         like.param_limits[11+x, 1] = 12.
         like.param_limits[np.array([12, 13])+x, 1] = 18.
 
-        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=300, nsamples=300,
-                         while_loop=False, k_data_max=10.**(-1.05), include_emulator_error=True, pool=None) #'use_real_data'
+        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=3000, nsamples=3000,
+                         while_loop=False, k_data_max=None, include_emulator_error=True, pool=None) #'use_real_data'
         #likeh.do_posterior_sampling_parallel(like, chainfile, datadir='use_real_data', nwalkers=150, burnin=300,
         #                                     nsamples=300, while_loop=False, include_emulator_error=True)
         print('Done sampling likelihood at', str(datetime.now()))
@@ -405,7 +405,7 @@ if __name__ == "__main__":
 
     # Get test simulation parameters
     t0_test_value = 1.
-    test_simulation_number = 89
+    test_simulation_number = 86
     test_emulator_instance = cg.nCDMEmulator(testdirs)
     test_emulator_instance.load(dumpfile='emulator_params_batch18_2_TDR_u0.json') #emulator_params_TDR_u0_original.json')
     test_simulation_directory = test_emulator_instance.get_outdir(test_emulator_instance.get_parameters()
