@@ -362,8 +362,9 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         print('Done sampling likelihood at', str(datetime.now()))
     if plot is True:
         if like.use_dark_matter_model:
+            axion_mass = likeh.ultra_light_axion_numerical_model_inverse(true_parameter_values[np.arange(6, 9)])
             true_parameter_values = np.delete(true_parameter_values, np.arange(6, 9))
-            true_parameter_values = np.concatenate((true_parameter_values, np.array([-20.,])))
+            true_parameter_values = np.concatenate((true_parameter_values, np.array([axion_mass,]))) #np.array([-20.,])
         #omega_m fixed
         true_parameter_values = np.delete(true_parameter_values, 5, axis=0)
 
