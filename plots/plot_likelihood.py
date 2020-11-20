@@ -338,7 +338,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_referee_test_mock87_3000' #'_emu50_512_test_ULA_diag_emu_input_IGM_3000' #TDR_u0_3000_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_referee_test_mock87_300' #'_emu50_512_test_ULA_diag_emu_input_IGM_3000' #TDR_u0_3000_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -355,7 +355,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
 
-        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=3000, nsamples=3000,
+        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=300, nsamples=300,
                          while_loop=False, k_data_max=None, include_emulator_error=True, pool=None) #'use_real_data'
         #likeh.do_posterior_sampling_parallel(like, chainfile, datadir='use_real_data', nwalkers=150, burnin=300,
         #                                     nsamples=300, while_loop=False, include_emulator_error=True)
@@ -387,7 +387,7 @@ if __name__ == "__main__":
     test_name = sys.argv[3] #'nCDM_test_thermal2'
     parameters_json = sys.argv[4] #'emulator_params_measured_TDR.json'
     use_measured_parameters = (sys.argv[5].lower() == 'true')
-    leave_out_validation = None #np.array([int(sys.argv[6]),])
+    leave_out_validation = np.array([int(sys.argv[6]),]) #None
     redshift_dependent_parameters = True #True #(sys.argv[6].lower() == 'true')
 
     plotdir = 'Plots' #'plots/simulations2'
