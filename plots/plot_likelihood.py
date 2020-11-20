@@ -345,17 +345,15 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
     datadir = os.path.join(sdir, "output")
     if true_parameter_values is None:
         true_parameter_values = get_simulation_parameters_s8(sdir, t0=t0)
+    # Change prior
+    x = 0
+    like.param_limits[5 + x, 1] = 12000.
+    # like.param_limits[np.array([6, 7]), 1] = 15000.
+    like.param_limits[np.array([8, 9, 10]) + x, 0] = 0.8
+    like.param_limits[11 + x, 1] = 12.
+    like.param_limits[np.array([12, 13]) + x, 1] = 18.
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
-        #pool_instance = mg.Pool(2) #None #MyPool()
-
-        #Change prior
-        x=0
-        like.param_limits[5+x, 1] = 12000.
-        #like.param_limits[np.array([6, 7]), 1] = 15000.
-        like.param_limits[np.array([8, 9, 10])+x, 0] = 0.8
-        like.param_limits[11+x, 1] = 12.
-        like.param_limits[np.array([12, 13])+x, 1] = 18.
 
         like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=3000, nsamples=3000,
                          while_loop=False, k_data_max=None, include_emulator_error=True, pool=None) #'use_real_data'
@@ -367,7 +365,7 @@ def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=T
             true_parameter_values = np.delete(true_parameter_values, np.arange(6, 9))
             true_parameter_values = np.concatenate((true_parameter_values, np.array([-20.,])))
         #omega_m fixed
-        #true_parameter_values = np.delete(true_parameter_values, 5, axis=0)
+        true_parameter_values = np.delete(true_parameter_values, 5, axis=0)
 
         fp_savefile = os.path.join(savedir, 'flux_power_'+sname + ".pdf")
         #make_plot_flux_power_spectra(like, true_parameter_values, datadir, savefile=fp_savefile, t0=t0,
