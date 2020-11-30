@@ -415,6 +415,7 @@ def violinplot_error_distribution(distribution='validation'):
     #Load data
     validation_data = np.load('/Users/keir/Software/lya_emulator/plots/cross_validation.npz')
     k = validation_data['k']
+    print('Emulator wavenumbers =', k)
     redshifts = validation_data['z']
     p = validation_data['p']
     f = validation_data['f']
@@ -462,20 +463,20 @@ def violinplot_error_distribution(distribution='validation'):
     elif distribution == 'data':
         errors = np.log10(s[:(n_sims * n_mf)] / s_data_expand) #np.log10(
         errors_real = np.log10(np.absolute(m - f_cut)[:(n_sims * n_mf)] / s_data_expand)
-        kernel_bw = 'scott' #0.01
+        kernel_bw = 'scott' #0.2
         colours = lyc.get_distinct(4)
         ylim = [-5., 2.5]
         ylabel = r'$\mathrm{log}\,(\sigma_\mathrm{Theory}\,/\,\sigma_\mathrm{Data})$'
         text_height = 0.1
         legend_loc = 'lower center'
-        save_file = 'data_error2.pdf'
+        save_file = 'data_error_optimise2.pdf'
     LH_cut = np.sort([np.arange(i, i+(n_LH + n_BO), 1) for i in range(0, n_sims*n_mf, n_sims)], axis=None)
     BO_cut = np.sort([np.arange(i+n_LH, i+n_sims, 1) for i in range(0, n_sims*n_mf, n_sims)], axis=None)
     errors_LH = errors[LH_cut]
     errors_BO = errors[BO_cut]
     errors_list = [errors_BO, errors_LH]
     if distribution == 'data':
-        errors_list_real = [errors_real[BO_cut], errors_real[LH_cut]]
+        errors_list_real = [errors_real[BO_cut], errors_real[BO_cut]] #[errors_real[BO_cut], errors_real[LH_cut]]
 
     #k bins
     #k_bins_input = k[:n_k_cut]
@@ -514,7 +515,8 @@ def violinplot_error_distribution(distribution='validation'):
                 #([samples_label_real,] * errors_list[j][:, z_cut].size * 20)
                 axes_idx = idx - 3
             elif distribution == 'data':
-                k_bin_df = np.tile(np.ravel(k_bin_list[j][:, z_cut]), 2)
+                k_bin_df = np.concatenate((np.ravel(k_bin_list[j][:, z_cut]), np.ravel(k_bin_list[0][:, z_cut])))
+                #np.tile(np.ravel(k_bin_list[j][:, z_cut]), 2)
                 errors_df = np.concatenate(
                     (np.ravel(errors_list[j][:, z_cut]), np.ravel(errors_list_real[j][:, z_cut])))
                 if j == 0:
@@ -523,9 +525,9 @@ def violinplot_error_distribution(distribution='validation'):
                     violin_colours = {samples_label: colours[0], samples_label_real: colours[1]}
                 else:
                     samples_label = r'Emulator / Data [all simulations]'
-                    samples_label_real = r'$|\mathrm{Mean - Truth}|$ / Data [all simulations]'
+                    samples_label_real = r'$|\mathrm{Mean - Truth}|$ / Data [optimization simulations]'
                     violin_colours = {samples_label: colours[2], samples_label_real: colours[3]}
-                split_cut_df = ([samples_label,] * errors_list[j][:, z_cut].size) + ([samples_label_real,] * errors_list[j][:, z_cut].size)
+                split_cut_df = ([samples_label,] * errors_list[j][:, z_cut].size) + ([samples_label_real,] * errors_list[0][:, z_cut].size) #0 --> j
                 axes_idx = idx - 3
             print(i, j, k_bin_df.shape, errors_df.shape, len(split_cut_df))
 
@@ -572,13 +574,16 @@ def plot_posterior(parameters='all'):
     """Make a triangle plot of marginalised 1D and 2D posteriors."""
     if parameters == 'all':
         n_chains = 4
-        save_file = 'posterior42_sims.pdf'
+        save_file = 'posterior42_sims2.pdf'
     elif parameters == 'logma':
         n_chains = 6
         save_file = 'posterior_logma2.pdf'
     elif parameters == 'PRL':
         n_chains = 1
         save_file = 'posterior_PRL2.pdf'
+    elif parameters == 'mock':
+        n_chains = 2
+        save_file = 'posterior42_mock_all.pdf'
 
     chainfiles = [None] * n_chains
     chainfile_root = '/Users/keir/Documents/emulator_data/chains_final'
@@ -597,6 +602,9 @@ def plot_posterior(parameters='all'):
     if parameters == 'logma':
         chainfiles[4] = 'chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_batch9_data_diag_emu_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18.txt'
         chainfiles[5] = 'chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_batch17_1_data_diag_emu_TDR_u0_15000_ULA_fit_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18.txt'
+    if parameters == 'mock':
+        chainfiles[0] = 'chain_ns0.969As1.8e-09heat_slope0.316heat_amp1.02omega_m0.321alpha0.00701beta5.81gamma-1.36z_rei7.25T_rei3.09e+04_87_referee_test_mock87_30000_86.txt'
+        chainfiles[1] = 'chain_ns0.969As1.8e-09heat_slope0.316heat_amp1.02omega_m0.321alpha0.00701beta5.81gamma-1.36z_rei7.25T_rei3.09e+04_87_referee_test_mock87_T0p_30000_86.txt'
 
     for i, chainfile in enumerate(chainfiles):
         chainfiles[i] = os.path.join(chainfile_root, chainfile)
@@ -625,22 +633,24 @@ def plot_posterior(parameters='all'):
     if parameters == 'logma':
         legend_labels = legend_labels[:2] + [r'After 25 optimization simulations',] + [legend_labels[2],] +\
                         [r'After 40 optimization simulations',] + [legend_labels[3],]
+    if parameters == 'mock':
+        legend_labels = [r'Mock data', r'Fiducial prior']
 
     samples = [None] * len(chainfiles)
     for i in range(len(samples)):
         if i < 3:
-            samples[i] = np.loadtxt(chainfiles[i]) #, max_rows=4500)
+            samples[i] = np.loadtxt(chainfiles[i]) #, max_rows=450)
         else:
             samples[i] = np.loadtxt(chainfiles[i]) #, max_rows=4500)
         samples[i][:, 4] *= 1.e+9
-        if (parameters == 'all') or (parameters == 'logma'):
+        if (parameters == 'all') or (parameters == 'logma') or (parameters == 'mock'):
             samples[i][:, 5] /= 1.e+4
             samples[i][:, 6] /= 1.e+4
             samples[i][:, 7] /= 1.e+4
             samples[i] = samples[i][:, np.array([2, 3, 4, 7, 10, 13, 14])]
         if parameters == 'logma':
             samples[i] = samples[i][:, -1].reshape(-1, 1)
-    if parameters == 'all':
+    if (parameters == 'all') or (parameters == 'mock'):
         width_inch = 6.4*2.5
         legend_loc = 'upper right'
         tick_label_size = 16.
@@ -667,10 +677,10 @@ def plot_posterior(parameters='all'):
     if parameters == 'logma':
         subplot_instance.settings.legend_fontsize = 12.
         subplot_instance.settings.figure_legend_frame = False
-    elif parameters == 'all':
+    elif (parameters == 'all') or (parameters == 'mock'):
         subplot_instance.settings.legend_fontsize = 22.
         subplot_instance.settings.figure_legend_frame = False
-    if (parameters == 'all') or (parameters == 'logma'):
+    if (parameters == 'all') or (parameters == 'logma') or (parameters == 'mock'):
         subplot_instance.triangle_plot(posterior_MCsamples, filled=True, contour_colors=colours, contour_lws=line_widths,
                                        legend_labels=legend_labels, legend_loc=legend_loc)
     elif parameters == 'PRL':
@@ -707,7 +717,7 @@ def plot_posterior(parameters='all'):
         log_mass[i, 0] = ultra_light_axion_numerical_model_inverse(np.array(json_dict['sample_params'])[i, 5:8])
     emulator_samples = np.concatenate((emulator_samples, log_mass), axis=1)
     emulator_samples[:, 1] *= 1.e+9
-    if (parameters == 'all') or (parameters == 'logma'):
+    if (parameters == 'all') or (parameters == 'logma') or (parameters == 'mock'):
         emulator_samples[:, 2] /= 1.e+4
         #emulator_samples[:, 3] /= 1.e+4
         #emulator_samples[:, 4] /= 1.e+4
@@ -736,7 +746,7 @@ def plot_posterior(parameters='all'):
                 if parameters == 'logma':
                     ax.xaxis.label.set_size(18.)
                     ax.yaxis.label.set_size(18.)
-                elif parameters == 'all':
+                elif (parameters == 'all') or (parameters == 'mock'):
                     ax.xaxis.label.set_size(22.)
                     ax.yaxis.label.set_size(22.)
                 ax.xaxis.set_tick_params(labelsize=tick_label_size)
@@ -747,10 +757,25 @@ def plot_posterior(parameters='all'):
                     #        (p in np.arange(8, 11)) and (q == (p - 3))) or (
                     #        (p in np.arange(11, 14)) and ((q == (p - 3)) or (q == (p - 6)))):
                     msize = 200
-                    ax.scatter(emulator_samples[:50, q-1], emulator_samples[:50, p-1], color=colours[0], marker='+', s=msize)
-                    ax.scatter(emulator_samples[50:69, q-1], emulator_samples[50:69, p-1], color=colours[1], marker='+', s=msize)
-                    ax.scatter(emulator_samples[69:85, q-1], emulator_samples[69:85, p-1], color=colours[2], marker='+', s=msize)
-                    ax.scatter(emulator_samples[85:, q-1], emulator_samples[85:, p-1], color=colours[3], marker='+', s=msize)
+                    if parameters != 'mock':
+                        ax.scatter(emulator_samples[:50, q-1], emulator_samples[:50, p-1], color=colours[0], marker='+', s=msize)
+                        ax.scatter(emulator_samples[50:69, q-1], emulator_samples[50:69, p-1], color=colours[1], marker='+', s=msize)
+                        ax.scatter(emulator_samples[69:85, q-1], emulator_samples[69:85, p-1], color=colours[2], marker='+', s=msize)
+                        ax.scatter(emulator_samples[85:, q-1], emulator_samples[85:, p-1], color=colours[3], marker='+', s=msize)
+                    else:
+                        ax.axvline(x=emulator_samples[86, q-1], color='black', ls='--', lw=line_widths[0])
+                        ax.axhline(y=emulator_samples[86, p - 1], color='black', ls='--', lw=line_widths[0])
+            if parameters == 'mock':
+                ax = subplot_instance.subplots[p, p]
+                if p == 0:
+                    truth = 1.
+                else:
+                    truth = emulator_samples[86, p-1]
+                ax.axvline(x=truth, color='black', ls='--', lw=line_widths[0])
+
+                ax = subplot_instance.subplots[p, 0]
+                ax.axvline(x=1., color='black', ls='--', lw=line_widths[0])
+                ax.axhline(y=emulator_samples[86, p - 1], color='black', ls='--', lw=line_widths[0])
 
     #plt.legend(fontsize=18., frameon=False)
     plt.savefig('/Users/keir/Documents/emulator_paper_axions/' + save_file)
@@ -1065,10 +1090,10 @@ if __name__ == "__main__":
 
     #plot_transfer_function(y='flux_power')
     #k, z, p, f, m, s, k_max = make_error_distribution()
-    k, z, p, f, m, s, k_data, s_data, k_max, data_frames = violinplot_error_distribution(distribution='validation')
+    #k, z, p, f, m, s, k_data, s_data, k_max, data_frames = violinplot_error_distribution(distribution='data')
     #plot_exploration()
     #posterior_means, posterior_limits = plot_convergence()
-    #plot_posterior(parameters='all')
+    plot_posterior(parameters='mock')
     #plot_data()
     #plot_transfer_ULA()
     #emulator_samples = plot_emulator()
