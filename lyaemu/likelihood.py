@@ -26,6 +26,10 @@ from .quadratic_emulator import QuadraticEmulator
 alpha_model_parameters = np.array([5.54530089e-03, 3.31718138e-01, 6.16422310e+00, 3.31219369e+01])
 beta_model_parameters = np.array([-0.02576259, -0.82153762, -0.45096863])
 gamma_model_parameters = np.array([-1.29071567e-02, -7.52873377e-01, -1.47076333e+01, -9.60752318e+01])
+alpha_model_parameters_bDM = np.array([-7.51459969e-03, -2.30695833e-03, 1.28202462e-01, -1.84144080e-01,
+                                       -8.96963581e-01, -4.22663264e+00, -2.41323815e+01])
+beta_model_parameters_bDM = np.array([-2.32142859e-04, -8.21964286e-02, 2.42587500e+00])
+gamma_model_parameters_bDM = np.array([-4.46])
 h_planck = 0.6686
 
 def _siIIIcorr(kf):
@@ -123,6 +127,19 @@ def ultra_light_axion_gamma_model(log_mass, b, a, m, c):
     """Model for gamma as a function of log ULA mass"""
     return -1. * (10. ** ((b * (log_mass ** 3)) + (a * (log_mass ** 2)) + (m * log_mass) + c))
 
+def bDM_alpha_model(log_mass, log_sigma, bmass, bsig, amass, asig, mmass, msig, c):
+    """Model for alpha as a function of log DM mass & log sigma"""
+    return 10. ** ((bmass * (log_mass ** 3)) + (amass * (log_mass ** 2)) + (mmass * log_mass) +
+                   (bsig * (log_sigma ** 3)) + (asig * (log_sigma ** 2)) + (msig * log_sigma) + c)
+
+def bDM_beta_model(log_mass, a, m, c):
+    """Model for beta as a function of log DM mass"""
+    return (a * (log_mass ** 2)) + (m * log_mass) + c
+
+def bDM_gamma_model(c):
+    """Model for gamma in parametric bDM model"""
+    return c
+
 def ultra_light_axion_numerical_model_inverse(nCDM_parameters, h=0.6686):
     """Inverse of numerical ultra-light axion model. Valid for -22 < log ULA mass [eV] < -18"""
     nCDM_corrected = nCDM_parameters
@@ -141,6 +158,9 @@ def ultra_light_axion_numerical_model_inverse(nCDM_parameters, h=0.6686):
 
     return log_mass[0]
 
+def bDM_numerical_model_inverse(nCDM_parameters, h=0.6686):
+    pass
+
 def ultra_light_axion_numerical_model(ultra_light_axion_parameters, nCDM_parameter_limits, h=0.6686):
     """Model to map ultra-light axion parameters to nCDM parameters using a fit to a numerical Einstein-Boltzmann
     solver. Valid for -22 < log ULA mass [eV] < -18"""
@@ -148,6 +168,22 @@ def ultra_light_axion_numerical_model(ultra_light_axion_parameters, nCDM_paramet
     alpha = ultra_light_axion_alpha_model(log_mass, *alpha_model_parameters)
     beta = ultra_light_axion_beta_model(log_mass, *beta_model_parameters)
     gamma = ultra_light_axion_gamma_model(log_mass, *gamma_model_parameters)
+    nCDM_parameters = np.array([alpha * h / h_planck, beta, gamma])
+
+    for i in range(3):
+        if nCDM_parameters[i] < nCDM_parameter_limits[i, 0]:
+            nCDM_parameters[i] = nCDM_parameter_limits[i, 0]
+        if nCDM_parameters[i] > nCDM_parameter_limits[i, 1]:
+            nCDM_parameters[i] = nCDM_parameter_limits[i, 1]
+    return nCDM_parameters
+
+def bDM_numerical_model(bDM_parameters, nCDM_parameter_limits, h=0.6686):
+    """Model to map bDM parameters to nCDM parameters using a fit to a numerical Einstein-Boltzmann solver. Valid for 4
+    < log DM mass [eV] < 11; -31 < log sigma [cm^2] < -24"""
+    log_mass, log_sigma = bDM_parameters
+    alpha = bDM_alpha_model(log_mass, log_sigma, *alpha_model_parameters_bDM)
+    beta = bDM_beta_model(log_mass, *beta_model_parameters_bDM)
+    gamma = bDM_gamma_model(*gamma_model_parameters_bDM)
     nCDM_parameters = np.array([alpha * h / h_planck, beta, gamma])
 
     for i in range(3):
@@ -1022,5 +1058,13 @@ class UltraLightAxionLikelihoodClass(DarkMatterLikelihoodClass):
 
 class BaryonDarkMatterLikelihoodClass(DarkMatterLikelihoodClass):
     """Class to contain likelihood computations for a model with baryon-dark matter interactions."""
-    def __init__(self, basedir, **kwargs):
-        super().__init__(basedir=basedir, **kwargs)
+    def __init__(self, basedir, dark_matter_model=bDM_numerical_model, dark_matter_parameter_names=None,
+                 dark_matter_parameter_limits=None, use_dark_matter=True, **kwargs):
+        if dark_matter_parameter_names is None:
+            dark_matter_parameter_names = np.array([['log(m)', r'logmdm'], ['log(s)', r'logsigma']])
+        if dark_matter_parameter_limits is None:
+            dark_matter_parameter_limits = np.array([[4., 11.], [-31., -24.]])
+        super().__init__(basedir=basedir, dark_matter_model=dark_matter_model,
+                         dark_matter_parameter_names=dark_matter_parameter_names,
+                         dark_matter_parameter_limits=dark_matter_parameter_limits, use_dark_matter=use_dark_matter,
+                         **kwargs)
