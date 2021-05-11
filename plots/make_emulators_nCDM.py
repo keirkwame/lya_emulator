@@ -125,11 +125,26 @@ if __name__ == '__main__':
     emulator_instance.gen_simulations(None, npart=npart, box=box, samples=samples_nCDM_test)'''
 
     #bDM_test
-    n_simulations = 2
+    '''n_simulations = 2
     samples_fiducial_nCDM = [0.9635, 1.8296e-9, 0., 1., 0.3209, 0., 1., -1., 8., 2.e+4]
     samples_nCDM_test = np.array(samples_fiducial_nCDM * n_simulations).reshape(n_simulations, -1)
     nCDM_test_params = like.bDM_numerical_model([9., -27.], np.array([[0., 0.1], [1., 10.], [-10., 0.]]))
     samples_nCDM_test[1, 5:8] = nCDM_test_params
+    print(samples_nCDM_test)
+    npart = 512
+    box = 10.
+
+    emulator_instance = cg.nCDMEmulator(os.path.join(emulator_base_directory, emulator_name))
+    emulator_instance.gen_simulations(None, npart=npart, box=box, samples=samples_nCDM_test)'''
+
+    #bDM_test2
+    n_simulations = 2
+    samples_fiducial_nCDM = [0.9635, 1.8296e-9, 0., 1., 0.3209, 0., 1., -1., 8., 2.e+4]
+    samples_nCDM_test = np.array(samples_fiducial_nCDM * n_simulations).reshape(n_simulations, -1)
+    nCDM_test_params28 = like.bDM_numerical_model([9., -28.], np.array([[0., 0.1], [1., 10.], [-10., 0.]]))
+    nCDM_test_params29 = like.bDM_numerical_model([9., -29.], np.array([[0., 0.1], [1., 10.], [-10., 0.]]))
+    samples_nCDM_test[0, 5:8] = nCDM_test_params28
+    samples_nCDM_test[1, 5:8] = nCDM_test_params29
     print(samples_nCDM_test)
     npart = 512
     box = 10.
