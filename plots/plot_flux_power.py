@@ -10,11 +10,11 @@ import lyaemu.coarse_grid as cg
 import lyaemu.mean_flux as mef
 
 if __name__ == "__main__":
-    emulator_base_directory = ['/share/rcifdata/keir/Simulations', '/share/data2/keir/Simulations'] #, '/share/rcifdata/keir/Simulations']
-    emulator_names = ['bDM_test', 'nCDM_convergence_512_256'] #, 'nCDM_convergence_896']
-    emulator_jsons = ['emulator_params.json', 'emulator_params_input_parameters.json'] #, 'emulator_params.json']
+    emulator_base_directory = ['/share/rcifdata/keir/Simulations', '/share/rcifdata/keir/Simulations'] #, '/share/rcifdata/keir/Simulations']
+    emulator_names = ['bDM_test', 'bDM_test2'] #, 'nCDM_convergence_896']
+    emulator_jsons = ['emulator_params_TDR_u0.json', 'emulator_params_TDR_u0.json'] #, 'emulator_params.json']
     flux_vectors = ['emulator_flux_vectors.hdf5', 'emulator_flux_vectors.hdf5'] #, 'emulator_flux_vectors.hdf5']
-    simulation_indices = [np.arange(2), np.arange(1)] #, np.arange(1)] #, np.arange(1)] #np.arange(2)]
+    simulation_indices = [np.arange(2), np.arange(2)] #, np.arange(1)] #, np.arange(1)] #np.arange(2)]
     interpolate_to_same_k = False
 
     default_emulator_index = 0
@@ -23,8 +23,8 @@ if __name__ == "__main__":
         [np.size(simulation_indices_single_emulator) for simulation_indices_single_emulator in simulation_indices])
 
     savefile = os.path.join(emulator_base_directory[0], emulator_names[0],
-                            'flux_power_bDM_test_nCDM_mfraw.pdf')
-    figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 3. / 10.))
+                            'flux_power_bDM_test2_all.pdf')
+    figure, axes = plt.subplots(nrows=n_simulations, ncols=2, figsize=(20., 20. * 4. / 10.))
 
     plot_start_index = 0
     input_parameters_all = []
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
         input_parameters_all_single_emulator, k_parallel_single_emulator, flux_powers_single_emulator = emulator_instance.get_flux_vectors(
             redshifts=emulator_instance.redshifts, pixel_resolution_km_s=1., spectral_resolution_km_s='default',
-            spectral_resolution_km_s_corrected='default', fix_mean_flux_samples=True, no_mean_flux_rescaling=True,
+            spectral_resolution_km_s_corrected='default', fix_mean_flux_samples=True, no_mean_flux_rescaling=False,
             mean_fluxes=None, add_z_evolution=False,
             savefile=flux_vectors[a], parallel=True, n_process=8) #np.array([0.17292689701710162, 0.25730327435491956, 0.3479585571365616])
         print(flux_powers_single_emulator.shape)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
             axes[i, 1].axvline(x = -2.2, ls=':', color='black', lw=0.5)
             axes[i, 1].axhline(y = 1., ls=':', color='black', lw=0.5)
 
-            for j, redshift in enumerate(emulator_instance.redshifts): #Loop over redshifts
+            for j, redshift in enumerate([emulator_instance.redshifts[0],]): #Loop over redshifts
                 k_cut = k_parallel[a][b, j] < 0.2
                 k_plot = k_parallel[a][b, j]
                 if interpolate_to_same_k:
