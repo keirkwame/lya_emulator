@@ -288,7 +288,8 @@ class Emulator:
 
     def get_outdir(self, pp, strsz=3, extra_flag=0):
         """Get the simulation output directory path for a parameter set."""
-        return os.path.join(os.path.join(self.basedir, self.build_dirname(pp, strsz=strsz, extra_flag=extra_flag)),"output")
+        return os.path.join(os.path.join(self.basedir, self.build_dirname(pp, strsz=strsz, extra_flag=extra_flag)),
+                            "output")
 
     def get_parameters(self, use_all=None):
         """Get the list of parameter vectors in this emulator."""

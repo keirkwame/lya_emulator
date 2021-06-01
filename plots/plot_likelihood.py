@@ -111,7 +111,8 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_cl
 
     ekf, emulated_flux_power, emulated_flux_power_std = like.get_predicted(params)
 
-    data_flux_power = like.lyman_data_instance.pf.reshape(-1, n_k_los)[:n_z][::-1]
+    data_flux_power = like.lyman_data_flux_power
+    #like.lyman_data_instance.pf.reshape(-1, n_k_los)[:n_z][::-1]
 
     figure, axes = plt.subplots(nrows=4, ncols=1, figsize=(6.4*2., 10.))
     distinct_colours = dc.get_distinct(n_z)
@@ -121,34 +122,39 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_cl
         scaling_factor = ekf[i]/ mh.pi
         data_flux_power_std_single_z = np.sqrt(like.lyman_data_instance.get_covar(z[i]).diagonal())
         exact_flux_power_std_single_z = np.sqrt(np.diag(like.get_data_covariance(i)))
-#         print('Diagonal elements of BOSS covariance matrix at single redshift:', data_flux_power_std_single_z)
 
         line_width = 0.5
-        axes[0].plot(ekf[i], exact_flux_power[i][idp]*scaling_factor, color=distinct_colours[i], ls='-', lw=line_width, label=r'$z = %.1f$'%z[i])
+        axes[0].plot(ekf[i], exact_flux_power[i][idp]*scaling_factor, color=distinct_colours[i], ls='-', lw=line_width,
+                     label=r'$z = %.1f$'%z[i])
         axes[0].plot(ekf[i], emulated_flux_power[i]*scaling_factor, color=distinct_colours[i], ls='--', lw=line_width)
-        axes[0].errorbar(ekf[i], emulated_flux_power[i]*scaling_factor, yerr=emulated_flux_power_std[i]*scaling_factor, ecolor=distinct_colours[i], ls='')
+        axes[0].errorbar(ekf[i], emulated_flux_power[i]*scaling_factor, yerr=emulated_flux_power_std[i]*scaling_factor,
+                         ecolor=distinct_colours[i], ls='')
 
         axes[1].plot(ekf[i], data_flux_power[i][idp]*scaling_factor, color=distinct_colours[i], lw=line_width)
-        axes[1].errorbar(ekf[i], data_flux_power[i][idp]*scaling_factor, yerr=data_flux_power_std_single_z[idp]*scaling_factor, ecolor=distinct_colours[i], ls='')
+        axes[1].errorbar(ekf[i], data_flux_power[i][idp]*scaling_factor,
+                         yerr=data_flux_power_std_single_z[idp]*scaling_factor, ecolor=distinct_colours[i], ls='')
 
-        axes[2].plot(ekf[i], exact_flux_power_std_single_z[idp] / exact_flux_power[i][idp], color=distinct_colours[i], ls='-', lw=line_width)
+        axes[2].plot(ekf[i], exact_flux_power_std_single_z[idp] / exact_flux_power[i][idp], color=distinct_colours[i],
+                     ls='-', lw=line_width)
         axes[2].plot(ekf[i], emulated_flux_power_std[i] / exact_flux_power[i][idp], color=distinct_colours[i], ls='--',
                      lw=line_width)
 
         #axes[3].plot(ekf[i], data_flux_power_std_single_z / data_flux_power[i], color=distinct_colours[i], ls='-', lw=line_width)
-        axes[3].plot(ekf[i], emulated_flux_power[i] / exact_flux_power[i][idp], color=distinct_colours[i], ls='-', lw=line_width)
-    print('z=%.2g Max frac overestimation of P_F =' % z[i], np.max((emulated_flux_power[i] / exact_flux_power[i][idp]) - 1.))
-    print('z=%.2g Min frac underestimation of P_F =' % z[i] , np.min((emulated_flux_power[i] / exact_flux_power[i][idp]) - 1.))
+        axes[3].plot(ekf[i], emulated_flux_power[i] / exact_flux_power[i][idp], color=distinct_colours[i], ls='-',
+                     lw=line_width)
+    print('z=%.2g Max frac overestimation of P_f =' % z[i],
+          np.max((emulated_flux_power[i] / exact_flux_power[i][idp]) - 1.))
+    print('z=%.2g Min frac underestimation of P_f =' % z[i] ,
+          np.min((emulated_flux_power[i] / exact_flux_power[i][idp]) - 1.))
 
     fontsize = 7.
     xlim = [1.e-3, 0.022]
     xlabel = r'$k$ ($\mathrm{s}\,\mathrm{km}^{-1}$)'
     ylabel = r'$k P(k) / \pi$'
 
-    axes[0].plot([], color='gray', ls='-', label=r'exact')
-    axes[0].plot([], color='gray', ls='--', label=r'emulated')
+    axes[0].plot([], color='gray', ls='-', label=r'Exact')
+    axes[0].plot([], color='gray', ls='--', label=r'Emulated')
     axes[0].legend(frameon=False, fontsize=fontsize)
-    #axes[0].set_xlim(xlim)  # 4.e-2])
     axes[0].set_xscale('log')
     axes[0].set_yscale('log')
     axes[0].set_xlabel(xlabel)
@@ -156,31 +162,26 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_cl
 
     axes[1].plot([], color='gray', label=r'Data')
     axes[1].legend(frameon=False, fontsize=fontsize)
-    #axes[1].set_xlim(xlim)
     axes[1].set_xscale('log')
     axes[1].set_yscale('log')
     axes[1].set_xlabel(xlabel)
     axes[1].set_ylabel(ylabel)
 
-    axes[2].plot([], color='gray', ls='-', label=r'measurement sigma')
-    axes[2].plot([], color='gray', ls='--', label=r'emulated sigma')
+    axes[2].plot([], color='gray', ls='-', label=r'Data sigma (frac of exact power)')
+    axes[2].plot([], color='gray', ls='--', label=r'Emulated sigma')
     axes[2].legend(frameon=False, fontsize=fontsize)
-    #axes[2].set_xlim(xlim)
     axes[2].set_xscale('log')
     axes[2].set_yscale('log')
     axes[2].set_xlabel(xlabel)
-    axes[2].set_ylabel(r'sigma / exact P(k)')
+    axes[2].set_ylabel(r'Sigma / Exact P(k)')
 
     axes[3].axhline(y=1., color='black', ls=':', lw=line_width)
-    #axes[3].set_xlim(xlim)
-    #axes[3].set_yscale('log')
     axes[3].set_xscale('log')
     axes[3].set_xlabel(xlabel)
-    axes[3].set_ylabel(r'emulated P(k) / exact P(k)') #BOSS sigma / BOSS P(k)')
+    axes[3].set_ylabel(r'Emulated P(k) / Exact P(k)')
 
     figure.subplots_adjust(hspace=0)
     plt.savefig(savefile)
-    #plt.show()
 
     return like
 
@@ -244,11 +245,6 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
 #     legend_labels = ['+ Initial Latin hypercube']
 #     subplot_instance.add_legend(legend_labels, legend_loc='upper right', colored_text=True, figure=True)
     plt.savefig(savefile)
-'''def prior_function(parameter_vector):
-    return like.log_gaussian_prior(parameter_vector,
-                            parameter_names=prior_function_args[0], means=prior_function_args[1],
-                            standard_deviations=prior_function_args[2])
-'''
 
 def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform', prior_function_args=None,
                         test_simulation_parameters=None, plot=True, mean_flux_label='s', max_z=4.2, redshifts=None,
@@ -257,9 +253,6 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                         plot_parameter_indices=None, emulator_json_file='emulator_params.json', n_threads_mcmc=1,
                         leave_out_validation=None):
     """Generate some likelihood samples"""
-    #omega_m hack
-    #plot_parameter_indices = np.array([0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
-
     #Find all subdirectories
     if test_simulation_parameters is None:
         subdirs = glob.glob(testdir + "/*/")
@@ -269,117 +262,104 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
 
     #Measured parameter redshift model
     measured_parameter_names_z_model = None #np.array(['T_0', 'gamma']) #'T_0', 'u_0'
-    measured_parameter_z_model_parameter_limits = np.array([[5000., 12000.], [-0.5, 0.5], [0.75, 1.75], [-0.5, 0.5]]) #A, S #[5000., 12000.], [-1., 1.]
-    like = likeh.UltraLightAxionLikelihoodClass(basedir=emudir, mean_flux=mean_flux_label,
+    measured_parameter_z_model_parameter_limits = None
+    #np.array([[5000., 12000.], [-0.5, 0.5], [0.75, 1.75], [-0.5, 0.5]]) #A, S #[5000., 12000.], [-1., 1.]
+
+    like = likeh.BaryonDarkMatterLikelihoodClass(basedir=emudir, mean_flux=mean_flux_label,
                                  measured_parameter_names_z_model=measured_parameter_names_z_model, max_z=max_z,
                                  redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s,
                                  t0_training_value = t0_training_value, t0_parameter_limits=np.array([0.75, 1.25]),
                                  emulator_class=emulator_class, emulator_json_file=emulator_json_file,
                                  use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters,
-                                 flux_power_savefile='batch18_2_emulator_flux_vectors.hdf5',
+                                 flux_power_savefile='emulator_flux_vectors.hdf5',
                                  flux_power_parallel=True, flux_power_n_process=35, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
-                                 fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation,
-                                 dark_matter_model=likeh.ultra_light_axion_numerical_model,
-                                 dark_matter_parameter_limits=np.array([[-22., -19.],]))
+                                 fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation) #,
+    #                             dark_matter_model=likeh.ultra_light_axion_numerical_model,
+    #                             dark_matter_parameter_limits=np.array([[-22., -19.],]))
+    #UltraLightAxionLikelihoodClass
 
     #Prior functions
     if prior_function == 'Gaussian':
-        #prior_function = lambda parameter_vector: like.log_gaussian_prior(parameter_vector,
-        #                    parameter_names=prior_function_args[0], means=prior_function_args[1],
-        #                    standard_deviations=prior_function_args[2])
         prior_function = {'parameter_names': prior_function_args[0], 'means': prior_function_args[1],
                             'standard_deviations': prior_function_args[2]}
 
     #Convex hull prior
     parameter_names_convex_hull = [['T_0_z_5.0', 'u_0_z_5.0'], ['T_0_z_4.6', 'u_0_z_4.6'], ['T_0_z_4.2', 'u_0_z_4.2']]
-    #prior_function_convex_hull = lambda parameter_vector: like.log_convex_hull_prior(parameter_vector,
-    #                                                                        parameter_names=parameter_names_convex_hull)
-    #convex_hulls = [None] * 3
-    #for i, convex_hull in enumerate(convex_hulls):
-
-    prior_function_convex_hull = {'parameter_names': parameter_names_convex_hull, 'use_likelihood_parameter_limits': True}
+    prior_function_convex_hull = {'parameter_names': parameter_names_convex_hull,
+                                  'use_likelihood_parameter_limits': True}
 
     #Maximum jumps prior
     parameter_names_maximum_jump = np.array(['T_0', 'u_0'])
     maximum_jumps = np.array([5000., 10.])
-    #prior_function_maximum_jump = lambda parameter_vector: like.log_redshift_prior(parameter_vector,
-    #                                parameter_names=parameter_names_maximum_jump, maximum_differences=maximum_jumps)
     prior_function_maximum_jump = {'parameter_names': parameter_names_maximum_jump,
                                    'maximum_differences': maximum_jumps}
 
     prior_functions = [prior_function_convex_hull, prior_function, prior_function_maximum_jump]
     like.set_log_prior(['convex_hull', 'Gaussian', 'maximum_jump'], prior_functions)
 
-    '''parameter_names = like.emulator.print_pnames(use_measured_parameters=use_measured_parameters)[:, 1]
-    if mean_flux_label == 'free_high_z':
-        parameter_names = np.concatenate(([r'tau0_%.2f'%redshift for redshift in like.zout], parameter_names[1:]))
-    else:
-        parameter_names = np.concatenate(([r'd \tau_0',], parameter_names))'''
     for sdir in subdirs:
-        single_likelihood_plot(sdir, like, savedir=savedir, prior_function=prior_functions, plot=plot,
-                               t0=t0_training_value, true_parameter_values=test_simulation_parameters,
-                               data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
-                               mean_flux_label=mean_flux_label, plot_parameter_indices=plot_parameter_indices,
-                               n_threads_mcmc=n_threads_mcmc, leave_out_validation=leave_out_validation)
+        single_likelihood_plot(sdir, like, savedir=savedir, plot=plot, t0=t0_training_value,
+                               true_parameter_values=test_simulation_parameters,
+                               plot_parameter_indices=plot_parameter_indices, leave_out_validation=leave_out_validation)
     return like
 
-def single_likelihood_plot(sdir, like, savedir, prior_function='uniform', plot=True, t0=1., true_parameter_values=None,
-                           data_class='BOSS', pixel_resolution_km_s='default', mean_flux_label='s',
-                           parameter_names=None, plot_parameter_indices=None, n_threads_mcmc=1,
-                           leave_out_validation=None):
+def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter_values=None,
+                           plot_parameter_indices=None, leave_out_validation=None):
     """Make a likelihood and error plot for a single simulation."""
     sname = os.path.basename(os.path.abspath(sdir))
     if t0 != 1.0:
-        sname = re.sub(r"\.","_", "tau0%.3g" % t0) + sname
+        sname = re.sub(r"\.", "_", "tau0%.3g" % t0) + sname
 
     if leave_out_validation is None:
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_referee_test_mock87_300' #'_emu50_512_test_ULA_diag_emu_input_IGM_3000' #TDR_u0_3000_convex_hull_omega_m_fixed_tau_Planck_T0_tighter_prior_no_jump_Tu0_Tu0CH_0_T012_g08_u012_18' #'_mf_free_prior_measured_TDR_gamma_power_law_T0_prior_3000'
+    filename_suffix = '_bDM_test'
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
     datadir = os.path.join(sdir, "output")
+
     if true_parameter_values is None:
         true_parameter_values = get_simulation_parameters_s8(sdir, t0=t0)
+
     # Change prior
     x = 0
-    like.param_limits[5 + x, 1] = 12000.
+    #like.param_limits[5 + x, 1] = 12000.
     # like.param_limits[np.array([6, 7]), 1] = 15000.
-    like.param_limits[np.array([8, 9, 10]) + x, 0] = 0.8
-    like.param_limits[11 + x, 1] = 12.
-    like.param_limits[np.array([12, 13]) + x, 1] = 18.
+    #like.param_limits[np.array([8, 9, 10]) + x, 0] = 0.8
+    #like.param_limits[11 + x, 1] = 12.
+    #like.param_limits[np.array([12, 13]) + x, 1] = 18.
+
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
 
-        like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=300, nsamples=300,
-                         while_loop=False, k_data_max=None, include_emulator_error=True, pool=None) #'use_real_data'
-        #likeh.do_posterior_sampling_parallel(like, chainfile, datadir='use_real_data', nwalkers=150, burnin=300,
-        #                                     nsamples=300, while_loop=False, include_emulator_error=True)
+        #like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=300, nsamples=300,
+        #                 while_loop=False, k_data_max=None, include_emulator_error=True, pool=None) #'use_real_data'
         print('Done sampling likelihood at', str(datetime.now()))
+
     if plot is True:
         if like.use_dark_matter_model:
-            axion_mass = likeh.ultra_light_axion_numerical_model_inverse(true_parameter_values[np.arange(6, 9)])
+            #DM_params = likeh.ultra_light_axion_numerical_model_inverse(true_parameter_values[np.arange(6, 9)])
             true_parameter_values = np.delete(true_parameter_values, np.arange(6, 9))
-            true_parameter_values = np.concatenate((true_parameter_values, np.array([axion_mass,]))) #np.array([-20.,])
+            true_parameter_values = np.concatenate((true_parameter_values, np.array([9. -27.])))
+            #np.array([DM_params,]))) #np.array([-20.,])
         #omega_m fixed
         true_parameter_values = np.delete(true_parameter_values, 5, axis=0)
 
-        fp_savefile = os.path.join(savedir, 'flux_power_'+sname + ".pdf")
-        #make_plot_flux_power_spectra(like, true_parameter_values, datadir, savefile=fp_savefile, t0=t0,
-        #                             data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
-        #                             mean_flux_label=mean_flux_label)
+        fp_savefile = os.path.join(savedir, 'flux_power_' + sname + ".pdf")
+        make_plot_flux_power_spectra(like, true_parameter_values, datadir, savefile=fp_savefile, t0=t0,
+                                     data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
+                                     mean_flux_label=mean_flux_label)
 
-        savefile = os.path.join(savedir, 'corner_'+sname + filename_suffix + ".pdf") #no_emu_measured_TDR_3000_Gaussian_Planck_omega_m_tight_emu_less.pdf")
-        plot_parameter_names = like.likelihood_parameter_names[:, 1] #parameter_names
+        savefile = os.path.join(savedir, 'corner_' + sname + filename_suffix + ".pdf")
+        plot_parameter_names = like.likelihood_parameter_names[:, 1]
         plot_parameter_limits = like.param_limits
-        #if like.use_dark_matter_model:
-        #    true_parameter_values = np.delete(true_parameter_values, np.arange(6, 9))
-        #    true_parameter_values = np.concatenate((true_parameter_values, np.array([-21.,])))
-        make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=plot_parameter_names, ranges=plot_parameter_limits, parameter_indices=plot_parameter_indices)
+        #make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=plot_parameter_names,
+        #          ranges=plot_parameter_limits, parameter_indices=plot_parameter_indices)
+
 
 if __name__ == "__main__":
     emulator_base_directory = sys.argv[1] #'/share/data2/keir/Simulations'
@@ -387,15 +367,13 @@ if __name__ == "__main__":
     test_name = sys.argv[3] #'nCDM_test_thermal2'
     parameters_json = sys.argv[4] #'emulator_params_measured_TDR.json'
     use_measured_parameters = (sys.argv[5].lower() == 'true')
-    leave_out_validation = np.array([int(sys.argv[6]),]) #None
+    leave_out_validation = None #np.array([int(sys.argv[6]),])
     redshift_dependent_parameters = True #True #(sys.argv[6].lower() == 'true')
 
-    plotdir = 'Plots' #'plots/simulations2'
-    gpsavedir=os.path.join(plotdir,"nCDM") #hires_s8")
-    #quadsavedir = os.path.join(plotdir, "hires_s8_quad_quad")
-    emud = os.path.join(emulator_base_directory, emulator_name) #hires_s8')
-    #quademud = os.path.join(sim_rootdir, "hires_s8_quadratic")
-    testdirs = os.path.join('/share/data2/keir/Simulations/', test_name) #hires_s8_test')
+    plotdir = 'Plots'
+    gpsavedir=os.path.join(plotdir,"nCDM")
+    emud = os.path.join(emulator_base_directory, emulator_name)
+    testdirs = os.path.join(emulator_base_directory, test_name)
 
     lyman_data_instance = lyman_data.BoeraData()
     redshifts = lyman_data_instance.redshifts_unique[::-1]
@@ -404,9 +382,9 @@ if __name__ == "__main__":
 
     # Get test simulation parameters
     t0_test_value = 1.
-    test_simulation_number = 86
+    test_simulation_number = 1
     test_emulator_instance = cg.nCDMEmulator(testdirs)
-    test_emulator_instance.load(dumpfile='emulator_params_batch18_2_TDR_u0.json') #emulator_params_TDR_u0_original.json')
+    test_emulator_instance.load(dumpfile='emulator_params_TDR_u0.json')
     test_simulation_directory = test_emulator_instance.get_outdir(test_emulator_instance.get_parameters()
                                                     [test_simulation_number], extra_flag=test_simulation_number+1)[:-7]
 
@@ -420,26 +398,12 @@ if __name__ == "__main__":
     #test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters[:-3], np.array([test_simulation_parameters[-2], 0.])))
 
     #Prior distribution
-    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2']) #, 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
+    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2'])
+    #, 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
     prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 9, 10, 11])] #, 12, 13, 14])] #0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14])] #, 15, 16])] #7
-    #prior_means[5] = 6000.
-    #prior_means[np.array([8, 9, 10])] = 1.6
     print('Gaussian prior means =', prior_means)
-    '''prior_means[6] = 5.55
-    prior_means[7] = -1.8
-    prior_means[8] = 20000.
-    prior_means[9] = 10000.
-    prior_means[10] = 10000.
-    prior_means[11] = 10000.'''
-    '''prior_means[9] = 1.3
-    prior_means[10] = 1.3
-    prior_means[11] = 1.3'''
-    #prior_means[5] = 0.3
-    #prior_means = np.array([0.93, 2.3 * 1.e-9, 0.27])
-    #prior_means = np.array([0.3,])
     prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 3000., 3000., 3000.]) #, 0.3, 0.3, 0.3]) #, 0.5, 0.5, 0.5]) #0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 2000., 2000., 2000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
     prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
-    #prior_function_args = None
     #omega_m fixed
     #test_simulation_parameters = np.delete(test_simulation_parameters, 5, axis=0)
 
@@ -451,9 +415,4 @@ if __name__ == "__main__":
                                    emulator_class='nCDM', use_measured_parameters=use_measured_parameters,
                                    redshift_dependent_parameters=redshift_dependent_parameters, data_class='Boera',
                                    emulator_json_file=parameters_json, n_threads_mcmc=23,
-                                   leave_out_validation=leave_out_validation) #_measured_TDR
-    #, plot_parameter_indices=np.array([7, 8, 9])) #0.9)
-
-#     gplike = run_likelihood_test(testdirs, emud, savedir=gpsavedir, plot=True)
-    #quadlike09 = run_likelihood_test(testdirs, quademud, savedir=quadsavedir, plot=True, t0_training_value=0.9, emulator_class="quadratic")
-#     quadlike = run_likelihood_test(testdirs, quademud, savedir=quadsavedir, plot=True, emulator_class="quadratic")
+                                   leave_out_validation=leave_out_validation)
