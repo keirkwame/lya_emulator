@@ -368,9 +368,9 @@ def plot_exploration():
 def make_error_distribution():
     """Calculate the emulator error distribution for leave-one-out cross-validation."""
     emudir = '/share/data2/keir/Simulations/nCDM_emulator_512'
-    emu_json = 'emulator_params_batch18_2_TDR_u0.json'
-    flux_power_file = 'batch18_2_emulator_flux_vectors.hdf5'
-    n_sims = 93
+    emu_json = 'emulator_params_TDR_u0_original_emu50.json' #'emulator_params_batch18_2_TDR_u0.json'
+    flux_power_file = 'mf10_emu50_emulator_flux_vectors.hdf5' #'batch18_2_emulator_flux_vectors.hdf5'
+    n_sims = 50 #93
     mf_instance = lym.FreeMeanFlux()
 
     emu_instance_full = lyc.nCDMEmulator(emudir, mf=mf_instance)
@@ -404,7 +404,7 @@ def make_error_distribution():
 
 def violinplot_error_distribution(distribution='validation'):
     """Make a violin-plot of the emulator error distribution for leave-one-out cross-validation."""
-    n_sims = 93
+    n_sims = 50 #93
     n_LH = 50
     n_BO = n_sims - n_LH
     n_mf = 2
@@ -413,7 +413,7 @@ def violinplot_error_distribution(distribution='validation'):
     k_bins = np.concatenate((np.repeat(1, 15), np.repeat(2, 15), np.repeat(3, 15)))
 
     #Load data
-    validation_data = np.load('/Users/keir/Software/lya_emulator/plots/cross_validation.npz')
+    validation_data = np.load('/home/keir/Software/lya_emulator/plots/cross_validation_bDM.npz')
     k = validation_data['k']
     print('Emulator wavenumbers =', k)
     redshifts = validation_data['z']
@@ -427,7 +427,7 @@ def violinplot_error_distribution(distribution='validation'):
     #Load Boera+ data
     s_data = np.zeros(n_k_data * redshifts.size)
     for i, z in enumerate(redshifts):
-        data_all = np.genfromtxt('/Users/keir/Software/lya_emulator/lyaemu/data/Boera_HIRES_UVES_flux_power/flux_power_z_%.1f.dat'%z,
+        data_all = np.genfromtxt('/home/keir/Software/lya_emulator/lyaemu/data/Boera_HIRES_UVES_flux_power/flux_power_z_%.1f.dat'%z,
                                     skip_header=5, skip_footer=1)
         s_data[(i * n_k_data): ((i + 1) * n_k_data)] = data_all[:, 3]
         if i == 0:
@@ -459,7 +459,7 @@ def violinplot_error_distribution(distribution='validation'):
         ylabel = r'$(\mathrm{Mean - Truth})\,/\,\sigma$'
         text_height = 0.85
         legend_loc = 'upper left'
-        save_file = 'validationUS2.pdf'
+        save_file = 'validation_bDM.pdf'
     elif distribution == 'data':
         errors = np.log10(s[:(n_sims * n_mf)] / s_data_expand) #np.log10(
         errors_real = np.log10(np.absolute(m - f_cut)[:(n_sims * n_mf)] / s_data_expand)
@@ -469,7 +469,7 @@ def violinplot_error_distribution(distribution='validation'):
         ylabel = r'$\mathrm{log}\,(\sigma_\mathrm{Theory}\,/\,\sigma_\mathrm{Data})$'
         text_height = 0.1
         legend_loc = 'lower center'
-        save_file = 'data_error_optimise2.pdf'
+        save_file = 'data_error_bDM.pdf'
     LH_cut = np.sort([np.arange(i, i+(n_LH + n_BO), 1) for i in range(0, n_sims*n_mf, n_sims)], axis=None)
     BO_cut = np.sort([np.arange(i+n_LH, i+n_sims, 1) for i in range(0, n_sims*n_mf, n_sims)], axis=None)
     errors_LH = errors[LH_cut]
@@ -567,7 +567,7 @@ def violinplot_error_distribution(distribution='validation'):
     else:
         bottom_adjust = 0.1
     fig.subplots_adjust(top=0.99, bottom=bottom_adjust, right=0.95, hspace=0.1)
-    plt.savefig('/Users/keir/Documents/emulator_paper_axions/' + save_file)
+    plt.savefig('/home/keir/Plots/nCDM/' + save_file) #'/Users/keir/Documents/emulator_paper_axions/' + save_file)
     return k, z, p, f, m, s, k_data, s_data, k_max, data_frames
 
 def plot_posterior(parameters='all'):
@@ -1093,9 +1093,15 @@ if __name__ == "__main__":
     #k, z, p, f, m, s, k_data, s_data, k_max, data_frames = violinplot_error_distribution(distribution='data')
     #plot_exploration()
     #posterior_means, posterior_limits = plot_convergence()
-    plot_posterior(parameters='mock')
+    #plot_posterior(parameters='mock')
     #plot_data()
     #plot_transfer_ULA()
     #emulator_samples = plot_emulator()
     #plot_comparison()
     #power_arrays, k_log = plot_numerical_convergence()
+
+    k, z, p, f, m, s, k_max = make_error_distribution()
+    np.savez('/Users/keir/Software/lya_emulator/plots/cross_validation_bDM.npz', k=k, z=z, p=p, f=f, m=m, s=s,
+             k_max=k_max)
+    violinplot_error_distribution(distribution='validation')
+    violinplot_error_distribution(distribution='data')
