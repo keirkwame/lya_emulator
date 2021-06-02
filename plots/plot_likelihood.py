@@ -109,6 +109,7 @@ def make_plot_flux_power_spectra(like, params, datadir, savefile, t0=1., data_cl
                                      mean_flux_model=mean_flux_model)
     exact_flux_power = data_fluxpower.reshape(n_z, n_k_los)
 
+    print('Exact parameters =', params)
     ekf, emulated_flux_power, emulated_flux_power_std = like.get_predicted(params)
 
     data_flux_power = like.lyman_data_flux_power
@@ -302,11 +303,11 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     for sdir in subdirs:
         single_likelihood_plot(sdir, like, savedir=savedir, plot=plot, t0=t0_training_value,
                                true_parameter_values=test_simulation_parameters,
-                               plot_parameter_indices=plot_parameter_indices, leave_out_validation=leave_out_validation)
+                               plot_parameter_indices=plot_parameter_indices, leave_out_validation=leave_out_validation, data_class=data_class, mean_flux_label=mean_flux_label)
     return like
 
 def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter_values=None,
-                           plot_parameter_indices=None, leave_out_validation=None):
+                           plot_parameter_indices=None, leave_out_validation=None, data_class='Boera', mean_flux_label='free_high_z'):
     """Make a likelihood and error plot for a single simulation."""
     sname = os.path.basename(os.path.abspath(sdir))
     if t0 != 1.0:
@@ -344,7 +345,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         if like.use_dark_matter_model:
             #DM_params = likeh.ultra_light_axion_numerical_model_inverse(true_parameter_values[np.arange(6, 9)])
             true_parameter_values = np.delete(true_parameter_values, np.arange(6, 9))
-            true_parameter_values = np.concatenate((true_parameter_values, np.array([9. -27.])))
+            true_parameter_values = np.concatenate((true_parameter_values, np.array([9., -27.])))
             #np.array([DM_params,]))) #np.array([-20.,])
         #omega_m fixed
         true_parameter_values = np.delete(true_parameter_values, 5, axis=0)
@@ -373,7 +374,7 @@ if __name__ == "__main__":
     plotdir = 'Plots'
     gpsavedir=os.path.join(plotdir,"nCDM")
     emud = os.path.join(emulator_base_directory, emulator_name)
-    testdirs = os.path.join(emulator_base_directory, test_name)
+    testdirs = os.path.join('/share/rcifdata/keir/Simulations', test_name)
 
     lyman_data_instance = lyman_data.BoeraData()
     redshifts = lyman_data_instance.redshifts_unique[::-1]

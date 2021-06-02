@@ -468,7 +468,7 @@ class Emulator:
             assert (newdp[-1] + nuggets[-1] < dpvals[-1]) and (newdp[0] + nuggets[0] >= dpvals[0])
             dpvals = newdp
             aparams = np.array([np.concatenate([dp+nuggets[i],pvals[i]]) for dp in dpvals for i in range(nsims)])
-            mfc = "mf10"
+            mfc = "mf10_emu50"
         if no_mean_flux_rescaling:
             mfc = 'mfraw'
         print('dpvals =', dpvals)
