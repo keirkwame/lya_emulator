@@ -6,6 +6,8 @@ import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
 import scipy.optimize as spo
+import matplotlib
+matplotlib.use('PDF')
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sb
@@ -369,7 +371,7 @@ def make_error_distribution():
     """Calculate the emulator error distribution for leave-one-out cross-validation."""
     emudir = '/share/data2/keir/Simulations/nCDM_emulator_512'
     emu_json = 'emulator_params_TDR_u0_original_emu50.json' #'emulator_params_batch18_2_TDR_u0.json'
-    flux_power_file = 'mf10_emu50_emulator_flux_vectors.hdf5' #'batch18_2_emulator_flux_vectors.hdf5'
+    flux_power_file = 'emulator_flux_vectors2.hdf5' #'batch18_2_emulator_flux_vectors.hdf5'
     n_sims = 50 #93
     mf_instance = lym.FreeMeanFlux()
 
@@ -476,7 +478,7 @@ def violinplot_error_distribution(distribution='validation'):
     errors_BO = errors[BO_cut]
     errors_list = [errors_BO, errors_LH]
     if distribution == 'data':
-        errors_list_real = [errors_real[BO_cut], errors_real[BO_cut]] #[errors_real[BO_cut], errors_real[LH_cut]]
+        errors_list_real = [errors_real[BO_cut], errors_real[LH_cut]] #[errors_real[BO_cut], errors_real[BO_cut]]
 
     #k bins
     #k_bins_input = k[:n_k_cut]
@@ -514,8 +516,9 @@ def violinplot_error_distribution(distribution='validation'):
                                ([samples_label1,] * errors_list[j][:, z_cut].size)
                 #([samples_label_real,] * errors_list[j][:, z_cut].size * 20)
                 axes_idx = idx - 3
+                violinplot_split = False
             elif distribution == 'data':
-                k_bin_df = np.concatenate((np.ravel(k_bin_list[j][:, z_cut]), np.ravel(k_bin_list[0][:, z_cut])))
+                k_bin_df = np.concatenate((np.ravel(k_bin_list[j][:, z_cut]), np.ravel(k_bin_list[j][:, z_cut]))) #j[2] --> 0 for BO only
                 #np.tile(np.ravel(k_bin_list[j][:, z_cut]), 2)
                 errors_df = np.concatenate(
                     (np.ravel(errors_list[j][:, z_cut]), np.ravel(errors_list_real[j][:, z_cut])))
@@ -525,10 +528,11 @@ def violinplot_error_distribution(distribution='validation'):
                     violin_colours = {samples_label: colours[0], samples_label_real: colours[1]}
                 else:
                     samples_label = r'Emulator / Data [all simulations]'
-                    samples_label_real = r'$|\mathrm{Mean - Truth}|$ / Data [optimization simulations]'
+                    samples_label_real = r'$|\mathrm{Mean - Truth}|$ / Data [all simulations]'
                     violin_colours = {samples_label: colours[2], samples_label_real: colours[3]}
-                split_cut_df = ([samples_label,] * errors_list[j][:, z_cut].size) + ([samples_label_real,] * errors_list[0][:, z_cut].size) #0 --> j
+                split_cut_df = ([samples_label,] * errors_list[j][:, z_cut].size) + ([samples_label_real,] * errors_list[j][:, z_cut].size) #0 --> j[2]
                 axes_idx = idx - 3
+                violinplot_split = True
             print(i, j, k_bin_df.shape, errors_df.shape, len(split_cut_df))
 
             if distribution == 'validation':
@@ -537,9 +541,8 @@ def violinplot_error_distribution(distribution='validation'):
 
             data_frames[idx] = pd.DataFrame({'kbin': k_bin_df, 'ErrorSigmas': errors_df, 'Distribution': split_cut_df})
             sb.violinplot(data_frames[idx].kbin, data_frames[idx].ErrorSigmas, data_frames[idx].Distribution,
-                          ax=axes[axes_idx], scale='width', bw=kernel_bw, inner=None, split=True, palette=violin_colours, cut=0.,
-                          linewidth=2.5, saturation=1.)
-            # #cut=0
+                          ax=axes[axes_idx], scale='width', bw=kernel_bw, inner=None, split=violinplot_split, palette=violin_colours, cut=0.,
+                          linewidth=2.5, saturation=1.) #split=True
 
             axes[axes_idx].set(ylim=ylim)
             axes[axes_idx].axhline(y=0., color='black', ls=':', lw=2.5)
@@ -1079,7 +1082,7 @@ def plot_comparison():
     plt.savefig('/Users/keir/Documents/emulator_paper_axions/comparisonUS.pdf')
 
 if __name__ == "__main__":
-    plt.rc('text', usetex=True)
+    #plt.rc('text', usetex=True)
     plt.rc('font', family='serif', size=18.) #18 normally - 16 for posteriors - 17 for comparison
 
     plt.rc('axes', linewidth=1.5)
@@ -1100,8 +1103,8 @@ if __name__ == "__main__":
     #plot_comparison()
     #power_arrays, k_log = plot_numerical_convergence()
 
-    k, z, p, f, m, s, k_max = make_error_distribution()
-    np.savez('/Users/keir/Software/lya_emulator/plots/cross_validation_bDM.npz', k=k, z=z, p=p, f=f, m=m, s=s,
-             k_max=k_max)
+    #k, z, p, f, m, s, k_max = make_error_distribution()
+    #np.savez('/home/keir/Software/lya_emulator/plots/cross_validation_bDM.npz', k=k, z=z, p=p, f=f, m=m, s=s,
+    #         k_max=k_max)
     violinplot_error_distribution(distribution='validation')
     violinplot_error_distribution(distribution='data')
