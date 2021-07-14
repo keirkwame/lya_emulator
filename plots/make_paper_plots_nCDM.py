@@ -409,7 +409,7 @@ def violinplot_error_distribution(distribution='validation'):
     n_sims = 50 #93
     n_LH = 50
     n_BO = n_sims - n_LH
-    n_mf = 2
+    n_mf = 10 #2
     n_k_cut = 45
     n_k_data = 16
     k_bins = np.concatenate((np.repeat(1, 15), np.repeat(2, 15), np.repeat(3, 15)))
@@ -455,7 +455,7 @@ def violinplot_error_distribution(distribution='validation'):
     #LH-BO cut
     if distribution == 'validation':
         errors = (m - f_cut) / s
-        kernel_bw = 0.5
+        kernel_bw = 'scott' #0.5
         colours = lyc.get_distinct(3)
         ylim = [-4.9, 4.9]
         ylabel = r'$(\mathrm{Mean - Truth})\,/\,\sigma$'

@@ -101,6 +101,11 @@ class SkLearnGP:
         #    assert np.max(params_cube[:,i]) > 0.9
         #    assert np.min(params_cube[:,i]) < 0.1
         #print('Normalised parameter values =', params_cube)
+
+        #Emulate log10(flux power)
+        #flux_vectors = np.log10(flux_vectors)
+        #print('Training data =', flux_vectors, np.min(flux_vectors), np.max(flux_vectors))
+
         #Normalise the flux vectors by the median power spectrum.
         #This ensures that the GP prior (a zero-mean input) is close to true.
         medind = np.argsort(np.mean(flux_vectors, axis=1))[np.shape(flux_vectors)[0]//2]
@@ -111,22 +116,23 @@ class SkLearnGP:
 
         #Standard squared-exponential kernel with a different length scale for each parameter, as
         #they may have very different physical properties.
-        kernel = GPy.kern.Linear(nparams)
-        kernel += GPy.kern.RBF(nparams)
+        #kernel = GPy.kern.Linear(nparams)
+        #kernel = GPy.kern.RBF(nparams, ARD=True) #+
 
         #Try rational quadratic kernel
-        #kernel += GPy.kern.RatQuad(nparams)
+        kernel = GPy.kern.RatQuad(nparams, ARD=True)
 
         #noutput = np.shape(normspectra)[1]
         self.gp = GPy.models.GPRegression(params_cube, normspectra,kernel=kernel, noise_var=1e-10)
 
-        status = self.gp.optimize(messages=True)
+        #status = self.gp.optimize(messages=True, optimizer='tnc', max_iters=10000)
         #print('Gradients of model hyperparameters [after optimisation] =', self.gp.gradient)
         #Let's check that hyperparameter optimisation is converged
-        if status.status != 'Converged':
-            print("Restarting optimization (not yet converged)")
-            #self.gp.optimize_restarts(num_restarts=10)
-        #print(self.gp)
+        #if status.status != 'Converged':
+        #    print("Restarting optimization (not yet converged)")
+        print('Initial model =', self.gp, self.gp.kern.parameters)
+        self.gp.optimize_restarts(num_restarts=20, parallel=True, num_processes=20, messages=True, optimizer='tnc', max_iters=2000)
+        print('Optimised model =', self.gp, self.gp.kern.parameters)
         #print('Gradients of model hyperparameters [after second optimisation (x 10)] =', self.gp.gradient)
 
     def _check_interp(self, flux_vectors):
@@ -156,9 +162,14 @@ class SkLearnGP:
         """Get the predicted flux at a parameter value (or list of parameter values)."""
         #Map the parameters onto a unit cube so that all the variations are similar in magnitude
         params_cube = map_to_unit_cube_list(params, self.param_limits)
-        flux_predict, var = GP_instance.predict(params_cube)
+        flux_predict, var = GP_instance.predict(params_cube, include_likelihood=False)
         mean = (flux_predict+1)*self.scalefactors
         std = np.sqrt(var) * self.scalefactors
+
+        #Emulate log10(flux power)
+        #mean = 10. ** mean
+        #std = 10. ** std
+
         return mean, std
 
     def predict(self, params):
