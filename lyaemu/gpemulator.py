@@ -117,13 +117,17 @@ class SkLearnGP:
         #Standard squared-exponential kernel with a different length scale for each parameter, as
         #they may have very different physical properties.
         #kernel = GPy.kern.Linear(nparams)
-        #kernel = GPy.kern.RBF(nparams, ARD=True) #+
+        kernel = GPy.kern.RBF(nparams, ARD=True) #+
 
         #Try rational quadratic kernel
-        kernel = GPy.kern.RatQuad(nparams, ARD=True)
+        #kernel = GPy.kern.RatQuad(nparams, ARD=True)
 
         #noutput = np.shape(normspectra)[1]
         self.gp = GPy.models.GPRegression(params_cube, normspectra,kernel=kernel, noise_var=1e-10)
+
+        #Try hyper-prior
+        #self.gp.kern.variance.set_prior(GPy.priors.Uniform(0., 100.))
+        self.gp.kern.variance.constrain_bounded(0., 2.)
 
         #status = self.gp.optimize(messages=True, optimizer='tnc', max_iters=10000)
         #print('Gradients of model hyperparameters [after optimisation] =', self.gp.gradient)
