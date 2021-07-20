@@ -91,6 +91,10 @@ class SkLearnGP:
             self._check_interp(powers)
             self._test_interp = False
 
+    def _get_interp_individual(self, flux_vectors):
+        """Build the actual interpolator for individual sections of the flux power spectrum."""
+        pass
+
     def _get_interp(self, flux_vectors):
         """Build the actual interpolator."""
         #Map the parameters onto a unit cube so that all the variations are similar in magnitude
