@@ -415,7 +415,7 @@ def violinplot_error_distribution(distribution='validation'):
     k_bins = np.concatenate((np.repeat(1, 15), np.repeat(2, 15), np.repeat(3, 15)))
 
     #Load data
-    validation_data = np.load('/home/keir/Software/lya_emulator/plots/cross_validation_bDM.npz')
+    validation_data = np.load('/home/keir/Software/lya_emulator/plots/cross_validation_bDM2.npz')
     k = validation_data['k']
     print('Emulator wavenumbers =', k)
     redshifts = validation_data['z']
@@ -1103,8 +1103,8 @@ if __name__ == "__main__":
     #plot_comparison()
     #power_arrays, k_log = plot_numerical_convergence()
 
-    #k, z, p, f, m, s, k_max = make_error_distribution()
-    #np.savez('/home/keir/Software/lya_emulator/plots/cross_validation_bDM.npz', k=k, z=z, p=p, f=f, m=m, s=s,
-    #         k_max=k_max)
+    k, z, p, f, m, s, k_max = make_error_distribution()
+    np.savez('/home/keir/Software/lya_emulator/plots/cross_validation_bDM2.npz', k=k, z=z, p=p, f=f, m=m, s=s,
+             k_max=k_max)
     violinplot_error_distribution(distribution='validation')
     violinplot_error_distribution(distribution='data')
