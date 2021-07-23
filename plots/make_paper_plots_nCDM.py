@@ -14,9 +14,9 @@ import seaborn as sb
 import getdist as gd
 import getdist.plots as gdp
 
-import lyaemu.distinct_colours_py3 as lyc
-#import lyaemu.coarse_grid as lyc
-#import lyaemu.mean_flux as lym
+#import lyaemu.distinct_colours_py3 as lyc
+import lyaemu.coarse_grid as lyc
+import lyaemu.mean_flux as lym
 #from lyaemu.likelihood import transfer_function_nCDM
 
 #Define global variables
@@ -1106,5 +1106,5 @@ if __name__ == "__main__":
     k, z, p, f, m, s, k_max = make_error_distribution()
     np.savez('/home/keir/Software/lya_emulator/plots/cross_validation_bDM2.npz', k=k, z=z, p=p, f=f, m=m, s=s,
              k_max=k_max)
-    violinplot_error_distribution(distribution='validation')
-    violinplot_error_distribution(distribution='data')
+    #violinplot_error_distribution(distribution='validation')
+    #violinplot_error_distribution(distribution='data')
