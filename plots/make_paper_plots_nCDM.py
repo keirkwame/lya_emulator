@@ -9,6 +9,7 @@ import scipy.optimize as spo
 import matplotlib
 matplotlib.use('PDF')
 import matplotlib.pyplot as plt
+import multiprocessing as mg
 import pandas as pd
 import seaborn as sb
 import getdist as gd
@@ -367,6 +368,30 @@ def plot_exploration():
     fig.subplots_adjust(top=0.95, bottom=0.15, right=0.95)
     plt.savefig('/Users/keir/Documents/emulator_paper_axions/explorationUS.pdf')
 
+def _get_emulator(args_list):
+    """Get the emulator output for cross-validation test i."""
+    print('Getting data for simulation number', i)
+    i, emudir, emu_json, flux_power_file, training_parameters, n_sims = args_list
+    mf_instance = lym.FreeMeanFlux()
+    emu_instance = lyc.nCDMEmulator(emudir, mf=mf_instance, leave_out_validation=np.array([i, ]))
+    emu_instance.load(dumpfile=emu_json)
+    test_parameters = emu_instance.get_combined_params(use_all=True)[i]
+    test_parameters = np.concatenate((np.array([[1., ], ]), test_parameters.reshape(1, -1)), axis=1)
+
+    GP_instance = emu_instance.get_emulator(use_measured_parameters=True, redshift_dependent_parameters=True,
+                                            savefile=flux_power_file)
+    test_parameters_tau0 = training_parameters[np.arange(i, training_parameters.shape[0], n_sims)]
+    GP_mean = [None] * test_parameters_tau0.shape[0]
+    GP_std = [None] * test_parameters_tau0.shape[0]
+    for j, test_parameters_tau0_single in enumerate(test_parameters_tau0):
+        print('Getting data for mean flux sample number', j)
+        npt.assert_array_equal(test_parameters_tau0_single[1:], test_parameters[0, 1:])
+        tau0 = np.ones(emu_instance.redshifts.size) * test_parameters_tau0_single[0]
+        GP_mean_single, GP_std_single = GP_instance.predict(test_parameters, tau0_factors=tau0)
+        GP_mean[j] = GP_mean_single[0]
+        GP_std[j] = GP_std_single[0]
+    return [GP_mean, GP_std]
+
 def make_error_distribution():
     """Calculate the emulator error distribution for leave-one-out cross-validation."""
     emudir = '/share/data2/keir/Simulations/nCDM_emulator_512'
@@ -375,34 +400,27 @@ def make_error_distribution():
     n_sims = 50 #93
     mf_instance = lym.FreeMeanFlux()
 
-    '''emu_instance_full = lyc.nCDMEmulator(emudir, mf=mf_instance)
+    emu_instance_full = lyc.nCDMEmulator(emudir, mf=mf_instance)
     emu_instance_full.load(dumpfile=emu_json)
     training_parameters, k, training_flux_powers = emu_instance_full.get_flux_vectors(kfunits='mpc',
                                                     redshifts=emu_instance_full.redshifts, pixel_resolution_km_s=1.,
                                                     use_measured_parameters=True, savefile=flux_power_file)
 
     GP_mean = [None] * training_flux_powers.shape[0] #np.zeros_like(training_flux_powers)
-    GP_std = [None] * training_flux_powers.shape[0] #np.zeros_like(GP_mean)'''
+    GP_std = [None] * training_flux_powers.shape[0] #np.zeros_like(GP_mean)
+
+    pool = mg.Pool(35)
+    args_list = [(i, emudir, emu_json, flux_power_file, training_parameters, n_sims) for i in range(n_sims)]
+    emu_output = pool.map(_get_emulator, args_list)
+
     for i in range(n_sims):
-        print('Getting data for simulation number', i)
-        emu_instance = lyc.nCDMEmulator(emudir, mf=mf_instance, leave_out_validation=None) #np.array([i,]))
-        emu_instance.load(dumpfile=emu_json)
-        #test_parameters = emu_instance.get_combined_params(use_all=True)[i]
-        #test_parameters = np.concatenate((np.array([[1., ], ]), test_parameters.reshape(1, -1)), axis=1)
-
-        GP_instance = emu_instance.get_emulator(use_measured_parameters=True, redshift_dependent_parameters=True,
-                                                savefile=flux_power_file)
-        test_parameters_tau0 = training_parameters[np.arange(i, training_parameters.shape[0], n_sims)]
-        for j, test_parameters_tau0_single in enumerate(test_parameters_tau0):
-            print('Getting data for mean flux sample number', j)
-            npt.assert_array_equal(test_parameters_tau0_single[1:], test_parameters[0, 1:])
-            tau0 = np.ones(emu_instance_full.redshifts.size) * test_parameters_tau0_single[0]
-            GP_mean_single, GP_std_single = GP_instance.predict(test_parameters, tau0_factors=tau0)
+        for j in range(int(training_flux_powers.shape[0] / n_sims)):
             idx = (j * n_sims) + i
-            GP_mean[idx] = GP_mean_single[0]
-            GP_std[idx] = GP_std_single[0]
+            GP_mean[idx] = emu_output[i][0][j] #GP_mean_single[0]
+            GP_std[idx] = emu_output[i][1][j] #GP_std_single[0]
 
-    return k, emu_instance_full.redshifts, training_parameters, training_flux_powers, np.array(GP_mean), np.array(GP_std), emu_instance_full._get_k_max_emulated_h_Mpc()
+    return k, emu_instance_full.redshifts, training_parameters, training_flux_powers, np.array(GP_mean),\
+           np.array(GP_std), emu_instance_full._get_k_max_emulated_h_Mpc()
 
 def violinplot_error_distribution(distribution='validation'):
     """Make a violin-plot of the emulator error distribution for leave-one-out cross-validation."""
