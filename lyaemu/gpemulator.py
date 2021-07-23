@@ -129,6 +129,7 @@ class SkLearnGP:
         kernel *= GPy.kern.Linear(nparams, ARD=True)
 
         #noutput = np.shape(normspectra)[1]
+        print(params_cube, normspectra)
         self.gp = GPy.models.GPRegression(params_cube, normspectra,kernel=kernel, noise_var=1e-10)
 
         #Try hyper-prior
@@ -141,7 +142,7 @@ class SkLearnGP:
         #if status.status != 'Converged':
         #    print("Restarting optimization (not yet converged)")
         print('Initial model =', self.gp, self.gp.kern.parameters)
-        self.gp.optimize_restarts(num_restarts=35, parallel=True, num_processes=35, messages=True, optimizer='tnc', max_iters=2000)
+        self.gp.optimize_restarts(num_restarts=5, parallel=False, num_processes=None, messages=True, optimizer='tnc', max_iters=2000)
         print('Optimised model =', self.gp, self.gp.kern.parameters)
         #print('Gradients of model hyperparameters [after second optimisation (x 10)] =', self.gp.gradient)
 

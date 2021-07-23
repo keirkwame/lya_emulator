@@ -375,20 +375,20 @@ def make_error_distribution():
     n_sims = 50 #93
     mf_instance = lym.FreeMeanFlux()
 
-    emu_instance_full = lyc.nCDMEmulator(emudir, mf=mf_instance)
+    '''emu_instance_full = lyc.nCDMEmulator(emudir, mf=mf_instance)
     emu_instance_full.load(dumpfile=emu_json)
     training_parameters, k, training_flux_powers = emu_instance_full.get_flux_vectors(kfunits='mpc',
                                                     redshifts=emu_instance_full.redshifts, pixel_resolution_km_s=1.,
                                                     use_measured_parameters=True, savefile=flux_power_file)
 
     GP_mean = [None] * training_flux_powers.shape[0] #np.zeros_like(training_flux_powers)
-    GP_std = [None] * training_flux_powers.shape[0] #np.zeros_like(GP_mean)
+    GP_std = [None] * training_flux_powers.shape[0] #np.zeros_like(GP_mean)'''
     for i in range(n_sims):
         print('Getting data for simulation number', i)
-        emu_instance = lyc.nCDMEmulator(emudir, mf=mf_instance, leave_out_validation=np.array([i,]))
+        emu_instance = lyc.nCDMEmulator(emudir, mf=mf_instance, leave_out_validation=None) #np.array([i,]))
         emu_instance.load(dumpfile=emu_json)
-        test_parameters = emu_instance.get_combined_params(use_all=True)[i]
-        test_parameters = np.concatenate((np.array([[1., ], ]), test_parameters.reshape(1, -1)), axis=1)
+        #test_parameters = emu_instance.get_combined_params(use_all=True)[i]
+        #test_parameters = np.concatenate((np.array([[1., ], ]), test_parameters.reshape(1, -1)), axis=1)
 
         GP_instance = emu_instance.get_emulator(use_measured_parameters=True, redshift_dependent_parameters=True,
                                                 savefile=flux_power_file)
