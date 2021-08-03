@@ -317,7 +317,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_bDM_test'
+    filename_suffix = '_bDM_base'
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -328,17 +328,17 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
 
     # Change prior
     x = 0
-    #like.param_limits[5 + x, 1] = 12000.
-    # like.param_limits[np.array([6, 7]), 1] = 15000.
-    #like.param_limits[np.array([8, 9, 10]) + x, 0] = 0.8
-    #like.param_limits[11 + x, 1] = 12.
-    #like.param_limits[np.array([12, 13]) + x, 1] = 18.
+    like.param_limits[5 + x, 1] = 15000. #12000.
+    like.param_limits[np.array([6, 7]), 1] = 15000.
+    like.param_limits[np.array([8, 9, 10]) + x, 0] = 0.8
+    like.param_limits[11 + x, 1] = 18. #12.
+    like.param_limits[np.array([12, 13]) + x, 1] = 18.
 
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
 
-        #like.do_sampling(chainfile, datadir=datadir, nwalkers=150, burnin=300, nsamples=300,
-        #                 while_loop=False, k_data_max=None, include_emulator_error=True, pool=None) #'use_real_data'
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
+                         while_loop=False, k_data_max=None, include_emulator_error=True, pool=None) #datadir
         print('Done sampling likelihood at', str(datetime.now()))
 
     if plot is True:
@@ -351,15 +351,15 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         true_parameter_values = np.delete(true_parameter_values, 5, axis=0)
 
         fp_savefile = os.path.join(savedir, 'flux_power_' + sname + ".pdf")
-        make_plot_flux_power_spectra(like, true_parameter_values, datadir, savefile=fp_savefile, t0=t0,
-                                     data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
-                                     mean_flux_label=mean_flux_label)
+        #make_plot_flux_power_spectra(like, true_parameter_values, datadir, savefile=fp_savefile, t0=t0,
+        #                             data_class=data_class, pixel_resolution_km_s=pixel_resolution_km_s,
+        #                             mean_flux_label=mean_flux_label)
 
         savefile = os.path.join(savedir, 'corner_' + sname + filename_suffix + ".pdf")
         plot_parameter_names = like.likelihood_parameter_names[:, 1]
         plot_parameter_limits = like.param_limits
-        #make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=plot_parameter_names,
-        #          ranges=plot_parameter_limits, parameter_indices=plot_parameter_indices)
+        make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=plot_parameter_names,
+                  ranges=plot_parameter_limits, parameter_indices=plot_parameter_indices)
 
 
 if __name__ == "__main__":
@@ -374,7 +374,7 @@ if __name__ == "__main__":
     plotdir = 'Plots'
     gpsavedir=os.path.join(plotdir,"nCDM")
     emud = os.path.join(emulator_base_directory, emulator_name)
-    testdirs = os.path.join('/share/rcifdata/keir/Simulations', test_name)
+    testdirs = os.path.join('/share/data2/keir/Simulations', test_name)
 
     lyman_data_instance = lyman_data.BoeraData()
     redshifts = lyman_data_instance.redshifts_unique[::-1]
@@ -383,9 +383,9 @@ if __name__ == "__main__":
 
     # Get test simulation parameters
     t0_test_value = 1.
-    test_simulation_number = 1
+    test_simulation_number = 0
     test_emulator_instance = cg.nCDMEmulator(testdirs)
-    test_emulator_instance.load(dumpfile='emulator_params_TDR_u0.json')
+    test_emulator_instance.load(dumpfile='emulator_params_TDR_u0_original.json')
     test_simulation_directory = test_emulator_instance.get_outdir(test_emulator_instance.get_parameters()
                                                     [test_simulation_number], extra_flag=test_simulation_number+1)[:-7]
 
