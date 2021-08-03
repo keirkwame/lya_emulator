@@ -15,8 +15,8 @@ import seaborn as sb
 import getdist as gd
 import getdist.plots as gdp
 
-#import lyaemu.distinct_colours_py3 as lyc
-import lyaemu.coarse_grid as lyc
+import lyaemu.distinct_colours_py3 as lyc
+#import lyaemu.coarse_grid as lyc
 import lyaemu.mean_flux as lym
 #from lyaemu.likelihood import transfer_function_nCDM
 
@@ -370,8 +370,8 @@ def plot_exploration():
 
 def _get_emulator(args_list):
     """Get the emulator output for cross-validation test i."""
-    print('Getting data for simulation number', i)
     i, emudir, emu_json, flux_power_file, training_parameters, n_sims = args_list
+    print('Getting data for simulation number', i)
     mf_instance = lym.FreeMeanFlux()
     emu_instance = lyc.nCDMEmulator(emudir, mf=mf_instance, leave_out_validation=np.array([i, ]))
     emu_instance.load(dumpfile=emu_json)
@@ -1121,8 +1121,8 @@ if __name__ == "__main__":
     #plot_comparison()
     #power_arrays, k_log = plot_numerical_convergence()
 
-    k, z, p, f, m, s, k_max = make_error_distribution()
-    np.savez('/home/keir/Software/lya_emulator/plots/cross_validation_bDM2.npz', k=k, z=z, p=p, f=f, m=m, s=s,
-             k_max=k_max)
-    #violinplot_error_distribution(distribution='validation')
-    #violinplot_error_distribution(distribution='data')
+    #k, z, p, f, m, s, k_max = make_error_distribution()
+    #np.savez('/home/keir/Software/lya_emulator/plots/cross_validation_bDM2.npz', k=k, z=z, p=p, f=f, m=m, s=s,
+    #         k_max=k_max)
+    violinplot_error_distribution(distribution='validation')
+    violinplot_error_distribution(distribution='data')
