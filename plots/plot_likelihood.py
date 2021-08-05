@@ -317,7 +317,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_bDM_base'
+    filename_suffix = '_bDM_base35_30000'
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -337,7 +337,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
 
-        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=300, nsamples=300,
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=1000, nsamples=30000,
                          while_loop=False, k_data_max=None, include_emulator_error=True, pool=None) #datadir
         print('Done sampling likelihood at', str(datetime.now()))
 
