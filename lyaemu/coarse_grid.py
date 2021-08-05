@@ -471,9 +471,6 @@ class Emulator:
             mfc = "mf10_emu50"
         if no_mean_flux_rescaling:
             mfc = 'mfraw'
-        print('dpvals =', dpvals)
-        print('nuggets =', nuggets)
-        print('mean_flux =', self.mf.get_mean_flux(myspec.zout, params=dpvals))
         try:
             kfmpc, kfkms, flux_vectors = self.load_flux_vectors(aparams, mfc=mfc, savefile=savefile)
         except (AssertionError, OSError):
@@ -629,7 +626,6 @@ class Emulator:
         omega_m_index = self._get_parameter_index_number('omega_m', include_mean_flux=False)
         omega_m_max = self.get_param_limits(include_dense=False)[omega_m_index, 1]
         k_max = np.max(self.kf) * flux_power.velocity_factor(np.max(self.redshifts), omega_m_max)
-        print('k_max_emulated_h_Mpc =', k_max, np.max(self.kf), np.max(self.redshifts), omega_m_max)
         return k_max
 
 
@@ -665,7 +661,7 @@ class KnotEmulator(Emulator):
         try:
             ss.make_simulation()
         except RuntimeError as e:
-            print(str(e), " while building: ",outdir)
+            print(str(e), " while building: ", outdir)
 
 
 class nCDMEmulator(Emulator):

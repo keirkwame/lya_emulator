@@ -624,7 +624,6 @@ class LikelihoodClass:
                 slice_array = self.kf[self.kf >= okf[bb][0]] <= k_data_max
                 diff_bin = diff_bin[slice_array]
                 covar_bin = covar_bin[slice_array, :][:, slice_array]
-            print('chi2 dims =', diff_bin.shape, covar_bin.shape)
             icov_bin = np.linalg.inv(covar_bin)
             (_, cdet) = np.linalg.slogdet(covar_bin)
             del(covar_bin)
@@ -824,7 +823,7 @@ class LikelihoodClass:
         while np.any(gr > 1.01) and count < maxsample:
             emcee_sampler.run_mcmc(pos, nsamples)
             gr = gelman_rubin(emcee_sampler.chain)
-            print("Total samples:",nsamples," Gelman-Rubin: ",gr)
+            print("Total samples per walker:", nsamples, "Gelman-Rubin:", gr)
             np.savetxt(savefile, emcee_sampler.flatchain)
             count += 1
             if while_loop is False:
@@ -1064,6 +1063,24 @@ class BaryonDarkMatterLikelihoodClass(DarkMatterLikelihoodClass):
             dark_matter_parameter_names = np.array([['log(m)', r'logmdm'], ['log(s)', r'logsigma']])
         if dark_matter_parameter_limits is None:
             dark_matter_parameter_limits = np.array([[4., 11.], [-31., -24.]])
+        super().__init__(basedir=basedir, dark_matter_model=dark_matter_model,
+                         dark_matter_parameter_names=dark_matter_parameter_names,
+                         dark_matter_parameter_limits=dark_matter_parameter_limits, use_dark_matter=use_dark_matter,
+                         **kwargs)
+
+
+class BaryonDarkMatterFixedMassLikelihoodClass(BaryonDarkMatterLikelihoodClass):
+    """Class to contain likelihood computations for a model with baryon-dark matter interactions for a fixed dark matter
+    particle mass."""
+    def __init__(self, basedir, log_mass_DM_eV, dark_matter_model=None, dark_matter_parameter_names=None,
+                 dark_matter_parameter_limits=None, use_dark_matter=True, **kwargs):
+        if dark_matter_model is None:
+            dark_matter_model = lambda log_sigma_cm2, nCDM_parameter_limits, h=0.6686: bDM_numerical_model(
+                                        np.array([log_mass_DM_eV, log_sigma_cm2[0]]), nCDM_parameter_limits, h=h)
+        if dark_matter_parameter_names is None:
+            dark_matter_parameter_names = np.array([['log(s)', r'logsigma'],])
+        if dark_matter_parameter_limits is None:
+            dark_matter_parameter_limits = np.array([[-31., -24.],])
         super().__init__(basedir=basedir, dark_matter_model=dark_matter_model,
                          dark_matter_parameter_names=dark_matter_parameter_names,
                          dark_matter_parameter_limits=dark_matter_parameter_limits, use_dark_matter=use_dark_matter,

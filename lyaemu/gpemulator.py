@@ -37,8 +37,8 @@ class MultiBinGP:
         else:
             params_function = lambda a: params[:, self.redshift_sensitivity[a]]
             param_limits_function = lambda b: param_limits[self.redshift_sensitivity[b]]
-        gp = lambda i: singleGP(params=params_function(i), powers=powers[:,i*self.nk:(i+1)*self.nk], param_limits = param_limits_function(i))
-        print('Number of redshifts for emulator generation =', self.nz)
+        gp = lambda i: singleGP(params=params_function(i), powers=powers[:,i*self.nk:(i+1)*self.nk],
+                                param_limits = param_limits_function(i))
         self.gps = [gp(i) for i in range(self.nz)]
 
     def predict(self,params, tau0_factors = None, use_updated_training_set=False):
@@ -129,7 +129,6 @@ class SkLearnGP:
         kernel *= GPy.kern.Linear(nparams, ARD=True)
 
         #noutput = np.shape(normspectra)[1]
-        print(params_cube, normspectra)
         self.gp = GPy.models.GPRegression(params_cube, normspectra,kernel=kernel, noise_var=1e-10)
 
         #Try hyper-prior
@@ -141,10 +140,10 @@ class SkLearnGP:
         #Let's check that hyperparameter optimisation is converged
         #if status.status != 'Converged':
         #    print("Restarting optimization (not yet converged)")
-        print('Initial model =', self.gp, self.gp.kern.parameters)
+        print('Initial GP model =', self.gp, self.gp.kern.parameters)
         self.gp.optimize_restarts(num_restarts=35, parallel=True, num_processes=35, messages=True, optimizer='tnc',
                                   max_iters=2000)
-        print('Optimised model =', self.gp, self.gp.kern.parameters)
+        print('Optimised GP model =', self.gp, self.gp.kern.parameters)
         #print('Gradients of model hyperparameters [after second optimisation (x 10)] =', self.gp.gradient)
 
     def _check_interp(self, flux_vectors):
