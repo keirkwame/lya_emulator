@@ -796,7 +796,7 @@ class LikelihoodClass:
         cent = (self.param_limits[:,1]+self.param_limits[:,0])/2.
 
         #Quicker ULA mass convergence
-        cent[-1] = -30. #-19.1
+        cent[-1] = self.param_limits[-1, 0] + 0.1 #-19.1
 
         p0_concentration_factor = 64
         p0 = [cent+2*pr/p0_concentration_factor*np.random.rand(self.ndim)-pr/p0_concentration_factor for _ in range(nwalkers)]
