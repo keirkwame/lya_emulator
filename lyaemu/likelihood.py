@@ -822,9 +822,12 @@ class LikelihoodClass:
         count = 0
         while np.any(gr > 1.01) and count < maxsample:
             emcee_sampler.run_mcmc(pos, nsamples)
+            np.savetxt(savefile, emcee_sampler.flatchain)
             gr = gelman_rubin(emcee_sampler.chain)
             print("Total samples per walker:", nsamples, "Gelman-Rubin:", gr)
-            np.savetxt(savefile, emcee_sampler.flatchain)
+            #Use integrated autocorrelation time for convergence
+            integrated_time = emcee_sampler.get_autocorr_time(quiet=True)
+            print('Integrated autocorrelation time:', integrated_time)
             count += 1
             if while_loop is False:
                 break
