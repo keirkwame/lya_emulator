@@ -266,7 +266,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     measured_parameter_z_model_parameter_limits = None
     #np.array([[5000., 12000.], [-0.5, 0.5], [0.75, 1.75], [-0.5, 0.5]]) #A, S #[5000., 12000.], [-1., 1.]
 
-    like = likeh.BaryonDarkMatterFixedMassLikelihoodClass(basedir=emudir, log_mass_DM_eV=9., mean_flux=mean_flux_label,
+    like = likeh.BaryonDarkMatterFixedMassLikelihoodClass(basedir=emudir, log_mass_DM_eV=11., mean_flux=mean_flux_label,
                                  measured_parameter_names_z_model=measured_parameter_names_z_model, max_z=max_z,
                                  redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s,
                                  t0_training_value = t0_training_value, t0_parameter_limits=np.array([0.75, 1.25]),
@@ -277,7 +277,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                                  flux_power_parallel=True, flux_power_n_process=35, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
                                  fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation,
-                                 dark_matter_parameter_limits=np.array([[-30., -25.],])) #,
+                                 dark_matter_parameter_limits=np.array([[-29., -24.],])) #,
     #                             dark_matter_model=likeh.ultra_light_axion_numerical_model,
     #                             dark_matter_parameter_limits=np.array([[-22., -19.],]))
     #UltraLightAxionLikelihoodClass
@@ -318,7 +318,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_fixed_mass_9_40000'
+    filename_suffix = '_fixed_mass_11_40000'
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
