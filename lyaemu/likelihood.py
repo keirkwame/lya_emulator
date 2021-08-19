@@ -915,12 +915,16 @@ class LikelihoodClass:
             objective_function = -1.e+99
         return objective_function * exploitation_weight
 
-    def _get_GP_UCB_exploration_term(self, data_vector_emulator_error, n_emulated_params, iteration_number=1, delta=0.5, nu=1.):
+    def _get_GP_UCB_exploration_term(self, data_vector_emulator_error, n_emulated_params, iteration_number=1, delta=0.5,
+                                     nu=1.):
         """Evaluate the exploration term of the GP-UCB acquisition function"""
-        exploration_weight = math.sqrt(nu * 2. * math.log((iteration_number**((n_emulated_params / 2.) + 2.)) * (math.pi**2) / 3. / delta))
+        exploration_weight = math.sqrt(nu * 2. * math.log(
+                                        (iteration_number**((n_emulated_params / 2.) + 2.)) * (math.pi**2) / 3. / delta))
         if self._inverse_covariance_full is None:
-            self._inverse_covariance_full = invert_block_diagonal_covariance(self.get_data_covariance(-1), self.zout.shape[0])
-        posterior_estimated_error = np.dot(data_vector_emulator_error, np.dot(self._inverse_covariance_full, data_vector_emulator_error))
+            self._inverse_covariance_full = invert_block_diagonal_covariance(self.get_data_covariance(-1),
+                                                                             self.zout.shape[0])
+        posterior_estimated_error = np.dot(data_vector_emulator_error, np.dot(self._inverse_covariance_full,
+                                                                              data_vector_emulator_error))
         return exploration_weight * posterior_estimated_error
 
     def acquisition_function_GP_UCB(self, params, iteration_number=1, delta=0.5, nu=1., exploitation_weight=1.,
@@ -936,12 +940,14 @@ class LikelihoodClass:
         else:
             n_emulated_params = params.shape[0] - 1
 
-        exploitation = self._get_GP_UCB_exploitation_term(self.log_posterior(params), exploitation_weight)
+        exploitation = self._get_GP_UCB_exploitation_term(self.log_posterior(params),
+                                                          exploitation_weight=exploitation_weight)
         std = np.array(self.get_predicted(params, use_updated_training_set=use_updated_training_set)[2]).flatten()
         exploration = self._get_GP_UCB_exploration_term(std, n_emulated_params, iteration_number=iteration_number,
                                                         delta=delta, nu=nu)
         acquisition = exploitation + exploration
-        print('Parameters =', params, 'Exploitation =', exploitation, 'Exploration =', exploration, 'Acquisition =', acquisition)
+        print('Parameters =', params, 'Exploitation =', exploitation, 'Exploration =', exploration,
+              'Acquisition =', acquisition)
         return acquisition
 
     def acquisition_function_GP_UCB_marginalised_mean_flux(self, params, iteration_number=1, delta=0.5, nu=1.,
@@ -967,12 +973,8 @@ class LikelihoodClass:
     def optimise_acquisition_function(self, starting_params, acquisition_function='GP_UCB_marginalised',
                                       optimisation_bounds='default', optimisation_method=None, iteration_number=1,
                                       delta=0.5, nu=1., exploitation_weight=1., integration_bounds='default',
-                                      use_updated_training_set=False):
-        """Find parameter vector (marginalised over mean flux parameters) at maximum of (GP-UCB) acquisition function"""
-        if optimisation_bounds == 'default': #Default to prior bounds
-            #optimisation_bounds = [tuple(self.param_limits[2 + i]) for i in range(starting_params.shape[0])]
-            optimisation_bounds = [(1.e-7, 1. - 1.e-7) for i in range(starting_params.shape[0])] #Might get away with 1.e-7
-
+                                      use_updated_training_set=False, **kwargs):
+        """Find parameter vector at maximum of acquisition function"""
         if acquisition_function == 'GP_UCB_marginalised':
             param_limits = self.param_limits[self.zout.shape[0]:]
             optimisation_function = lambda parameter_vector: -1. * self.acquisition_function_GP_UCB_marginalised_mean_flux(
@@ -989,8 +991,14 @@ class LikelihoodClass:
         else:
             raise ValueError('Acquisition function type not recognised.')
 
-        return spo.minimize(optimisation_function, map_to_unit_cube(starting_params, param_limits),
-                            method=optimisation_method, bounds=optimisation_bounds)
+        if optimisation_bounds == 'default': #Default to prior bounds
+            optimisation_bounds = [(1.e-7, 1. - 1.e-7) for i in range(starting_params.shape[0])]
+
+        if optimisation_method == 'dual_annealing':
+            return spo.dual_annealing(optimisation_function, optimisation_bounds, **kwargs)
+        else:
+            return spo.minimize(optimisation_function, map_to_unit_cube(starting_params, param_limits),
+                                method=optimisation_method, bounds=optimisation_bounds)
 
     def check_for_refinement(self, conf = 0.95, thresh = 1.05):
         """Crude check for refinement: check whether the likelihood is dominated by
