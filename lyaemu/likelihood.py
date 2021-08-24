@@ -159,7 +159,31 @@ def ultra_light_axion_numerical_model_inverse(nCDM_parameters, h=0.6686):
     return log_mass[0]
 
 def bDM_numerical_model_inverse(nCDM_parameters, h=0.6686):
-    pass
+    """Inverse of numerical bDM model. Valid for 4 < log DM mass [eV] < 11; -31 < log sigma [cm^2] < -24"""
+    nCDM_corrected = nCDM_parameters
+    nCDM_corrected[0] = np.log10(nCDM_corrected[0] * h_planck / h)
+    nCDM_corrected[2] = np.log10(-1. * nCDM_corrected[2])
+
+    #Mass from beta
+    model_coefficients = cp.deepcopy(beta_model_parameters_bDM)
+    model_coefficients[-1] -= nCDM_corrected[1]
+    model_roots = np.roots(model_coefficients)
+    print(model_roots)
+    log_mass = model_roots[(model_roots <= 11.1) * (model_roots >= 3.9)][0].real
+    print('log mass =', log_mass)
+
+    #Sigma from alpha
+    model_coefficients = cp.deepcopy(alpha_model_parameters_bDM[np.array([1, 3, 5, 6])])
+    model_coefficients[-1] -= nCDM_corrected[0]
+    alpha_model_parameters_bDM_no_const = cp.deepcopy(alpha_model_parameters_bDM[:-1])
+    model_coefficients[-1] += np.log10(bDM_alpha_model(log_mass, 0., *alpha_model_parameters_bDM_no_const, 0.)
+                                       * h_planck / h)
+    model_roots = np.roots(model_coefficients)
+    print(model_roots)
+    log_sigma = model_roots[(model_roots <= -23.9) * (model_roots >= -32.1)][0].real
+    print('log sigma =', log_sigma)
+
+    return np.array([log_mass, log_sigma])
 
 def ultra_light_axion_numerical_model(ultra_light_axion_parameters, nCDM_parameter_limits, h=0.6686):
     """Model to map ultra-light axion parameters to nCDM parameters using a fit to a numerical Einstein-Boltzmann
