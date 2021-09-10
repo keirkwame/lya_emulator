@@ -266,7 +266,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     measured_parameter_z_model_parameter_limits = None
     #np.array([[5000., 12000.], [-0.5, 0.5], [0.75, 1.75], [-0.5, 0.5]]) #A, S #[5000., 12000.], [-1., 1.]
 
-    log_mass_DM_eV = 11.
+    log_mass_DM_eV = 9.
     like = likeh.BaryonDarkMatterFixedMassLikelihoodClass(basedir=emudir, log_mass_DM_eV=log_mass_DM_eV, mean_flux=mean_flux_label,
                                  measured_parameter_names_z_model=measured_parameter_names_z_model, max_z=max_z,
                                  redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s,
@@ -278,7 +278,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                                  flux_power_parallel=True, flux_power_n_process=35, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
                                  fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation,
-                                 dark_matter_parameter_limits=np.array([[-29., -24.],])) #,
+                                 dark_matter_parameter_limits=np.array([[-30., -25.],])) #,
     #                             dark_matter_model=likeh.ultra_light_axion_numerical_model,
     #                             dark_matter_parameter_limits=np.array([[-22., -19.],]))
     #UltraLightAxionLikelihoodClass
@@ -319,7 +319,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_fixed_mass_%i_40000_batch5'%int(log_mass_DM_eV)
+    filename_suffix = '_fixed_mass_%i_40000_batch5_ucut'%int(log_mass_DM_eV)
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -333,7 +333,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
     like.param_limits[5 + x, 1] = 15000. #12000.
     like.param_limits[np.array([6, 7]), 1] = 15000.
     like.param_limits[np.array([8, 9, 10]) + x, 0] = 0.8
-    like.param_limits[11 + x, 1] = 18. #12.
+    like.param_limits[11 + x, 1] = 12. #18. #12.
     like.param_limits[np.array([12, 13]) + x, 1] = 18.
 
     if not os.path.exists(chainfile):
