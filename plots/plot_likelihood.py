@@ -289,7 +289,9 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                             'standard_deviations': prior_function_args[2]}
 
     #Convex hull prior
-    parameter_names_convex_hull = [['T_0_z_5.0', 'u_0_z_5.0'], ['T_0_z_4.6', 'u_0_z_4.6'], ['T_0_z_4.2', 'u_0_z_4.2']] #, ['T_0_z_5.0', 'gamma_z_5.0'], ['T_0_z_4.6', 'gamma_z_4.6'], ['T_0_z_4.2', 'gamma_z_4.2']]
+    parameter_names_convex_hull = [['T_0_z_5.0', 'u_0_z_5.0'], ['T_0_z_4.6', 'u_0_z_4.6'], ['T_0_z_4.2', 'u_0_z_4.2'],
+                                   ['T_0_z_5.0', 'gamma_z_5.0'], ['T_0_z_4.6', 'gamma_z_4.6'],
+                                   ['T_0_z_4.2', 'gamma_z_4.2']]
     prior_function_convex_hull = {'parameter_names': parameter_names_convex_hull,
                                   'use_likelihood_parameter_limits': True}
 
@@ -319,7 +321,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_fixed_mass_%i_40000_batch5_gpri'%int(log_mass_DM_eV)
+    filename_suffix = '_fixed_mass_%i_40000_batch5_noT_CH_gcut'%int(log_mass_DM_eV)
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -332,7 +334,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
     x = 0
     like.param_limits[5 + x, 1] = 15000. #12000.
     like.param_limits[np.array([6, 7]), 1] = 15000.
-    like.param_limits[np.array([8, 9, 10]) + x, 0] = 0.8
+    like.param_limits[np.array([8, 9, 10]) + x, 0] = 0.9
     like.param_limits[11 + x, 1] = 18. #12.
     like.param_limits[np.array([12, 13]) + x, 1] = 18.
 
@@ -401,11 +403,16 @@ if __name__ == "__main__":
     #test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters[:-3], np.array([test_simulation_parameters[-2], 0.])))
 
     #Prior distribution
-    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2'])
-    #, 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
-    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4, 12, 13, 14])] #9, 10, 11])] #, 12, 13, 14])] #0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14])] #, 15, 16])] #7
+    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As'])
+    #, 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2'])
+    #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
+    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4])]
+    #, 12, 13, 14])] #9, 10, 11])] #0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14])] #, 15, 16])] #7
     print('Gaussian prior means =', prior_means)
-    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.25, 0.25, 0.25]) #3000., 3000., 3000.]) #, 0.3, 0.3, 0.3]) #, 0.5, 0.5, 0.5]) #0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 2000., 2000., 2000., 0.25, 0.25, 0.25]) #0.013]) #0.1, 0.1 * 1.e-9, 0.1])
+    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9])
+    #, 0.25, 0.25, 0.25]) #3000., 3000., 3000.]) #, 0.3, 0.3, 0.3]) #, 0.5, 0.5, 0.5])
+    #0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 2000., 2000., 2000., 0.25, 0.25, 0.25]) #0.013])
+    #0.1, 0.1 * 1.e-9, 0.1])
     prior_function_args = (prior_parameter_names, prior_means, prior_standard_deviations)
     #omega_m fixed
     #test_simulation_parameters = np.delete(test_simulation_parameters, 5, axis=0)
