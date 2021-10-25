@@ -266,7 +266,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     measured_parameter_z_model_parameter_limits = None
     #np.array([[5000., 12000.], [-0.5, 0.5], [0.75, 1.75], [-0.5, 0.5]]) #A, S #[5000., 12000.], [-1., 1.]
 
-    log_mass_DM_eV = 9.
+    log_mass_DM_eV = 7.
     like = likeh.BaryonDarkMatterFixedMassLikelihoodClass(basedir=emudir, log_mass_DM_eV=log_mass_DM_eV, mean_flux=mean_flux_label,
                                  measured_parameter_names_z_model=measured_parameter_names_z_model, max_z=max_z,
                                  redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s,
@@ -274,11 +274,11 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                                  emulator_class=emulator_class, emulator_json_file=emulator_json_file,
                                  use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters,
-                                 flux_power_savefile='bDM_batch5_emulator_flux_vectors.hdf5',
+                                 flux_power_savefile='bDM_batch11_1_emulator_flux_vectors.hdf5',
                                  flux_power_parallel=True, flux_power_n_process=35, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
                                  fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation,
-                                 dark_matter_parameter_limits=np.array([[-30., -25.],])) #,
+                                 dark_matter_parameter_limits=np.array([[-31., -26.],])) #,
     #                             dark_matter_model=likeh.ultra_light_axion_numerical_model,
     #                             dark_matter_parameter_limits=np.array([[-22., -19.],]))
     #UltraLightAxionLikelihoodClass
@@ -321,7 +321,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_fixed_mass_%i_40000_batch5_noT_CH_gcut'%int(log_mass_DM_eV)
+    filename_suffix = '_fixed_mass_%i_40000_batch11_1'%int(log_mass_DM_eV)
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
