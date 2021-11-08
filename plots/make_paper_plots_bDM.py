@@ -142,28 +142,43 @@ def plot_transfer_function():
 
 def plot_scale():
     """Make a plot of l_0.75 in mass - sigma space."""
-    save_file = 'scale.pdf'
-    mass = np.linspace(np.log10(15. * (10. ** 3.)), 11., num=8)
+    save_file = 'scale_new3.pdf'
+    mass = np.linspace(np.log10(15. * (10. ** 3.)), 11., num=128)
     delta_mass = (mass[-1] - mass[0]) / (mass.shape[0] - 1.) / 2.
-    sigma = np.linspace(-31., -24., num=8)
+    sigma = np.linspace(-31., -24., num=128)
     delta_sigma = (sigma[-1] - sigma[0]) / (sigma.shape[0] - 1.) / 2.
 
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6.4 * 1.5, 6.4 * (1. + (0.15 / 0.85))))
+    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(6.4 * 1.5, 6.4 * (1.11 + 0.1)), #(0.15 / 0.85)
+                             gridspec_kw={'height_ratios': [0.1, 1.11]})
 
     l = np.zeros((mass.shape[0], sigma.shape[0]))
     for i, m in enumerate(mass):
         for j, s in enumerate(sigma):
-            params_nCDM = bDM_numerical_model(np.array([m, s]), nCDM_parameter_limits, h=h_planck)
+            nCDM_parameter_limits_extended = cp.deepcopy(nCDM_parameter_limits)
+            nCDM_parameter_limits_extended[0, 1] = 10.
+            params_nCDM = bDM_numerical_model(np.array([m, s]), nCDM_parameter_limits_extended, h=h_planck)
+            print(m, s, params_nCDM)
             k = (((0.75 ** (1. / (2. * params_nCDM[2]))) - 1.) ** (1. / params_nCDM[1])) / params_nCDM[0]
-            l[i, j] = np.log10(2. * np.pi * 1.e+6 / k) #log(pc / h)
+            l[i, j] = np.log10(2. * np.pi * 1.e+6 / k / h_planck) #log(pc)
 
-    axp = ax.imshow(l.T, origin='lower', aspect='auto',
-                extent=(mass[0] - delta_mass, mass[-1] + delta_mass, sigma[0] - delta_sigma, sigma[-1] + delta_sigma))
-    cb = plt.colorbar(axp, ax=[ax], location='top') #orientation='horizontal',
+    axp = axes[1].imshow(l.T, origin='lower', aspect='auto', #axp =
+                extent=(mass[0] - delta_mass, mass[-1] + delta_mass, sigma[0] - delta_sigma, sigma[-1] + delta_sigma),
+                cmap='inferno')
+    axes[1].contour(l.T, levels=np.array([3., 4., 5., 6., 7., 8.]), origin='lower',
+                extent=(mass[0] - delta_mass, mass[-1] + delta_mass, sigma[0] - delta_sigma, sigma[-1] + delta_sigma),
+                colors='black')
+    cb = plt.colorbar(axp, cax=axes[0], orientation='horizontal') #location='top') #orientation='horizontal', #ax=[ax],
 
-    ax.set_xlabel(r'$\mathrm{log}\,[\mathrm{Dark\,\,matter\,\,mass}\,\,m\,(\mathrm{eV})]$')
-    ax.set_ylabel(r'$\mathrm{log}\,[\mathrm{Baryon-DM\,\,cross\,\,section}\,\,\sigma\,(\mathrm{cm}^2)]$')
-    #fig.subplots_adjust(right=0.99, bottom=0.15)
+    axes[0].set_xlabel(r'$\mathrm{log}\,[\mathrm{Suppression\,\,scale}\,\,\lambda_{0.75}\,(\mathrm{pc})]$', labelpad=12)
+    axes[0].xaxis.tick_top()
+    axes[0].xaxis.set_label_position('top')
+
+    axes[1].set_xlim([np.log10(15. * (10. ** 3.)), 11.])
+    axes[1].set_ylim([-31., -24.])
+    axes[1].set_xlabel(r'$\mathrm{log}\,[\mathrm{Dark\,\,matter\,\,mass}\,\,m\,(\mathrm{eV})]$')
+    axes[1].set_ylabel(r'$\mathrm{log}\,[\mathrm{Baryon-DM\,\,cross\,\,section}\,\,\sigma\,(\mathrm{cm}^2)]$')
+
+    fig.subplots_adjust(top=0.89, bottom=0.12, right=0.98, hspace=0.05)
 
     plt.savefig('/Users/keir/Documents/paper_bDM/' + save_file)
 
