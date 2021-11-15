@@ -6,6 +6,7 @@ import copy as cp
 import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
+import scipy.interpolate as spi
 import scipy.optimize as spo
 import getdist as gd
 import getdist.plots as gdp
@@ -142,7 +143,7 @@ def plot_transfer_function():
 
 def plot_scale():
     """Make a plot of l_0.75 in mass - sigma space."""
-    save_file = 'scale_new3.pdf'
+    save_file = 'scale_new4.pdf'
     mass = np.linspace(np.log10(15. * (10. ** 3.)), 11., num=128)
     delta_mass = (mass[-1] - mass[0]) / (mass.shape[0] - 1.) / 2.
     sigma = np.linspace(-31., -24., num=128)
@@ -176,7 +177,7 @@ def plot_scale():
     axes[1].set_xlim([np.log10(15. * (10. ** 3.)), 11.])
     axes[1].set_ylim([-31., -24.])
     axes[1].set_xlabel(r'$\mathrm{log}\,[\mathrm{Dark\,\,matter\,\,mass}\,\,m\,(\mathrm{eV})]$')
-    axes[1].set_ylabel(r'$\mathrm{log}\,[\mathrm{Baryon-DM\,\,cross\,\,section}\,\,\sigma\,(\mathrm{cm}^2)]$')
+    axes[1].set_ylabel(r'$\mathrm{log}\,[\mathrm{Proton-DM\,\,cross\,\,section}\,\,\sigma\,(\mathrm{cm}^2)]$')
 
     fig.subplots_adjust(top=0.89, bottom=0.12, right=0.98, hspace=0.05)
 
@@ -184,7 +185,7 @@ def plot_scale():
 
 def plot_comparison():
     """Make a plot comparing mass - sigma bounds."""
-    save_file = 'comparison3.pdf'
+    save_file = 'comparison7.pdf'
 
     chainfile = '/Users/keir/Data/emulator/bDM/chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_vary_mass_40000_batch11.txt'
     param_names = ['logmass', 'logsigma']
@@ -218,7 +219,7 @@ def plot_comparison():
     x = np.array([7., 9., 10.])
     y1 = np.log10([5.6e-27, 1.2e-26, 5.8e-26])
     y2 = np.ones_like(y1) * -22.
-    ax.fill_between(x=x, y1=y1, y2=y2, label=r'Ly-$\alpha$f (previous work)', color=plot_colours[3])
+    ax.fill_between(x=x, y1=y1, y2=y2, label=r'Ly-$\alpha$f (SDSS-I)', color=plot_colours[3])
 
     #XQC
     data_xqc = np.loadtxt('/Users/keir/Data/XQC.dat')
@@ -228,20 +229,32 @@ def plot_comparison():
     ax.fill_between(x=x, y1=y1, y2=y2, label=r'X-ray Quantum Calorimeter', color='#D3D3D3', alpha=0.5)
     #plot_colours[4]) #alpha=0.5,
 
-    #CRESST-surface
-    data_cresst_surface = np.loadtxt('/Users/keir/Data/CRESST-surface.dat')
+    #CRESST-surface & EDELWEISS-Migdal/standard
+    data_cresst_surface = np.loadtxt('/Users/keir/Data/CRESST_EDELWEISS_combined.dat')
     x = np.log10(data_cresst_surface[:, 0] * 1.e+9)
     y1 = np.log10(data_cresst_surface[:, 1])
     y2 = np.log10(data_cresst_surface[:, 2])
+    #x0_idx = np.where(data_cresst_surface[:, 0] == 1.07199)[0][0]
+    #x1_idx = np.where(data_cresst_surface[:, 0] == 3.82586)[0][0]
+    #y2_interpolator = spi.interp1d(x[np.array([x0_idx, x1_idx])], y2[np.array([x0_idx, x1_idx])])
+    #y2[np.argwhere(np.isnan(y2))] = y2_interpolator(x[np.argwhere(np.isnan(y2))])
     ax.fill_between(x=x, y1=y1, y2=y2, label=r'Direct detection', color='#A9A9A9', alpha=0.5)
     #plot_colours[5]) #[CRESST-surface] #alpha=0.5,
 
+    #EDELWEISS-Migdal
+    '''data_edelweiss_migdal = np.loadtxt('/Users/keir/Data/EDELWEISS-Migdal.dat')
+    x = np.log10(data_edelweiss_migdal[:, 0] * 1.e+9)
+    y1 = np.log10(data_edelweiss_migdal[:, 1])
+    y2 = np.log10(data_edelweiss_migdal[:, 2])
+    ax.fill_between(x=x, y1=y1, y2=y2, color='#A9A9A9', alpha=0.5)
+    '''
+
     ax.set_xlabel(r'$\mathrm{log}\,[\mathrm{Dark\,\,matter\,\,mass}\,\,m\,(\mathrm{eV})]$')
-    ax.set_ylabel(r'$\mathrm{log}\,[\mathrm{Baryon-DM\,\,cross\,\,section}\,\,\sigma\,(\mathrm{cm}^2)]$')
+    ax.set_ylabel(r'$\mathrm{log}\,[\mathrm{Proton-DM\,\,cross\,\,section}\,\,\sigma\,(\mathrm{cm}^2)]$')
     ax.legend(frameon=False, loc='lower right', fontsize=19., ncol=2)
     ax.set_xlim([np.log10(15. * (10. ** 3.)), 11.])
     ax.set_ylim([-31., -24.])
-    fig.subplots_adjust(top=0.98, right=0.99, bottom=0.15)
+    fig.subplots_adjust(top=0.98, right=0.98, bottom=0.15)
 
     #samples = np.loadtxt(chainfile, usecols=(14, 15), max_rows=10000)
     '''posterior_MCsamples = gd.MCSamples(samples=samples, names=param_names, labels=param_labels, ranges=param_ranges)
