@@ -268,9 +268,95 @@ def plot_comparison():
 
     plt.savefig('/Users/keir/Documents/paper_bDM/' + save_file)
 
+def plot_convergence():
+    """Plot the marginalised posterior summary statistics convergence."""
+    sim_num = np.array([0, 3, 6, 12, 18, 21, 24, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39])
+    slice_array = np.concatenate((np.arange(0, 8), np.array([10, 13, 16, 19])))
+    sim_num = sim_num[slice_array]
+    redshifts = [4.95, 4.58, 4.24]
+
+    convergence_data = np.load('/Users/keir/Software/lya_emulator/plots/convergence_bDM_mass7_batch11.npz')
+    posterior_means = convergence_data['arr_0']
+    posterior_means = posterior_means[slice_array, :]
+    posterior_limits = convergence_data['arr_1']
+    posterior_limits = posterior_limits[slice_array, :, :]
+    convergence_data = np.load('/Users/keir/Software/lya_emulator/plots/convergence_bDM_mass5_batch11.npz')
+    posterior_means = np.insert(posterior_means, -1, convergence_data['arr_0'][:, -1], axis=1)
+    posterior_limits = np.insert(posterior_limits, -1, convergence_data['arr_1'][:, -1, :], axis=1)
+    convergence_data = np.load('/Users/keir/Software/lya_emulator/plots/convergence_bDM_mass9_batch11.npz')
+    posterior_means = np.concatenate((posterior_means, convergence_data['arr_0'][:, -1].reshape(-1, 1)), axis=1)
+    posterior_limits = np.concatenate((posterior_limits, convergence_data['arr_1'][:, -1, :].reshape(-1, 1, 4)), axis=1)
+
+    one_sigma = (posterior_limits[:, :, 2] - posterior_limits[:, :, 1]) / 2.
+    two_sigma = (posterior_limits[:, :, 3] - posterior_limits[:, :, 0]) / 2.
+    mean_diff = (posterior_means[1:] - posterior_means[:-1]) / (two_sigma[:-1] / 2.)
+    one_sigma_diff = (one_sigma[1:] - one_sigma[:-1]) / (two_sigma[:-1] / 2.)
+    two_sigma_diff = (two_sigma[1:] - two_sigma[:-1]) / (two_sigma[:-1] / 2.)
+
+    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6.4*2., 6.4*2.5))
+    plot_labels = [r'$\tau_0 (z = %.1f)$'%redshifts[0], r'$\tau_0 (z = %.1f)$'%redshifts[1],
+                   r'$\tau_0 (z = %.1f)$'%redshifts[2], r'$n_\mathrm{s}$', r'$A_\mathrm{s}$',
+                   r'$T_0 (z = %.1f)$'%redshifts[0], r'$T_0 (z = %.1f)$'%redshifts[1], r'$T_0 (z = %.1f)$'%redshifts[2],
+                   r'$\widetilde{\gamma} (z = %.1f)$'%redshifts[0], r'$\widetilde{\gamma} (z = %.1f)$'%redshifts[1],
+                   r'$\widetilde{\gamma} (z = %.1f)$'%redshifts[2], r'$u_0 (z = %.1f)$'%redshifts[0],
+                   r'$u_0 (z = %.1f)$'%redshifts[1], r'$u_0 (z = %.1f)$'%redshifts[2],
+                   r'$\log[\sigma (m = 100\,\mathrm{keV})]$', r'$\log[\sigma (m = 10\,\mathrm{MeV})]$',
+                   r'$\log[\sigma (m = 1\,\mathrm{GeV})]$'] #[\mathrm{cm}^2]]$']
+    colours = lyc.get_distinct(8)
+    colours += colours[:8]
+    colours += [colours[0],]
+    line_style = '-'
+
+    for i in range(len(plot_labels)):
+        if i > 7:
+            line_style = '--'
+        if i > 15:
+            line_style = ':'
+
+        if i < 5:
+            plot_label = plot_labels[i]
+        else:
+            plot_label = None
+        axes[0].plot(sim_num[1:], mean_diff[:, i], label=plot_label, color=colours[i], lw=2.5, ls=line_style)
+
+        if (i > 4) and (i < 11):
+            plot_label = plot_labels[i]
+        else:
+            plot_label = None
+        axes[1].plot(sim_num[1:], one_sigma_diff[:, i], label=plot_label, color=colours[i], lw=2.5, ls=line_style)
+
+        if i > 10:
+            plot_label = plot_labels[i]
+        else:
+            plot_label = None
+        axes[2].plot(sim_num[1:], two_sigma_diff[:, i], label=plot_label, color=colours[i], lw=2.5, ls=line_style)
+
+    axes[0].axhline(y=0.2, color='black', ls='--', lw=3.) #2.5)
+    axes[0].axhline(y=-0.2, color='black', ls='--', lw=3.) #2.5)
+    axes[1].axhline(y=0.2, color='black', ls='--', lw=3.) #2.5)
+    axes[1].axhline(y=-0.2, color='black', ls='--', lw=3.) #2.5)
+    axes[2].axhline(y=0.2, color='black', ls='--', lw=3.) #2.5)
+    axes[2].axhline(y=-0.2, color='black', ls='--', lw=3.) #2.5)
+
+    axes[2].set_xlabel(r'Optimization simulation number')
+    axes[0].set_ylabel(r'\textnumero\,\,of sigma shift [mean]')
+    axes[1].set_ylabel(r'\textnumero\,\,of sigma shift [1 sigma]')
+    axes[2].set_ylabel(r'\textnumero\,\,of sigma shift [2 sigma]')
+    axes[0].set_xticklabels([])
+    axes[1].set_xticklabels([])
+    axes[2].set_ylim([-0.8, 1.9])
+    axes[0].legend(frameon=False, loc='upper right', ncol=2, fontsize=25.)
+    axes[1].legend(frameon=False, loc='upper right', ncol=2, fontsize=25.)
+    axes[2].legend(frameon=False, loc='upper right', ncol=2, fontsize=25.)
+    fig.subplots_adjust(top=0.99, bottom=0.06, right=0.95, hspace=0.05)
+    plt.savefig('/Users/keir/Documents/paper_bDM/convergence3.pdf')
+
+    return posterior_means, posterior_limits
+
+
 if __name__ == "__main__":
     plt.rc('text', usetex=True)
-    plt.rc('font', family='serif', size=24.)
+    plt.rc('font', family='serif', size=32.) #24 normally
 
     plt.rc('axes', linewidth=1.5)
     plt.rc('xtick.major', width=1.5)
@@ -280,4 +366,5 @@ if __name__ == "__main__":
 
     #plot_comparison()
     #plot_transfer_function()
-    plot_scale()
+    #plot_scale()
+    plot_convergence()
