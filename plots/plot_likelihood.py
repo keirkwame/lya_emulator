@@ -266,19 +266,19 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     measured_parameter_z_model_parameter_limits = None
     #np.array([[5000., 12000.], [-0.5, 0.5], [0.75, 1.75], [-0.5, 0.5]]) #A, S #[5000., 12000.], [-1., 1.]
 
-    log_mass_DM_eV = 7.
-    like = likeh.BaryonDarkMatterFixedMassLikelihoodClass(basedir=emudir, log_mass_DM_eV=log_mass_DM_eV, mean_flux=mean_flux_label,
+    log_mass_DM_eV = 9.
+    like = likeh.BaryonDarkMatterLikelihoodClass(basedir=emudir, mean_flux=mean_flux_label, #log_mass_DM_eV=log_mass_DM_eV,
                                  measured_parameter_names_z_model=measured_parameter_names_z_model, max_z=max_z,
                                  redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s,
                                  t0_training_value = t0_training_value, t0_parameter_limits=np.array([0.75, 1.25]),
                                  emulator_class=emulator_class, emulator_json_file=emulator_json_file,
                                  use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters,
-                                 flux_power_savefile='bDM_batch11_1_emulator_flux_vectors.hdf5',
+                                 flux_power_savefile='emu50_emulator_flux_vectors2.hdf5',
                                  flux_power_parallel=True, flux_power_n_process=35, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
-                                 fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation,
-                                 dark_matter_parameter_limits=np.array([[-31., -26.],])) #,
+                                 fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation) #,
+    #                             dark_matter_parameter_limits=np.array([[-31., -26.],])) #,
     #                             dark_matter_model=likeh.ultra_light_axion_numerical_model,
     #                             dark_matter_parameter_limits=np.array([[-22., -19.],]))
     #UltraLightAxionLikelihoodClass
@@ -307,11 +307,13 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     for sdir in subdirs:
         single_likelihood_plot(sdir, like, savedir=savedir, plot=plot, t0=t0_training_value,
                                true_parameter_values=test_simulation_parameters,
-                               plot_parameter_indices=plot_parameter_indices, leave_out_validation=leave_out_validation, data_class=data_class, mean_flux_label=mean_flux_label, log_mass_DM_eV=log_mass_DM_eV)
+                               plot_parameter_indices=plot_parameter_indices, leave_out_validation=leave_out_validation,
+                               data_class=data_class, mean_flux_label=mean_flux_label, log_mass_DM_eV=log_mass_DM_eV)
     return like
 
 def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter_values=None,
-                           plot_parameter_indices=None, leave_out_validation=None, data_class='Boera', mean_flux_label='free_high_z', log_mass_DM_eV=9.):
+                           plot_parameter_indices=None, leave_out_validation=None, data_class='Boera',
+                           mean_flux_label='free_high_z', log_mass_DM_eV=9.):
     """Make a likelihood and error plot for a single simulation."""
     sname = os.path.basename(os.path.abspath(sdir))
     if t0 != 1.0:
@@ -321,7 +323,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_fixed_mass_%i_40000_batch11_1'%int(log_mass_DM_eV)
+    filename_suffix = '_vary_mass_40000_bDM_initial' #%int(log_mass_DM_eV)
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -349,7 +351,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         if like.use_dark_matter_model:
             #DM_params = likeh.ultra_light_axion_numerical_model_inverse(true_parameter_values[np.arange(6, 9)])
             true_parameter_values = np.delete(true_parameter_values, np.arange(6, 9))
-            true_parameter_values = np.concatenate((true_parameter_values, np.array([-28.,]))) #9.,
+            true_parameter_values = np.concatenate((true_parameter_values, np.array([9., -28.]))) #9.,
             #np.array([DM_params,]))) #np.array([-20.,])
         #omega_m fixed
         true_parameter_values = np.delete(true_parameter_values, 5, axis=0)
