@@ -18,8 +18,8 @@ import matplotlib
 matplotlib.use('PDF')
 import matplotlib.pyplot as plt
 
-#import lyaemu.distinct_colours_py3 as lyc
-import lyaemu.coarse_grid as lyc
+import lyaemu.distinct_colours_py3 as lyc
+#import lyaemu.coarse_grid as lyc
 import lyaemu.mean_flux as lym
 #from lyaemu.likelihood import transfer_function_nCDM
 
@@ -212,7 +212,7 @@ def plot_scale():
 
 def plot_comparison():
     """Make a plot comparing mass - sigma bounds."""
-    save_file = 'comparison7.pdf'
+    save_file = 'comparison10.pdf'
 
     chainfile = '/Users/keir/Data/emulator/bDM/chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_vary_mass_40000_batch11.txt'
     param_names = ['logmass', 'logsigma']
@@ -236,6 +236,11 @@ def plot_comparison():
     y2 = np.ones_like(y1) * -22.
     ax.fill_between(x=x, y1=y1, y2=y2, label=r'MW satellites', color=plot_colours[1])
 
+    #Nadler21
+    x = np.array([4., 6., 8., 10.])
+    y1 = np.log10([7.e-30, 2.6e-29, 8.8e-29, 1.7e-27])
+    ax.plot(x, y1, color=plot_colours[1], ls='--', lw=2.)
+
     #Boddy18
     x = np.array([np.log10(15. * (10. ** 3.)), 6., 9., 12.])
     y1 = np.log10([8.8e-27, 2.6e-26, 1.5e-25, 1.4e-23]) #Table III/IV, O(1)
@@ -249,10 +254,10 @@ def plot_comparison():
     ax.fill_between(x=x, y1=y1, y2=y2, label=r'Ly-$\alpha$f (SDSS-I)', color=plot_colours[3])
 
     #XQC
-    data_xqc = np.loadtxt('/Users/keir/Data/XQC.dat')
+    data_xqc = np.loadtxt('/Users/keir/Data/XQC_Mahdawi2018.dat')
     x = np.log10(data_xqc[:, 0] * 1.e+9)
     y1 = np.log10(data_xqc[:, 1])
-    y2 = np.ones_like(y1) * -22.
+    y2 = np.ones_like(y1) * -19.
     ax.fill_between(x=x, y1=y1, y2=y2, label=r'X-ray Quantum Calorimeter', color='#D3D3D3', alpha=0.5)
     #plot_colours[4]) #alpha=0.5,
 
@@ -384,7 +389,7 @@ def plot_posterior(parameters='all'):
     """Make a triangle plot of marginalised 1D and 2D posteriors."""
     if parameters == 'all':
         n_chains = 4
-        save_file = 'posterior2.pdf'
+        save_file = 'posterior6.pdf'
     elif parameters == 'logma':
         n_chains = 6
         save_file = 'posterior_logma2.pdf'
@@ -399,7 +404,7 @@ def plot_posterior(parameters='all'):
     chainfile_root = '/Users/keir/Data/emulator/bDM'
     if (parameters == 'all') or (parameters == 'logma'):
         chainfiles[
-            0] = 'chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_vary_mass_40000_batch8.txt'
+            0] = 'chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_vary_mass_40000_bDM_initial.txt'
         chainfiles[
             1] = 'chain_ns0.964As1.83e-09heat_slope0heat_amp1omega_m0.321alpha0beta1gamma-1z_rei8T_rei2e+04_1_vary_mass_40000_batch8.txt'
         chainfiles[
@@ -422,19 +427,19 @@ def plot_posterior(parameters='all'):
     redshifts = [4.95, 4.58, 4.24]
     parameter_names = ['t5', 't46', 't42', 'ns', 'As', 'T5', 'T46', 'T42', 'g5', 'g46', 'g42', 'u5', 'u46', 'u42',
                        'logm', 'logs']
-    parameter_labels = [r'\tau_0^{5.0}', r'\tau_0 (z = 4.6)',
-                        r'\tau_0 (z = 4.2)', r'n_\mathrm{s}', r'A_\mathrm{s}',
-                        r'T_0^{5.0}', r'T_0 (z = 4.6)', r'T_0 (z = 4.2)',
-                        r'\widetilde{\gamma}^{5.0}', r'\widetilde{\gamma} (z = 4.6)',
+    parameter_labels = [r'\tau_0^{5.0}', r'\tau_0^{z = 4.6}',
+                        r'\tau_0 (z = 4.2)', r'n_\mathrm{s}', r'10^9 A_\mathrm{s}',
+                        r'T_0^{5.0}', r'T_0^{z = 4.6}\,[10^4 \mathrm{K}]', r'T_0 (z = 4.2)',
+                        r'\widetilde{\gamma}^{5.0}', r'\widetilde{\gamma}^{z = 4.6}',
                         r'\widetilde{\gamma} (z = 4.2)', r'u_0^{5.0}',
-                        r'u_0 (z = 4.6)', r'u_0 (z = 4.2)',
-                        r'\log\,m', r'\log\,\sigma'] #^\mathrm{eV}
+                        r'u_0^{z = 4.6}\,\left[\frac{\mathrm{eV}}{m_\mathrm{p}^{-1}}\right]', r'u_0 (z = 4.2)',
+                        r'\log(m\,[\mathrm{eV}])', r'\log(\sigma\,[\mathrm{cm}^2])'] #^\mathrm{eV}
     if parameters == 'PRL':
         parameter_labels[-1] = r'\log(m_\mathrm{a} [\mathrm{eV}])'
 
     legend_labels = [r'Initial emulator', r'After 30 optimization simulations',
                      r'After 35 optimization simulations',
-                     r'After 39 optimization simulations']
+                     r'Final emulator']
     if parameters == 'PRL':
         colours = [lyc.get_distinct(6)[-1],]
     else:
@@ -482,7 +487,7 @@ def plot_posterior(parameters='all'):
     posterior_MCsamples = [None] * len(samples)
     for i, samples_single in enumerate(samples):
         posterior_MCsamples[i] = gd.MCSamples(samples=samples_single, names=parameter_names, labels=parameter_labels,
-                                              ranges={'logm': [4., 11.]})
+                                              ranges={'logm': [4., 11.], 'logs': [-31., -25.5]})
 
     subplot_instance = gdp.getSubplotPlotter(width_inch=width_inch, rc_sizes=True, scaling=False)
     if parameters == 'logma':
@@ -647,16 +652,16 @@ def make_error_distribution():
 
 def violinplot_error_distribution(distribution='validation'):
     """Make a violin-plot of the emulator error distribution for leave-one-out cross-validation."""
-    n_sims = 93
+    n_sims = 89 #93
     n_LH = 50
     n_BO = n_sims - n_LH
-    n_mf = 2
+    n_mf = 10 #2
     n_k_cut = 45
     n_k_data = 16
     k_bins = np.concatenate((np.repeat(1, 15), np.repeat(2, 15), np.repeat(3, 15)))
 
     #Load data
-    validation_data = np.load('/Users/keir/Software/lya_emulator/plots/cross_validation.npz')
+    validation_data = np.load('/Users/keir/Software/lya_emulator/plots/cross_validation_bDM_89.npz')
     k = validation_data['k']
     print('Emulator wavenumbers =', k)
     redshifts = validation_data['z']
@@ -696,25 +701,26 @@ def violinplot_error_distribution(distribution='validation'):
     #LH-BO cut
     if distribution == 'validation':
         errors = (m - f_cut) / s
-        kernel_bw = 0.5
+        kernel_bw = 'silverman'
         colours = lyc.get_distinct(3)
-        ylim = [-4.9, 4.9]
-        ylabel = r'$(\mathrm{Mean - Truth})\,/\,\sigma$'
-        text_height = 0.85
-        legend_loc = 'upper left'
-        save_file = 'validationUS2.pdf'
+        ylim = [-5.9, 5.9] #[-4.9, 4.9]
+        ylabel = r'$(\mathrm{Mean - Truth}) / \Sigma$' #\frac{\mathrm{Mean - Truth}}{\Sigma}$'
+        text_height = 0.84 #0.85
+        legend_loc = 'lower left' #'upper left'
+        save_file = 'validation5.pdf'
     elif distribution == 'data':
         errors = np.log10(s[:(n_sims * n_mf)] / s_data_expand) #np.log10(
         errors_real = np.log10(np.absolute(m - f_cut)[:(n_sims * n_mf)] / s_data_expand)
-        kernel_bw = 'scott' #0.2
+        kernel_bw = 'scott'
         colours = lyc.get_distinct(4)
         ylim = [-5., 2.5]
         ylabel = r'$\mathrm{log}\,(\sigma_\mathrm{Theory}\,/\,\sigma_\mathrm{Data})$'
         text_height = 0.1
         legend_loc = 'lower center'
-        save_file = 'data_error_optimise2.pdf'
+        save_file = 'data_error.pdf'
     LH_cut = np.sort([np.arange(i, i+(n_LH + n_BO), 1) for i in range(0, n_sims*n_mf, n_sims)], axis=None)
-    BO_cut = np.sort([np.arange(i+n_LH, i+n_sims, 1) for i in range(0, n_sims*n_mf, n_sims)], axis=None)
+    BO_cut = np.sort([np.arange(i, i+n_LH, 1) for i in range(0, n_sims*n_mf, n_sims)], axis=None)
+    #Turn BO_cut to initial_cut
     errors_LH = errors[LH_cut]
     errors_BO = errors[BO_cut]
     errors_list = [errors_BO, errors_LH]
@@ -725,14 +731,14 @@ def violinplot_error_distribution(distribution='validation'):
     #k_bins_input = k[:n_k_cut]
     k_bins_input = cp.deepcopy(k_bins)
     k_bin_LH = np.tile(k_bins_input, ((n_LH + n_BO) * n_mf, redshifts.size))
-    k_bin_BO = np.tile(k_bins_input, (n_BO * n_mf, redshifts.size))
+    k_bin_BO = np.tile(k_bins_input, (n_LH * n_mf, redshifts.size)) #Turn BO_cut to initial_cut
     k_bin_list = [k_bin_BO, k_bin_LH]
 
     #BO
     if distribution == 'data':
         fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6.4 * 2., 6.4 * 1.25))  # 6.4*1.))
     else:
-        fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6.4*2., 6.4*1.25)) #6.4*1.))
+        fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6.4*2., 6.4*1.75)) #6.4*1.25))
     data_frames = [None] * redshifts.size * len(errors_list)
     for i, z in enumerate(redshifts):
         #z cut
@@ -745,9 +751,9 @@ def violinplot_error_distribution(distribution='validation'):
                 errors_df = np.concatenate((np.ravel(errors_list[j-1][:, z_cut]), np.ravel(errors_list[j][:, z_cut])))
                 #npr.normal(size=errors_list[j][:, z_cut].size * 20)
                 #if j == 0:
-                samples_label0 = r'Validation test [optimization simulations]'
+                samples_label0 = r'Initial simulations'
                 #else:
-                samples_label1 = r'Validation test [all simulations]'
+                samples_label1 = r'All simulations'
                 samples_label_real = 'Unit Gaussian model'
                 if j == 0:
                     violin_colours = {samples_label: colours[0], samples_label_real: colours[2]}
@@ -777,6 +783,7 @@ def violinplot_error_distribution(distribution='validation'):
             if distribution == 'validation':
                 axes[axes_idx].axhspan(ymin=-3., ymax=3., alpha=0.075, color=colours[0])
                 axes[axes_idx].axhspan(ymin=-1., ymax=1., alpha=0.15, color=colours[0])
+                axes[axes_idx].set_yticks([-3, 0, 3])
 
             data_frames[idx] = pd.DataFrame({'kbin': k_bin_df, 'ErrorSigmas': errors_df, 'Distribution': split_cut_df})
             sb.violinplot(data_frames[idx].kbin, data_frames[idx].ErrorSigmas, data_frames[idx].Distribution,
@@ -789,14 +796,18 @@ def violinplot_error_distribution(distribution='validation'):
             axes[axes_idx].axvline(x=0., color='black', ls='-', lw=2.5)
             axes[axes_idx].axvline(x=1., color='black', ls='-', lw=2.5)
             axes[axes_idx].axvline(x=2., color='black', ls='-', lw=2.5)
-            axes[axes_idx].text(0.9, text_height, r'$z = %.1f$'%redshifts[i], transform=axes[axes_idx].transAxes) #, fontsize=16.)
+            axes[axes_idx].text(0.86, text_height, r'$z = %.1f$'%redshifts[i], transform=axes[axes_idx].transAxes) #, fontsize=16.)
+            #0.9
             axes[axes_idx].get_legend().remove()
-            axes[axes_idx].set(ylabel=ylabel)
+            if axes_idx == 1:
+                axes[axes_idx].set(ylabel=ylabel)
+            else:
+                axes[axes_idx].set(ylabel='')
             #if idx < 5:
             #axes[idx].xaxis.set_ticklabels([])
             if (idx == 0) or (idx == 3):
                 axes[axes_idx].legend(loc=legend_loc, frameon=True, facecolor='white', fancybox=False, shadow=False,
-                                 framealpha=1., edgecolor='white', fontsize=15.)
+                                 framealpha=1., edgecolor='white', fontsize=22., ncol=2) #15.
             if idx < 5:
                 axes[axes_idx].xaxis.set_visible(False)
             else:
@@ -810,13 +821,13 @@ def violinplot_error_distribution(distribution='validation'):
     else:
         bottom_adjust = 0.1
     fig.subplots_adjust(top=0.99, bottom=bottom_adjust, right=0.95, hspace=0.1)
-    plt.savefig('/Users/keir/Documents/emulator_paper_axions/' + save_file)
+    plt.savefig('/Users/keir/Documents/paper_bDM/' + save_file)
     return k, z, p, f, m, s, k_data, s_data, k_max, data_frames
 
 
 if __name__ == "__main__":
     plt.rc('text', usetex=True)
-    plt.rc('font', family='serif', size=24.) #24 normally #32 for convergence
+    plt.rc('font', family='serif', size=24.) #24 normally #32 for convergence; violinplot
 
     plt.rc('axes', linewidth=1.5)
     plt.rc('xtick.major', width=1.5)
@@ -824,12 +835,15 @@ if __name__ == "__main__":
     plt.rc('ytick.major', width=1.5)
     plt.rc('ytick.minor', width=1.5)
 
-    #plot_comparison()
+    plot_comparison()
     #plot_transfer_function()
     #plot_scale()
     #plot_convergence()
     #plot_posterior()
 
-    k, z, p, f, m, s, k_max = make_error_distribution()
-    np.savez('/home/keir/Software/lya_emulator/plots/cross_validation_bDM_89.npz', k=k, z=z, p=p, f=f, m=m, s=s,
-             k_max=k_max)
+    #k, z, p, f, m, s, k_max = make_error_distribution()
+    #np.savez('/home/keir/Software/lya_emulator/plots/cross_validation_bDM_89.npz', k=k, z=z, p=p, f=f, m=m, s=s,
+    #         k_max=k_max)
+
+    #violinplot_error_distribution()
+    #violinplot_error_distribution(distribution='data')
