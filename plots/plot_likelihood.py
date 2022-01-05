@@ -274,7 +274,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                                  emulator_class=emulator_class, emulator_json_file=emulator_json_file,
                                  use_measured_parameters=use_measured_parameters,
                                  redshift_dependent_parameters=redshift_dependent_parameters,
-                                 flux_power_savefile='emu50_emulator_flux_vectors2.hdf5',
+                                 flux_power_savefile='bDM_batch11_emulator_flux_vectors.hdf5',
                                  flux_power_parallel=True, flux_power_n_process=35, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
                                  fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation) #,
@@ -323,7 +323,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_vary_mass_40000_bDM_initial' #%int(log_mass_DM_eV)
+    filename_suffix = '_vary_mass_400_bDM_z_test' #%int(log_mass_DM_eV)
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -343,7 +343,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
 
-        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=1000, nsamples=40000, #1000, 40000
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=100, nsamples=400, #1000, 40000
                          while_loop=False, k_data_max=None, include_emulator_error=True, pool=None) #datadir
         print('Done sampling likelihood at', str(datetime.now()))
 
@@ -383,7 +383,8 @@ if __name__ == "__main__":
     testdirs = os.path.join('/share/data2/keir/Simulations', test_name)
 
     lyman_data_instance = lyman_data.BoeraData()
-    redshifts = lyman_data_instance.redshifts_unique[::-1]
+    #redshifts = lyman_data_instance.redshifts_unique[::-1]
+    redshifts = np.array([4.24,])
     max_z = np.max(redshifts)
     pixel_resolution_km_s = 1.
 
