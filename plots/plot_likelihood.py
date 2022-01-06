@@ -383,8 +383,8 @@ if __name__ == "__main__":
     testdirs = os.path.join('/share/data2/keir/Simulations', test_name)
 
     lyman_data_instance = lyman_data.BoeraData()
-    #redshifts = lyman_data_instance.redshifts_unique[::-1]
-    redshifts = np.array([4.24,])
+    redshifts = lyman_data_instance.redshifts_unique[::-1]
+    #redshifts = np.array([4.24,])
     max_z = np.max(redshifts)
     pixel_resolution_km_s = 1.
 

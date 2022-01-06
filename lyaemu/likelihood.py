@@ -627,7 +627,7 @@ class LikelihoodClass:
         #Likelihood using full covariance matrix
         chi2 = 0
 
-        for bb in range(nz):
+        for bb in range(1): #nz):
             idp = np.where(self.kf >= okf[bb][0])
             diff_bin = predicted[bb] - data_power[nkf*bb:nkf*(bb+1)][idp]
             std_bin = std[bb]
