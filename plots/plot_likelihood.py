@@ -236,9 +236,10 @@ def make_plot(chainfile, savefile, true_parameter_values=None, pnames=None, rang
                 ax.set_xticks(ticks[pnames[pi2]])
             if pi2 == 0 and pnames[pi] in ticks:
                 ax.set_yticks(ticks[pnames[pi]])
-            ax.axvline(true_parameter_values[pi2], color='gray', ls='--', lw=2)
-            if pi2 < pi:
-                ax.axhline(true_parameter_values[pi], color='gray', ls='--', lw=2)
+            if true_parameter_values is not None:
+                ax.axvline(true_parameter_values[pi2], color='gray', ls='--', lw=2)
+                if pi2 < pi:
+                    ax.axhline(true_parameter_values[pi], color='gray', ls='--', lw=2)
 #                #Plot the emulator points
 #                 if parameter_index > 1:
 #                     ax.scatter(simulation_parameters_latin[:, parameter_index2 - 2], simulation_parameters_latin[:, parameter_index - 2], s=54, color=colour_array[-1], marker='+')
@@ -267,6 +268,8 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     #np.array([[5000., 12000.], [-0.5, 0.5], [0.75, 1.75], [-0.5, 0.5]]) #A, S #[5000., 12000.], [-1., 1.]
 
     log_mass_DM_eV = 9.
+    fix_parameters = {'u_0_z_4.2': 8., 'u_0_z_4.6': 8., 'gamma_z_4.2': 1.6, 'gamma_z_4.6': 1.6, 'T_0_z_4.2': 10000.,
+                      'T_0_z_4.6': 10000., 'omega_m': 0.3209, 'tau0_2': 1., 'tau0_1': 1.}
     like = likeh.BaryonDarkMatterLikelihoodClass(basedir=emudir, mean_flux=mean_flux_label, #log_mass_DM_eV=log_mass_DM_eV,
                                  measured_parameter_names_z_model=measured_parameter_names_z_model, max_z=max_z,
                                  redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s,
@@ -277,7 +280,7 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                                  flux_power_savefile='bDM_batch11_emulator_flux_vectors.hdf5',
                                  flux_power_parallel=True, flux_power_n_process=35, data_class=data_class,
                                  measured_parameter_z_model_parameter_limits=measured_parameter_z_model_parameter_limits,
-                                 fix_parameters={'omega_m': 0.3209}, leave_out_validation=leave_out_validation) #,
+                                 fix_parameters=fix_parameters, leave_out_validation=leave_out_validation) #,
     #                             dark_matter_parameter_limits=np.array([[-31., -26.],])) #,
     #                             dark_matter_model=likeh.ultra_light_axion_numerical_model,
     #                             dark_matter_parameter_limits=np.array([[-22., -19.],]))
@@ -289,9 +292,9 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                             'standard_deviations': prior_function_args[2]}
 
     #Convex hull prior
-    parameter_names_convex_hull = [['T_0_z_5.0', 'u_0_z_5.0'], ['T_0_z_4.6', 'u_0_z_4.6'], ['T_0_z_4.2', 'u_0_z_4.2'],
-                                   ['T_0_z_5.0', 'gamma_z_5.0'], ['T_0_z_4.6', 'gamma_z_4.6'],
-                                   ['T_0_z_4.2', 'gamma_z_4.2']]
+    parameter_names_convex_hull = [['T_0_z_5.0', 'u_0_z_5.0'], #['T_0_z_4.6', 'u_0_z_4.6'], ['T_0_z_4.2', 'u_0_z_4.2'],
+                                   ['T_0_z_5.0', 'gamma_z_5.0']] #, ['T_0_z_4.6', 'gamma_z_4.6'],
+    #                               ['T_0_z_4.2', 'gamma_z_4.2']]
     prior_function_convex_hull = {'parameter_names': parameter_names_convex_hull,
                                   'use_likelihood_parameter_limits': True}
 
@@ -301,8 +304,8 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     prior_function_maximum_jump = {'parameter_names': parameter_names_maximum_jump,
                                    'maximum_differences': maximum_jumps}
 
-    prior_functions = [prior_function_convex_hull, prior_function, prior_function_maximum_jump]
-    like.set_log_prior(['convex_hull', 'Gaussian', 'maximum_jump'], prior_functions)
+    prior_functions = [prior_function_convex_hull, prior_function] #, prior_function_maximum_jump]
+    like.set_log_prior(['convex_hull', 'Gaussian'], prior_functions) #, 'maximum_jump'
 
     for sdir in subdirs:
         single_likelihood_plot(sdir, like, savedir=savedir, plot=plot, t0=t0_training_value,
@@ -323,7 +326,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_vary_mass_400_bDM_z_test' #%int(log_mass_DM_eV)
+    filename_suffix = '_vary_mass_400_bDM_z_test_full' #%int(log_mass_DM_eV)
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -334,11 +337,15 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
 
     # Change prior
     x = 0
-    like.param_limits[5 + x, 1] = 15000. #12000.
+    '''like.param_limits[5 + x, 1] = 15000. #12000.
     like.param_limits[np.array([6, 7]), 1] = 15000.
     like.param_limits[np.array([8, 9, 10]) + x, 0] = 0.9
     like.param_limits[11 + x, 1] = 18. #12.
     like.param_limits[np.array([12, 13]) + x, 1] = 18.
+    '''
+    like.param_limits[3, 1] = 15000.
+    like.param_limits[4, 0] = 0.9
+    like.param_limits[5, 1] = 18.
 
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
@@ -364,7 +371,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         savefile = os.path.join(savedir, 'corner_' + sname + filename_suffix + ".pdf")
         plot_parameter_names = like.likelihood_parameter_names[:, 1]
         plot_parameter_limits = like.param_limits
-        make_plot(chainfile, savefile, true_parameter_values=true_parameter_values, pnames=plot_parameter_names,
+        make_plot(chainfile, savefile, true_parameter_values=None, pnames=plot_parameter_names, #true_parameter_values
                   ranges=plot_parameter_limits, parameter_indices=plot_parameter_indices)
 
 
@@ -406,13 +413,13 @@ if __name__ == "__main__":
     #test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters[:-3], np.array([test_simulation_parameters[-2], 0.])))
 
     #Prior distribution
-    prior_parameter_names = np.array(['tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As'])
+    prior_parameter_names = np.array(['tau0_0', 'ns', 'As']) #'tau0_1', 'tau0_2',
     #, 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2'])
     #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
-    prior_means = test_simulation_parameters[np.array([0, 1, 2, 3, 4])]
+    prior_means = test_simulation_parameters[np.array([0, 3, 4])] #1, 2,
     #, 12, 13, 14])] #9, 10, 11])] #0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14])] #, 15, 16])] #7
     print('Gaussian prior means =', prior_means)
-    prior_standard_deviations = np.array([0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9])
+    prior_standard_deviations = np.array([0.05, 0.0057, 0.030 * 1.e-9]) #0.05, 0.05,
     #, 0.25, 0.25, 0.25]) #3000., 3000., 3000.]) #, 0.3, 0.3, 0.3]) #, 0.5, 0.5, 0.5])
     #0.05, 0.05, 0.05, 0.0057, 0.030 * 1.e-9, 0.001, 2000., 2000., 2000., 0.25, 0.25, 0.25]) #0.013])
     #0.1, 0.1 * 1.e-9, 0.1])

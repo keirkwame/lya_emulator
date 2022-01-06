@@ -541,7 +541,7 @@ class LikelihoodClass:
     def get_predicted(self, params, use_updated_training_set=False):
         """Helper function to get the predicted flux power spectrum and error, rebinned to match the desired kbins."""
         if self.fix_parameters is not None:
-            for parameter_name in self.fix_parameters.keys():
+            for parameter_name in list(self.fix_parameters.keys())[::-1]:
                 params_insert_indices_fix = self.emulator._get_parameter_index_number(parameter_name,
                                                     use_measured_parameters=self.use_measured_parameters,
                                                     include_mean_flux_slope=self.mf_slope,
@@ -601,10 +601,14 @@ class LikelihoodClass:
 
         # .predict should take [{list of parameters: t0; cosmo.; thermal},]
         # Here: emulating @ cosmo.; thermal; sampled t0 * [tau0_fac from above]
-        predicted_nat, std_nat = self.gpemu.predict(np.array(nparams).reshape(1,-1), tau0_factors = tau0_fac, use_updated_training_set=use_updated_training_set)
+        predicted_nat, std_nat = self.gpemu.predict(np.array(nparams).reshape(1,-1), tau0_factors = tau0_fac,
+                                                    use_updated_training_set=use_updated_training_set)
 
-        okf, predicted = flux_power.rebin_power_to_kms(kfkms=self.kf, kfmpc=self.gpemu.kf, flux_powers = predicted_nat[0], zbins=self.zout, omega_m = omega_m)
-        _, std= flux_power.rebin_power_to_kms(kfkms=self.kf, kfmpc=self.gpemu.kf, flux_powers = std_nat[0], zbins=self.zout, omega_m = omega_m)
+        okf, predicted = flux_power.rebin_power_to_kms(kfkms=self.kf, kfmpc=self.gpemu.kf,
+                                                       flux_powers = predicted_nat[0], zbins=self.zout,
+                                                       omega_m = omega_m)
+        _, std= flux_power.rebin_power_to_kms(kfkms=self.kf, kfmpc=self.gpemu.kf, flux_powers = std_nat[0],
+                                              zbins=self.zout, omega_m = omega_m)
         return okf, predicted, std
 
     def likelihood(self, params, k_data_max=None, include_emu=True, data_power=None, use_updated_training_set=False):
