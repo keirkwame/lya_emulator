@@ -777,7 +777,7 @@ class LikelihoodClass:
             pnames = np.concatenate((np.array([['dtau0',r'd\tau_0'],]), pnames), axis=0)
         elif self.mf_free:
             pnames = pnames[1:]
-            pnames = np.concatenate(([['tau0_%.2f'%redshift, r'\tau_0(z=%.2f)'%redshift] for redshift in self.zout], pnames))
+            pnames = np.concatenate(([['tau0_%i'%i, r'\tau_0(z=%.2f)'%redshift] for i, redshift in enumerate(self.zout)], pnames))
 
         if self.measured_parameter_names_z_model is not None:
             pnames_remove_indices = self._get_measured_parameter_indices_to_remove()
