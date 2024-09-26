@@ -268,8 +268,8 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
     #np.array([[5000., 12000.], [-0.5, 0.5], [0.75, 1.75], [-0.5, 0.5]]) #A, S #[5000., 12000.], [-1., 1.]
 
     log_mass_DM_eV = 9.
-    fix_parameters = {'u_0_z_4.2': 8., 'u_0_z_4.6': 8., 'gamma_z_4.2': 1.6, 'gamma_z_4.6': 1.6, 'T_0_z_4.2': 10000.,
-                      'T_0_z_4.6': 10000., 'omega_m': 0.3209, 'tau0_2': 1., 'tau0_1': 1.}
+    fix_parameters = {'u_0_z_4.6': 8., 'u_0_z_5.0': 8., 'gamma_z_4.6': 1.6, 'gamma_z_5.0': 1.6, 'T_0_z_4.6': 10000.,
+                      'T_0_z_5.0': 10000., 'omega_m': 0.3209, 'tau0_1': 1., 'tau0_0': 1.}
     like = likeh.BaryonDarkMatterLikelihoodClass(basedir=emudir, mean_flux=mean_flux_label, #log_mass_DM_eV=log_mass_DM_eV,
                                  measured_parameter_names_z_model=measured_parameter_names_z_model, max_z=max_z,
                                  redshifts=redshifts, pixel_resolution_km_s=pixel_resolution_km_s,
@@ -292,8 +292,8 @@ def run_likelihood_test(testdir, emudir, savedir=None, prior_function='uniform',
                             'standard_deviations': prior_function_args[2]}
 
     #Convex hull prior
-    parameter_names_convex_hull = [['T_0_z_5.0', 'u_0_z_5.0'], #['T_0_z_4.6', 'u_0_z_4.6'], ['T_0_z_4.2', 'u_0_z_4.2'],
-                                   ['T_0_z_5.0', 'gamma_z_5.0']] #, ['T_0_z_4.6', 'gamma_z_4.6'],
+    parameter_names_convex_hull = [['T_0_z_4.2', 'u_0_z_4.2'], #['T_0_z_4.6', 'u_0_z_4.6'], ['T_0_z_4.2', 'u_0_z_4.2'],
+                                   ['T_0_z_4.2', 'gamma_z_4.2']] #, ['T_0_z_4.6', 'gamma_z_4.6'],
     #                               ['T_0_z_4.2', 'gamma_z_4.2']]
     prior_function_convex_hull = {'parameter_names': parameter_names_convex_hull,
                                   'use_likelihood_parameter_limits': True}
@@ -326,7 +326,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
         validation_suffix = ''
     else:
         validation_suffix = '_' + str(leave_out_validation[0])
-    filename_suffix = '_vary_mass_400_bDM_z_test_full' #%int(log_mass_DM_eV)
+    filename_suffix = '_vary_mass_40000_bDM_z_test3_full' #%int(log_mass_DM_eV)
     filename_suffix += validation_suffix
     chainfile = os.path.join(savedir, 'chain_' + sname + filename_suffix + '.txt')
     sname = re.sub(r"\.", "_", sname)
@@ -350,7 +350,7 @@ def single_likelihood_plot(sdir, like, savedir, plot=True, t0=1., true_parameter
     if not os.path.exists(chainfile):
         print('Beginning to sample likelihood at', str(datetime.now()))
 
-        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=100, nsamples=400, #1000, 40000
+        like.do_sampling(chainfile, datadir='use_real_data', nwalkers=150, burnin=1000, nsamples=40000, #1000, 40000
                          while_loop=False, k_data_max=None, include_emulator_error=True, pool=None) #datadir
         print('Done sampling likelihood at', str(datetime.now()))
 
@@ -413,7 +413,7 @@ if __name__ == "__main__":
     #test_simulation_parameters = np.concatenate((np.array([t0_test_value,] * 3), test_simulation_parameters[:-3], np.array([test_simulation_parameters[-2], 0.])))
 
     #Prior distribution
-    prior_parameter_names = np.array(['tau0_0', 'ns', 'As']) #'tau0_1', 'tau0_2',
+    prior_parameter_names = np.array(['tau0_2', 'ns', 'As']) #'tau0_1', 'tau0_2',
     #, 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2']) #'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2'])
     #tau0_0', 'tau0_1', 'tau0_2', 'ns', 'As', 'omega_m', 'T_0_z_5.0', 'T_0_z_4.6', 'T_0_z_4.2', 'gamma_z_5.0', 'gamma_z_4.6', 'gamma_z_4.2'])
     prior_means = test_simulation_parameters[np.array([0, 3, 4])] #1, 2,

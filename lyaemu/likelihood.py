@@ -413,8 +413,9 @@ class LikelihoodClass:
                                                     use_measured_parameters=self.use_measured_parameters,
                                                     include_mean_flux_slope=self.mf_slope,
                                                     include_mean_flux_free=self.mf_free,
-                                                    remove_nCDM=self.use_dark_matter_model) - i
+                                                    remove_nCDM=self.use_dark_matter_model) #- i
                 self.param_limits = np.delete(self.param_limits, param_limits_remove_indices_fix, axis=0)
+        #print('Initial param limits = ', self.param_limits)
 
         self.ndim = np.shape(self.param_limits)[0]
         assert np.shape(self.param_limits)[1] == 2
@@ -540,6 +541,7 @@ class LikelihoodClass:
 
     def get_predicted(self, params, use_updated_training_set=False):
         """Helper function to get the predicted flux power spectrum and error, rebinned to match the desired kbins."""
+        print('params =', params)
         if self.fix_parameters is not None:
             for parameter_name in list(self.fix_parameters.keys())[::-1]:
                 params_insert_indices_fix = self.emulator._get_parameter_index_number(parameter_name,
@@ -599,6 +601,7 @@ class LikelihoodClass:
                                     '_z_%.1f'%self.zout[0], use_measured_parameters=True)
                 nparams = np.insert(nparams, nparams_index, measured_parameter_values)
 
+        print('nparams =', nparams, tau0_fac)
         # .predict should take [{list of parameters: t0; cosmo.; thermal},]
         # Here: emulating @ cosmo.; thermal; sampled t0 * [tau0_fac from above]
         predicted_nat, std_nat = self.gpemu.predict(np.array(nparams).reshape(1,-1), tau0_factors = tau0_fac,
@@ -631,7 +634,7 @@ class LikelihoodClass:
         #Likelihood using full covariance matrix
         chi2 = 0
 
-        for bb in range(1): #nz):
+        for bb in range(2, 3): #nz):
             idp = np.where(self.kf >= okf[bb][0])
             diff_bin = predicted[bb] - data_power[nkf*bb:nkf*(bb+1)][idp]
             std_bin = std[bb]
